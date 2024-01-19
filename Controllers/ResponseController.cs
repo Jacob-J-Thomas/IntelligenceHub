@@ -5,22 +5,23 @@ using OpenAICustomFunctionCallingAPI.Business;
 
 namespace OpenAICustomFunctionCallingAPI.Controllers
 {
+    [Route("[controller]")]
     [ApiController]
-    public class Controller : ControllerBase
+    public class ResponseController : ControllerBase
     {
         private readonly Settings _settings;
 
-        public Controller(Settings settings)
+        public ResponseController(Settings settings)
         {
             _settings = settings;
         }
 
         [HttpPost]
-        [Route("/input")]
-        public async Task<string> InputRouting([FromBody] InboundRequest body)
+        [Route("Completion")]
+        public async Task<string> CompletionRouting([FromBody] InboundRequest body)
         {
             BusinessLogic business = new BusinessLogic(_settings);
-            var completion = await business.BuildRoutingRequest(body);
+            var completion = await business.GetCompletion(body, true);
             return completion;
         }
     }
