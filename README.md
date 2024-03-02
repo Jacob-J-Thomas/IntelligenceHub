@@ -6,16 +6,20 @@ This is accomplished by using a single function definition which then calls more
 
 Please add your own API token in appsettings.json after cloning the repo.
 
-You can use the below request body for testing:
 
-```
-{
-  "prompt": "hello, can you please turn on my lights for me?",
-  "functionEndpoint": "string",
-  "functionNames": {
-    "callHomeAutomationModel": "A function that should be used when the user wants to trigger, configure, or inquire about their home automations, such as lighting orchestrations, heating/cooling, etc.",
-    "callEmailOrTextWriterModel": "A function that should be used when the user wants to write and send an email or a text message.",
-    "callOrderPlacementModel": "A function that should be used when the user wants to place an order online. This can be food, amazon orders, or any other transaction else that can be done online."
-  }
-}
-```
+Future Features:
+- Add route profile/associate/{name}
+- Add route profile/dissociate/{name}
+- Add route profile/get/{name}/tools
+- Add message history handling
+- Add logic to switch to fallback resources during service outages
+
+Technical Debt Items (Descending Priority):
+- Seperate seperate tool logic from profileLogic.cs and refactor where needed
+- Clean up DTOs and their reavaluate their constructors
+	- Consider completely seperating completion and database DTOs 
+	- Create seperate DTOs for each AI client
+	- replace chatRequest.Modifiers with CompletionBaseDTO if not done already
+- Delete unused files/classes
+- Add additional properties for Tools (Name, Role, Function details). This will assist with dialogues between AI models
+- Go through 500 status codes for _serverSidesStatusCode list

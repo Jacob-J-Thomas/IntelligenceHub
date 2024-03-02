@@ -3,6 +3,12 @@ using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
 using OpenAICustomFunctionCallingAPI.Host.Config;
 using OpenAICustomFunctionCallingAPI.Business;
 using System.Runtime;
+using Azure;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Newtonsoft.Json.Linq;
+using OpenAICustomFunctionCallingAPI.DAL;
+using Nest;
+using OpenAICustomFunctionCallingAPI.Business.ProfileLogic;
 
 namespace OpenAICustomFunctionCallingAPI.Controllers
 {
@@ -10,39 +16,115 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
     [ApiController]
     public class ProfileController : ControllerBase
     {
-        private readonly Settings _settings;
+        //private readonly IConfiguration _configuration;
+        private ProfileLogic _profileLogic;
 
         public ProfileController(Settings settings)
         {
-            _settings = settings;
+            settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _profileLogic = new ProfileLogic(settings.DbConnectionString);
         }
 
         [HttpGet]
-        [Route("get")]
-        public async Task<string> GetProfile([FromBody] InboundRequest body)
+        [Route("get/{name}")]
+        public async Task<IActionResult> GetProfile([FromRoute] string name) // get this to work with either a string or an int
         {
-            return "placeholder";
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    return BadRequest("Invalid route data. Please check your input.");
+                }
+
+                var profileDto = await _profileLogic.GetProfile(name);
+                if (profileDto != null)
+                {
+                    return Ok(profileDto);
+                }
+                return NotFound($"No profile with the name {name} was found.");
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+                // Logging and transient exception handling here
+                throw;
+            }
+        }
+
+        [HttpGet]
+        [Route("get/all")]
+        public async Task<IActionResult> GetAllProfiles()
+        {
+            try
+            {
+                return Ok(await _profileLogic.GetAllProfiles());
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpPost]
-        [Route("add")]
-        public async Task<string> CreateProfile([FromBody] InboundRequest body)
+        [Route("upsert")]
+        public async Task<IActionResult> AddOrUpdateProfile([FromBody] APIProfileDTO profileDto)
         {
-            return "placeholder";
-        }
-
-        [HttpPut]
-        [Route("modify")]
-        public async Task<string> ModifyProfile([FromBody] InboundRequest body)
-        {
-            return "placeholder";
+            try
+            {
+                var errorMessage = await _profileLogic.CreateOrUpdateProfile(profileDto);
+                if (errorMessage != null)
+                {
+                    return BadRequest(errorMessage);
+                }
+                return Ok(await _profileLogic.GetProfile(profileDto.Name));
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+                // Logging and transient exception handling here
+                throw;
+            }
         }
 
         [HttpDelete]
-        [Route("remove")]
-        public async Task<string> DeleteProfile([FromBody] InboundRequest body)
+        [Route("delete/{name}")]
+        public async Task<IActionResult> DeleteProfile([FromRoute] string name)
         {
-            return "placeholder";
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    return BadRequest($"Invalid request. Please check the route parameter for the profile name: {name}.");
+                }
+
+                var errorMessage = await _profileLogic.DeleteProfile(name);
+                if (errorMessage != null)
+                {
+                    return NotFound(errorMessage);
+                }
+                return NoContent();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+                // Logging and transient exception handling here
+                throw;
+            }
         }
     }
 }

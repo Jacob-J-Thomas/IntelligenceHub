@@ -1,4 +1,4 @@
-﻿namespace OpenAICustomFunctionCallingAPI.Client.OpenAI.DTOs
+﻿namespace OpenAICustomFunctionCallingAPI.API.DTOs
 {
     public class Message
     {
@@ -6,6 +6,7 @@
         public string Content { get; set; }
         public Message(string role, string content)
         {
+            // validate user
             Role = role;
             Content = content;
         }
