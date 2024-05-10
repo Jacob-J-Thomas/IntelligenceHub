@@ -1,5 +1,5 @@
 ﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
 using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
 using OpenAICustomFunctionCallingAPI.DAL.DTOs;
 using System;
@@ -48,12 +48,12 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                                 var profile = MapProfileFromReader(reader);
                                 var toolList = MapToolsFromReader(reader);
 
-                                profile.Tools = new List<Tool>();
+                                profile.Tools = new List<ToolDTO>();
 
                                 // probably move this foreach into 
                                 foreach (var tool in toolList)
                                 {
-                                    profile.Tools.Add(new Tool(tool));
+                                    profile.Tools.Add(new ToolDTO(tool, null));
                                 }
                                 return profile;
                             }
@@ -76,9 +76,9 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 Id = (int)reader["Id"],
                 Name = (string)reader["Name"],
                 Response_Format = reader["Response_Format"] as string,
-                Logprobs = reader["Logprobs"] as bool?,
+                //Logprobs = reader["Logprobs"] as bool?,
                 Reference_Profiles = reader["Reference_Profiles"] as string,
-                Stop_Sequences = reader["Stop_Sequences"] as string,
+                Stop = reader["Stop"] as string,
                 System_Message = reader["System_Message"] as string,
                 Model = reader["Model"] as string,
                 Frequency_Penalty = reader["frequency_penalty"] as double?,
@@ -105,7 +105,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     Id = (int)reader["ToolId"],
                     Name = (string)reader["ToolName"],
                     Description = reader["ToolDescription"] as string,
-                    Type = (string)reader["ToolType"],
+                    //Type = (string)reader["ToolType"],
                     Required = reader["Required"] as string,
                 }
             };

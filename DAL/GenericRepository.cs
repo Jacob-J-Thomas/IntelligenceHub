@@ -50,7 +50,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 throw;
             }
         }
-
         public async Task<IEnumerable<T>> GetAllAsync()
         {
             try
@@ -185,7 +184,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             return typeof(T).GetCustomAttribute<TableNameAttribute>().TableName;
         }
 
-        private T MapFromReader<T>(SqlDataReader reader) where T : new()
+        public T MapFromReader<T>(SqlDataReader reader) where T : new()
         {
             var entity = new T();
             foreach (var property in typeof(T).GetProperties())

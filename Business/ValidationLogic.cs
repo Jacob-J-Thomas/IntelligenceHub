@@ -14,24 +14,30 @@ using Nest;
 using OpenAICustomFunctionCallingAPI.DAL.DTOs;
 using OpenAICustomFunctionCallingAPI.API.DTOs;
 using System.Reflection.Metadata;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
 
 namespace OpenAICustomFunctionCallingAPI.Business
 {
     // this whole class needs some refactoring
-    public class ValidationLogic
+    public class ValidationLogic : IValidationLogic
     {
         public ValidationLogic() { }
 
-        public string ValidateChatRequest(ChatRequestDTO chatRequest)
+        public string ValidateChatRequest(string name, ChatRequestDTO chatRequest)
         {
+            if (name == null && chatRequest == null)
+            {
+                return "An AI profile name must be included in the request body or route.";
+            }
+
             if (chatRequest == null)
             {
                 return "The chatRequest object must be provided";
             }
             if (chatRequest.Modifiers != null)
             {
-                var profileDTO = new APIProfileDTO(chatRequest.Modifiers);
-                var errorMessage = ValidateProfile(profileDTO);
+                var errorMessage =  ValidateBaseDTO(chatRequest.Modifiers);
                 if (errorMessage != null)
                 {
                     return errorMessage;
@@ -41,7 +47,41 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return null;
         }
 
-        public string ValidateProfile(APIProfileDTO profile)
+        public string ValidateAPIProfile(APIProfileDTO profile)
+        {
+
+
+
+
+            // ensure tool and profiles do not have overlapping names since there
+            // would be no way to tell them apart during recursive child/function calls
+            //      - Actually, might be able to avoid this by appending "-tool" and
+            //          "-model" when data is retrieved from the database
+
+
+
+            // validate reference profiles exist (same with any other values?)
+
+            
+
+            if (string.IsNullOrWhiteSpace(profile.Name) || profile.Name == null)
+            {
+                return "The 'Name' field is required";
+            }
+            if (profile.Name.ToLower() == "all")
+            {
+                return "Profile name 'all' conflicts with the get/all route";
+            }
+
+            var errorMessage = ValidateBaseDTO(profile);
+            if (errorMessage != null)
+            {
+                return errorMessage;
+            }
+            return null;
+        }
+
+        public string ValidateBaseDTO(BaseCompletionDTO profile)
         {
             var validModels = new List<string>()
             {
@@ -58,21 +98,6 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 "cusotom" // need to implement this still
             };
 
-            // ensure tool and profiles do not have overlapping names since there
-            // would be no way to tell them apart during recursive child/function calls
-            //      - Actually, might be able to avoid this by appending "-tool" and
-            //          "-model" when data is retrieved from the database
-
-            // validate reference profiles exist (same with any other values?)
-
-            if (string.IsNullOrWhiteSpace(profile.Name) || profile.Name == null)
-            {
-                return "The 'Name' field is required";
-            }
-            if (profile.Name.ToLower() == "all")
-            {
-                return "Profile name 'all' conflicts with the get/all route";
-            }
             if (profile.Model != null && validModels.Contains(profile.Model) == false)
             {
                 return "The model name must match and existing AI model";
@@ -97,9 +122,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
             {
                 return "Max_Tokens must be a value between 1 and 1,000,000";
             }
-            if (profile.N < 0 || profile.N > 100)
+            if (profile.N < 1 || profile.N > 100)
             {
-                return "N must be a value between 0 and 100";
+                return "N must be a value between 1 and 100";
             }
             if (profile.Top_Logprobs < 0 || profile.Top_Logprobs > 5)
             {
@@ -128,7 +153,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return null;
         }
 
-        public string ValidateTool(Tool tool)
+        public string ValidateTool(ToolDTO tool)
         {
             if (tool.Function.Name == null || string.IsNullOrEmpty(tool.Function.Name))
             {

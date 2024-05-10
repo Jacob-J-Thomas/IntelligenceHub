@@ -11,15 +11,20 @@ Future Features:
 - Add route profile/associate/{name}
 - Add route profile/dissociate/{name}
 - Add route profile/get/{name}/tools
-- Add message history handling
+- Conversation history via id
 - Add logic to switch to fallback resources during service outages
+- Self writing database
+- RAG database support
+- Support for streaming
+- Speech support
+- Document input/extraction support
+- Real time internet search support
 
 Technical Debt Items (Descending Priority):
-- Seperate seperate tool logic from profileLogic.cs and refactor where needed
-- Clean up DTOs and their reavaluate their constructors
-	- Consider completely seperating completion and database DTOs 
-	- Create seperate DTOs for each AI client
-	- replace chatRequest.Modifiers with CompletionBaseDTO if not done already
+- Go through 500 status codes for _serverSidesStatusCode list
+- Clean up 
+- Clean up DTOs, particularly a few newer ones related to OpenAI API response deserialization
+- Clean up a few methods in Profile and Tool logic/DAL, particularly as it pertains to some data retrieval operations
 - Delete unused files/classes
 - Add additional properties for Tools (Name, Role, Function details). This will assist with dialogues between AI models
-- Go through 500 status codes for _serverSidesStatusCode list
+- Ensure program.cs service lifteimes are properly created as well as cors policy

@@ -23,7 +23,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             _connectionString = connectionString;
         }
 
-        public async Task<List<ProfileToolDTO>> GetToolIdsAsync(int profileId) // change to delete all associations by profile
+        public async Task<List<DbProfileToolDTO>> GetToolAssociationsAsync(int profileId) // change to delete all associations by profile
         {
             try
             {
@@ -39,14 +39,13 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         command.Parameters.AddWithValue("@ProfileId", profileId);
                         using (var reader = await command.ExecuteReaderAsync())
                         {
-                            var associations = new List<ProfileToolDTO>();
+                            var associations = new List<DbProfileToolDTO>();
                             while (await reader.ReadAsync())
                             {
                                 associations.Add(MapAssociationsFromReader(reader));
                             }
                             return associations;
                         }
-                        return null;
                     }
                 }
             }
@@ -238,10 +237,10 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             return entity;
         }
 
-        private ProfileToolDTO MapAssociationsFromReader(SqlDataReader reader)
+        private DbProfileToolDTO MapAssociationsFromReader(SqlDataReader reader)
         {
-            var entity = new ProfileToolDTO();
-            foreach (var property in typeof(ProfileToolDTO).GetProperties())
+            var entity = new DbProfileToolDTO();
+            foreach (var property in typeof(DbProfileToolDTO).GetProperties())
             {
                 var columnName = property.Name;
                 var value = reader[columnName];
@@ -253,78 +252,4 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             return entity;
         }
     }
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //public class Repository<T> : IRepository<T> where T : class
-    //{
-    //    private readonly DbContext _context;
-    //    private readonly DbSet<T> _dbSet;
-
-    //    public Repository(DbContext context)
-    //    {
-    //        _context = context ?? throw new ArgumentNullException(nameof(context));
-    //        _dbSet = _context.Set<T>();
-    //    }
-
-    //    // Remove ORM
-    //    public async Task<T> GetById(int id)
-    //    {
-    //        return await _dbSet.FindAsync(id);
-    //    }
-
-    //    public async Task<T> GetByColumn(string columnName, string value)
-    //    {
-    //        var entity = await _dbSet
-    //            .Where(profile => EF.Property<string>(profile, columnName) == value)
-    //            .FirstOrDefaultAsync();
-    //        return entity;
-    //    }
-
-    //    public async Task<IEnumerable<T>> GetAll()
-    //    {
-    //        return await _dbSet.ToListAsync();
-    //    }
-
-    //    public async Task Add(T entity)
-    //    {
-    //        await _dbSet.AddAsync(entity);
-    //        await _context.SaveChangesAsync();
-    //    }
-
-    //    public async Task Update(T existingEntity, T entity)
-    //    {
-    //        var entityId = existingEntity.GetType().GetProperty("Id").GetValue(existingEntity);
-    //        var entityProperties = entity.GetType().GetProperties().Where(p => 
-    //            p.Name != "Id" && 
-    //            p.Name != "Name" && 
-    //            p.GetValue(entity) != null && 
-    //            p.Name != "Response_Format" // probably just add this to JsonIgnore if this is even needed
-    //            );
-
-    //        foreach (var property in entityProperties)
-    //        {
-    //            _context.Entry(existingEntity).Property(property.Name).CurrentValue = property.GetValue(entity);
-    //        }
-    //        await _context.SaveChangesAsync();
-    //    }
-
-    //    public async Task Delete(T entity)
-    //    {
-    //        _dbSet.Remove(entity);
-    //        await _context.SaveChangesAsync();
-    //    }
-    //}
 }

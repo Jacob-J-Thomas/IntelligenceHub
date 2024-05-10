@@ -1,6 +1,6 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
 using OpenAICustomFunctionCallingAPI.Common;
 using OpenAICustomFunctionCallingAPI.Common.Attributes;
 using OpenAICustomFunctionCallingAPI.Common.Extensions;
@@ -16,32 +16,32 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [JsonIgnore] // shouldn't be needed
         public int Id { get; set; }
+        [Required]
         public string Name { get; set; }
-        public string? Description { get; set; }
-        public string Type { get; set; }
-        //public string Properties { get; set; }
+        public string Description { get; set; }
+        public string Type { get; private set; } = "function";
         public string Required { get; set; }
 
         public DbToolDTO() { }
 
-        public DbToolDTO(Tool tool)
+        public DbToolDTO(ToolDTO tool) : base()
+        {
+            ConvertToDbTool(tool);
+        }
+
+        public void ConvertToDbTool(ToolDTO tool)
         {
             Id = tool.Id;
             Name = tool.Function.Name;
-            Description = tool.Function.Description;
-            Type = tool.Type;
+            if (tool.Function != null && tool.Function.Description != null)
+            {
+                Description = tool.Function.Description;
+            }
             if (tool.Function != null && tool.Function.Parameters != null && tool.Function.Parameters.Required != null && tool.Function.Parameters.Required.Length > 0)
             {
                 Required = tool.Function.Parameters.Required.ToCommaSeparatedString();
             }
-
-            //Properties = new List<DbPropertyDTO>();
-            //foreach(var prop in tool.Function.Parameters.Properties)
-            //{
-            //    Properties.Add(new DbPropertyDTO(prop.Key, prop.Value));
-            //}
         }
     }
 }

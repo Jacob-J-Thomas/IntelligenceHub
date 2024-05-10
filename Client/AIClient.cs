@@ -4,7 +4,8 @@ using Azure.Core;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
 using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
 using OpenAICustomFunctionCallingAPI.DAL;
 using OpenAICustomFunctionCallingAPI.DAL.DTOs;
@@ -16,24 +17,23 @@ namespace OpenAICustomFunctionCallingAPI.Client
 {
     public class AIClient
     {
-        private string _openAIEndpoint;
-        private string _openAIKey;
+        private string _apiEndpoint;
+        private string _apiKey;
 
-        public AIClient(string openAIEndpoint, string openAIKey) 
+        public AIClient(string ApiEndpoint, string ApiKey) 
         {
-            _openAIEndpoint = openAIEndpoint;
-            _openAIKey = openAIKey;
+            _apiEndpoint = ApiEndpoint;
+            _apiKey = ApiKey;
         }
 
-        public async Task<JObject> Post(CompletionBaseDTO completion)
+        public async Task<CompletionResponseDTO?> PostCompletion(OpenAICompletionDTO completion)
         {
-
             var retryPolicy = GetRetryPolicy();
 
             HttpClient client = new HttpClient();
             client.DefaultRequestHeaders.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _openAIKey);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
             var settings = new JsonSerializerSettings();
             settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
@@ -43,15 +43,7 @@ namespace OpenAICustomFunctionCallingAPI.Client
 
             using (client)
             {
-                return await retryPolicy.ExecuteAsync(async () =>
-                {
-                    var response = await client.PostAsync(_openAIEndpoint, content);
-
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var completionResponse = JObject.Parse(responseString);
-
-                    return completionResponse;
-                });
+                return await retryPolicy.ExecuteAsync(async () => await ProcessRequest(client, content));
             }
         }
 
@@ -68,6 +60,17 @@ namespace OpenAICustomFunctionCallingAPI.Client
                 .WaitAndRetryAsync(delay);
 
             return retryPolicy;
+        }
+
+        public async Task<CompletionResponseDTO> ProcessRequest(HttpClient client, StringContent content)
+        {
+            var httpResponse = await client.PostAsync(_apiEndpoint, content);
+            httpResponse.EnsureSuccessStatusCode();
+
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            var completionResponse = JsonConvert.DeserializeObject<CompletionResponseDTO>(responseString);
+
+            return completionResponse;
         }
     }
 }
