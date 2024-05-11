@@ -50,9 +50,9 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 throw;
             }
         }
-
         public async Task<IEnumerable<T>> GetAllAsync()
         {
+            // add pagination
             try
             {
                 var result = new List<T>();
@@ -127,7 +127,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     await connection.OpenAsync();
 
                     var setClause = string.Join(", ", typeof(T).GetProperties()
-                        .Where(p => p.Name != "Id" && p.Name != "Name" && p.Name != "Messages" && p.Name != "Tools" && p.Name != "Stop") // Exclude Id, Name, and List<DbPropertyDTO> properties
+                        .Where(p => p.Name != "Id" && p.Name != "Name" && p.Name != "Messages" && p.Name != "Tools") // Exclude Id, Name, and List<DbPropertyDTO> properties
                         .Select(p => $"[{p.Name}] = @{p.Name}"));
 
                     var query = $@"
@@ -139,7 +139,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         foreach (var property in typeof(T).GetProperties())
                         {
                             // Exclude Id and Name properties from being updated
-                            if (property.Name != "Id" && property.Name != "Name" && property.Name != "Messages" && property.Name != "Tools" && property.Name != "Stop")
+                            if (property.Name != "Id" && property.Name != "Name" && property.Name != "Messages" && property.Name != "Tools")
                             {
                                 var paramName = $"@{property.Name}";
                                 var value = property.GetValue(entity) ?? DBNull.Value;
@@ -185,18 +185,28 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             return typeof(T).GetCustomAttribute<TableNameAttribute>().TableName;
         }
 
-        private T MapFromReader<T>(SqlDataReader reader) where T : new()
+        public T MapFromReader<T>(SqlDataReader reader) where T : new()
         {
             var entity = new T();
             foreach (var property in typeof(T).GetProperties())
             {
                 var columnName = property.Name;
-                if (columnName != "Messages" && columnName != "Tools" && columnName != "Stop")
+                if (columnName != "Messages" && columnName != "Tools")
                 {
                     var value = reader[columnName];
                     if (value != DBNull.Value)
                     {
-                        property.SetValue(entity, value);
+                        // better way to do this?
+                        if (property.PropertyType == typeof(float?) || property.PropertyType == typeof(float))
+                        {
+                            // Explicitly convert SQL float to C# float
+                            var floatValue = Convert.ToSingle(value);
+                            property.SetValue(entity, floatValue);
+                        }
+                        else
+                        {
+                            property.SetValue(entity, value);
+                        }
                     }
                 }
             }

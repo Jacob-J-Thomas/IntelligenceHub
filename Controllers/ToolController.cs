@@ -11,8 +11,8 @@ using Nest;
 using Azure.Core;
 using Microsoft.AspNetCore.Routing;
 using System.Reflection.Metadata;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
 using OpenAICustomFunctionCallingAPI.Business.ProfileLogic;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
 
 namespace OpenAICustomFunctionCallingAPI.Controllers
 {
@@ -112,7 +112,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
 
         [HttpPost]
         [Route("upsert")]
-        public async Task<IActionResult> AddOrUpdateTool([FromBody] List<Tool> toolList)
+        public async Task<IActionResult> AddOrUpdateTool([FromBody] List<ToolDTO> toolList)
         {
             try
             {

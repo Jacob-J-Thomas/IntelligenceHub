@@ -5,6 +5,7 @@ using OpenAICustomFunctionCallingAPI.Business;
 using OpenAICustomFunctionCallingAPI.DAL;
 using OpenAICustomFunctionCallingAPI.Client;
 using OpenAICustomFunctionCallingAPI.API.DTOs;
+using Nest;
 
 namespace OpenAICustomFunctionCallingAPI.Controllers
 {
@@ -28,13 +29,15 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
+                var errorMessage = _validationLogic.ValidateChatRequest(name, completionRequest);
                 if (errorMessage != null)
                 {
                     return BadRequest(errorMessage);
                 }
 
-                var response = await _completionLogic.GetCompletion(name, completionRequest);
+                completionRequest.ProfileName = name ?? completionRequest.ProfileName;
+
+                var response = await _completionLogic.ProcessCompletion(completionRequest);
                 if (response != null)
                 {
                     return Ok(response);

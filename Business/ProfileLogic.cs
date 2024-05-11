@@ -12,8 +12,8 @@ using System.Net.Mail;
 using Microsoft.AspNetCore.Mvc;
 using Nest;
 using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
 using System.Reflection.Metadata;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
 
 namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
 {
@@ -21,7 +21,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
     public class ProfileLogic
     {
         private readonly ProfileRepository _profileDb;
-        private readonly ProfileToolsRepository _profileToolsDb;
+        private readonly ProfileToolsAssociativeRepository _profileToolsDb;
         private readonly ToolRepository _toolDb;
         private readonly PropertyRepository _propertyDb;
 
@@ -30,12 +30,12 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
         public ProfileLogic(string connectionString)
         {
             _profileDb = new ProfileRepository(connectionString);
-            _profileToolsDb = new ProfileToolsRepository(connectionString);
+            _profileToolsDb = new ProfileToolsAssociativeRepository(connectionString);
             _toolDb = new ToolRepository(connectionString);
             _propertyDb = new PropertyRepository(connectionString); 
 
             //_toolLogic = new ToolLogic(connectionString);
-            _validationLogic = new ValidationLogic();
+            _validationLogic = new ValidationLogic(); // move this and any logic to controller
         }
 
         // else shouldn't be required here
@@ -44,17 +44,15 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             var dbProfile = await _profileDb.GetByNameWithToolsAsync(name);
             if (dbProfile != null)
             {
-                var apiProfile = dbProfile;
-
                 // package this into a seperate method (same one as in GetAllProfiles())
-                var profileToolDTOs = await _profileToolsDb.GetToolIdsAsync(apiProfile.Id);
-                apiProfile.Tools = new List<Tool>();
+                var profileToolDTOs = await _profileToolsDb.GetToolAssociationsAsync(dbProfile.Id);
+                dbProfile.Tools = new List<ToolDTO>();
                 foreach (var association in profileToolDTOs)
                 {
                     var tool = await _toolDb.GetToolByIdAsync(association.ToolID);
-                    apiProfile.Tools.Add(tool);
+                    dbProfile.Tools.Add(tool);
                 }
-                return apiProfile;
+                return dbProfile;
             }
             else
             {
@@ -74,86 +72,106 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             var apiResponseList = new List<APIProfileDTO>();
             if (response != null)
             {
-                foreach (var dbProfile in response)
+                foreach (var profile in response)
                 {
-                    var apiProfile = new APIProfileDTO(dbProfile);
-
                     // package this into a seperate method (same one as in GetProfiles())
-                    var profileToolDTOs = await _profileToolsDb.GetToolIdsAsync(apiProfile.Id);
-                    apiProfile.Tools = new List<Tool>();
+                    var apiProfileDto = new APIProfileDTO(profile);
+                    var profileToolDTOs = await _profileToolsDb.GetToolAssociationsAsync(profile.Id);
+                    apiProfileDto.Tools = new List<ToolDTO>();
                     foreach (var association in profileToolDTOs)
                     {
                         var tool = await _toolDb.GetToolByIdAsync(association.ToolID);
-                        apiProfile.Tools.Add(tool);
+                        apiProfileDto.Tools.Add(tool);
                     }
-                    apiResponseList.Add(apiProfile);
+                    apiResponseList.Add(apiProfileDto);
                 }
             }
             return apiResponseList;
         }
 
-        // fix this
         public async Task<string> CreateOrUpdateProfile(APIProfileDTO profileDto)
         {
-            var errorMessage = _validationLogic.ValidateProfile(profileDto); // move to controller
+            var errorMessage = _validationLogic.ValidateAPIProfile(profileDto); // move to controller
             if (errorMessage != null)
             {
                 return errorMessage;
             }
-            var existingProfile = await _profileDb.GetByNameWithToolsAsync(profileDto.Name);
+
+            var existingProfile = await _profileDb.GetByNameAsync(profileDto.Name);
+            var success = true;
             if (existingProfile != null)
             {
-                var existingProfileDbDTO = new DbProfileDTO(createNew: false, existingProfile);
-                var profileDbDTO = new DbProfileDTO(existingProfile, profileDto);
-                await _profileDb.UpdateAsync(existingProfileDbDTO, profileDbDTO);
-                var success = await AddOrUpdateProfileTools(profileDto, existingProfile);
-                if (!success)
+                var updateProfileDto = new DbProfileDTO(existingProfile, profileDto);
+                var rows = await _profileDb.UpdateAsync(existingProfile, updateProfileDto);
+                if (rows != 1)
                 {
-                    return "Failed to add or update the tools in the database";
+                    success = false;
                 }
             }
             else
             {
-                var toolLessProfile = await _profileDb.GetByNameAsync(profileDto.Name);
-                if (toolLessProfile != null)
+                var updateProfileDto = new DbProfileDTO(null, profileDto);
+                var newTool = await _profileDb.AddAsync(updateProfileDto);
+                if (newTool == null)
                 {
-                    var toolLessDbProfileDTO = new APIProfileDTO(toolLessProfile);
-                    var profileDbDTO = new DbProfileDTO(toolLessDbProfileDTO, profileDto);
-                    await _profileDb.UpdateAsync(toolLessProfile, profileDbDTO);
-                    var success = await AddOrUpdateProfileTools(profileDto, toolLessDbProfileDTO);
-                    if (!success)
-                    {
-                        return "Failed to add or update the tools in the database";
-                    }
+                    success = false;
+                }
+            }
+
+            if (profileDto.Tools != null && profileDto.Tools.Count > 0)
+            {
+                if (existingProfile == null)
+                {
+                    await AddOrUpdateProfileTools(profileDto, null);
                 }
                 else
                 {
-                    var profileDbDTO = new DbProfileDTO(createNew: true, profileDto);
-                    var newProfile = await _profileDb.AddAsync(profileDbDTO);
-                    var newProfileDTO = new APIProfileDTO(newProfile);
-                    var success = await AddOrUpdateProfileTools(profileDto, newProfileDTO);
-                    if (!success)
-                    {
-                        return "Failed to add or update the tools in the database";
-                    }
+                    await AddOrUpdateProfileTools(profileDto, new APIProfileDTO(existingProfile));
                 }
+            }
+
+            var existingProfileWithTools = await _profileDb.GetByNameWithToolsAsync(profileDto.Name);
+            if (success && existingProfileWithTools != null)
+            {
+                success = await AddOrUpdateProfileTools(profileDto, existingProfileWithTools);
+                
+            }
+
+            if (!success)
+            {
+                return $"Something went wrong...";
             }
             return null;
         }
 
+        // could use some refactoring
         public async Task<string> DeleteProfile(string name)
         {
             var profileDto = await _profileDb.GetByNameWithToolsAsync(name);
-            if (profileDto == null)
+            int rows;
+            if (profileDto != null)
             {
-                return $"No profile with the name '{name}' was found.";
+                if (profileDto.Tools != null && profileDto.Tools.Count > 0)
+                {
+                    await _profileToolsDb.DeleteAllProfileAssociationsAsync(profileDto.Id);
+                }
+                var dbProfileDTO = new DbProfileDTO()
+                {
+                    Id = profileDto.Id,
+                    Name = profileDto.Name
+                };
+                rows = await _profileDb.DeleteAsync(dbProfileDTO); 
+                
             }
-
-            if (profileDto.Tools != null)
+            else
             {
-                await _profileToolsDb.DeleteAllProfileAssociationsAsync(profileDto.Id);
+                var toolLessProfile = await _profileDb.GetByNameAsync(name);
+                if (toolLessProfile == null)
+                {
+                    return $"No profile with the name '{name}' was found.";
+                }
+                rows = await _profileDb.DeleteAsync(toolLessProfile);
             }
-            var rows = await _profileDb.DeleteAsync(new DbProfileDTO(createNew: false, profileDto));
             if (rows != 1)
             {
                 return "something went wrong while deleting the tool. Please note that the profile associations were deleted successfully.";
@@ -161,12 +179,12 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             return null;
         }
 
-        #region 
+        #region Tool Logic
         private async Task<bool> AddOrUpdateProfileTools(APIProfileDTO profileDto, APIProfileDTO existingProfile)
         {
             var toolIds = new List<int>();
             await _profileToolsDb.DeleteAllProfileAssociationsAsync(existingProfile.Id);
-            if (profileDto.Tools != null)
+            if (profileDto.Tools != null && profileDto.Tools.Count > 0)
             {
                 await CreateOrUpdateTools(profileDto.Tools);
                 foreach (var tool in profileDto.Tools)
@@ -180,19 +198,19 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             return true;
         }
 
-        public async Task<Tool> GetTool(string name)
+        public async Task<ToolDTO> GetTool(string name)
         {
             return await _toolDb.GetToolByNameAsync(name);
         }
 
-        public async Task<IEnumerable<Tool>> GetAllTools()
+        public async Task<IEnumerable<ToolDTO>> GetAllTools()
         {
-            var returnList = new List<Tool>();
+            var returnList = new List<ToolDTO>();
             var dbTools = await _toolDb.GetAllAsync();
             foreach (var tool in dbTools)
             {
                 var properties = await _propertyDb.GetToolProperties(tool.Id);
-                returnList.Add(new Tool(tool, properties));
+                returnList.Add(new ToolDTO(tool, properties));
             }
             return returnList;
         }
@@ -207,8 +225,9 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             return null;
         }
 
-        public async Task<string> CreateOrUpdateTools(List<Tool> toolList)
+        public async Task<string> CreateOrUpdateTools(List<ToolDTO> toolList)
         {
+            // move below to controller
             foreach (var tool in toolList)
             {
                 var errorMessage = _validationLogic.ValidateTool(tool);
@@ -230,7 +249,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
                 else
                 {
                     var newTool = await _toolDb.AddAsync(dbToolDTO);
-                    var newToolDTO = new Tool(newTool);
+                    var newToolDTO = new ToolDTO(newTool, null);
                     await AddOrUpdateToolProperties(newToolDTO, tool.Function.Parameters.Properties);
                 }
             }
@@ -276,8 +295,8 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             {
                 foreach (var property in existingTool.Function.Parameters.Properties)
                 {
-                    var dto = new DbPropertyDTO(existingTool.Id, property.Key, property.Value);
-                    await _propertyDb.DeleteAsync(dto);
+                    var propertyDTO = new DbPropertyDTO(property.Key, property.Value);
+                    await _propertyDb.DeleteAsync(propertyDTO);
                 }
                 await _profileToolsDb.DeleteAllToolAssociationsAsync(existingTool.Id);
                 return await _toolDb.DeleteAsync(new DbToolDTO(existingTool)) == 1;
@@ -285,7 +304,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             return false;
         }
 
-        public async Task<bool> AddOrUpdateToolProperties(Tool existingTool, Dictionary<string, PropertyDTO> newProperties)
+        public async Task<bool> AddOrUpdateToolProperties(ToolDTO existingTool, Dictionary<string, PropertyDTO> newProperties)
         {
             var existingProperties = await _propertyDb.GetToolProperties(existingTool.Id);
             foreach (var property in existingProperties)
@@ -295,7 +314,8 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
 
             foreach (var property in newProperties)
             {
-                await _propertyDb.AddAsync(new DbPropertyDTO(existingTool.Id, property.Key, property.Value));
+                property.Value.Id = existingTool.Id;
+                await _propertyDb.AddAsync(new DbPropertyDTO(property.Key, property.Value));
             }
             return true;
         }
