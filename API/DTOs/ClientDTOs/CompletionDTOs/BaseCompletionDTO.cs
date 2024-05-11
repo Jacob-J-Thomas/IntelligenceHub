@@ -16,12 +16,12 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
         // move properties into OpenAICompletionDTO as needed.
         public string? Model { get; set; }
         [JsonProperty("frequency_penalty")]
-        public double? Frequency_Penalty { get; set; }
+        public float? Frequency_Penalty { get; set; }
         [JsonProperty("presence_penalty")]
-        public double? Presence_Penalty { get; set; }
-        public double? Temperature { get; set; }
+        public float? Presence_Penalty { get; set; }
+        public float? Temperature { get; set; }
         [JsonProperty("top_p")]
-        public double? Top_P { get; set; }
+        public float? Top_P { get; set; }
         [JsonProperty("max_tokens")]
         public int? Max_Tokens { get; set; }
         public int? N { get; set; }
@@ -37,7 +37,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
         public string? Response_Format { get; set; }
         public virtual string? System_Message { get; set; } // maybe move this
         public string[]? Stop { get; set; }
-        public List<ToolDTO>? Tools { get; set; }
+        public List<ToolDTO> Tools { get; set; } = new List<ToolDTO>();
         public virtual string? Reference_Description { get; set; } // probably move this
         public virtual bool? Return_Recursion { get; set; }
 
@@ -51,6 +51,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
             ConvertAPIProfileAndSetModifiers(completion, null);
 
             SetTools(completion.Tools, null);
+            SetStop(completion.Stop, null);
             SetLogProbs();
         }
 
@@ -59,6 +60,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
             ConvertAPIProfileAndSetModifiers(openAIRequest, modifiers);
 
             SetTools(openAIRequest.Tools, modifiers.Tools);
+            SetStop(openAIRequest.Stop, modifiers.Stop);
             SetLogProbs();
         }
 
@@ -93,6 +95,18 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
             else if (requestTools != null && requestTools.Count > 0)
             {
                 Tools = requestTools;
+            }
+        }
+
+        public void SetStop(string[]? stopArray, string[]? modifierStopArray)
+        {
+            if (modifierStopArray != null && modifierStopArray.Length > 0)
+            {
+                Stop = modifierStopArray;
+            }
+            else if (stopArray != null && stopArray.Length > 0)
+            {
+                Stop = stopArray;
             }
         }
 

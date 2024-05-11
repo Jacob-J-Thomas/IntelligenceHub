@@ -14,11 +14,11 @@ using System.Reflection;
 namespace OpenAICustomFunctionCallingAPI.DAL
 {
     //make this more generic
-    public class ProfileToolsRepository : IAssociativeRepository<APIProfileDTO>
+    public class ProfileToolsAssociativeRepository : IAssociativeRepository<APIProfileDTO>
     {
         private readonly string _connectionString;
 
-        public ProfileToolsRepository(string connectionString)
+        public ProfileToolsAssociativeRepository(string connectionString)
         {
             _connectionString = connectionString;
         }

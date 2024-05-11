@@ -103,17 +103,17 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        public DbPropertyDTO MapFromReader<T>(SqlDataReader reader)
-        {
-            var tool = new DbPropertyDTO
-            {
-                Id = (int)reader["Id"],
-                Name = (string)reader["Name"],
-                Type = (string)reader["Type"], // this always equals function
-                Description = reader["Description"] as string,
-                ToolId = (int)reader["ToolID"]
-            };
-            return tool;
-        }
+        //public DbPropertyDTO MapFromReader<T>(SqlDataReader reader)
+        //{
+        //    var tool = new DbPropertyDTO
+        //    {
+        //        Id = (int)reader["Id"],
+        //        Name = (string)reader["Name"],
+        //        Type = (string)reader["Type"], // this always equals function
+        //        Description = reader["Description"] as string,
+        //        ToolId = (int)reader["ToolID"]
+        //    };
+        //    return tool;
+        //}
     }
 }

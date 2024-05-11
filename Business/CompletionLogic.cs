@@ -1,4 +1,5 @@
 ﻿using Azure;
+using Azure.AI.OpenAI;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Nest;
 using Newtonsoft.Json.Linq;
@@ -26,14 +27,14 @@ namespace OpenAICustomFunctionCallingAPI.Business
         private readonly FunctionClient _FunctionClient;
         private readonly ProfileRepository _profileDb;
         private readonly ToolRepository _toolDb;
-        private readonly ProfileToolsRepository _profileToolAssocaitionDb;
+        private readonly ProfileToolsAssociativeRepository _profileToolAssocaitionDb;
         private readonly MessageHistoryRepository _messageHistoryRepository;
         private readonly List<HttpStatusCode> _serverSideErrorCodes;
 
         public CompletionLogic(Settings settings) 
         {
             settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _profileToolAssocaitionDb = new ProfileToolsRepository(settings.DbConnectionString);
+            _profileToolAssocaitionDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
             _toolDb = new ToolRepository(settings.DbConnectionString);
             _AIClient = new AIClient(settings.OpenAIEndpoint, settings.OpenAIKey);
             _FunctionClient = new FunctionClient("https://Unimplemented.FunctionCallingService.NotARealWebsite.1234567890.com");
@@ -55,7 +56,78 @@ namespace OpenAICustomFunctionCallingAPI.Business
             };
         }
 
-        public async Task<ChatResponseDTO> ProcessCompletionRequest(ChatRequestDTO completionRequest)
+        #region Streaming Requests
+        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest, string username)
+        {
+            completionRequest.ConversationId = completionRequest.ConversationId ?? Guid.NewGuid();
+            completionRequest.Modifiers = completionRequest.Modifiers ?? new BaseCompletionDTO();
+            completionRequest.Modifiers.User = username;
+            var responseDTO = new ChatResponseDTO();
+
+            await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest)); // run this without async to improve speed
+
+            var aiClientDTO = await BuildOpenAICompletion(completionRequest); // chose which AIClient to build and execute with here
+            if (aiClientDTO == null)
+            {
+                return null;// adjust this to return 404s
+            }
+
+            // add below logic to the controller method as well,
+            // and remove Stream from the SQL database
+            aiClientDTO.Stream = true;
+
+            //var finalData = "";
+            return await _AIClient.StreamCompletion(aiClientDTO);
+
+            //await foreach (var chunk in response)
+            //{
+            //    finalData += chunk.ContentUpdate;
+            //};
+
+            //add this logic
+            //responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.ProfileName, (Guid)completionRequest.ConversationId);
+            //responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
+            //responseDTO.ConversationId = (Guid)completionRequest.ConversationId;
+
+            //return finalData;
+        }
+
+        //public async Task<string> GetStreamCompletion(StandardCompletionDTO completionRequest)
+        //{
+        //    try
+        //    {
+        //        var completionResponse = await _AIClient.PostCompletion(completionRequest);
+
+        //        // improve this validation
+        //        if (completionResponse == null || completionResponse.Choices.FirstOrDefault() == null)
+        //        {
+        //            return null;
+        //        }
+        //        return completionResponse;
+        //    }
+        //    catch (HttpRequestException ex)
+        //    {
+        //        if (ex.StatusCode != null && _serverSideErrorCodes.Contains((HttpStatusCode)ex.StatusCode))
+        //        {
+
+        //            // add logic to switch to fail safe services
+
+        //            await GetCompletion(profileName, completionRequest, attempts++);
+        //        }
+        //        else
+        //        {
+        //            throw;
+        //        }
+        //    }
+        //    catch (Exception)
+        //    {
+        //        throw;
+        //    }
+        //}
+        #endregion
+
+        #region Standard API Controller Methods
+        public async Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest)
         {
             // recursive completions contain all their chat history in the database
             completionRequest.ConversationId = completionRequest.ConversationId ?? Guid.NewGuid();
@@ -64,16 +136,16 @@ namespace OpenAICustomFunctionCallingAPI.Business
             await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest));
             
             // Build request DTO
-            var openAIRequest = await BuildOpenAICompletion(completionRequest); // chose which AIClient to build and execute with here
-            if (openAIRequest == null)
+            var aiClientDTO = await BuildOpenAICompletion(completionRequest); // chose which AIClient to build and execute with here
+            if (aiClientDTO == null)
             {
                 return null;// adjust this to return 404s
             }
-            var completionResponse = await GetCompletion(completionRequest.ProfileName, openAIRequest, attempts: 0);
+            var completionResponse = await GetCompletion(completionRequest.ProfileName, aiClientDTO, attempts: 0);
 
             // if tool calls != null && content == null return "Please give me a moment to process this request."
 
-            var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this can be modified if we wish to select from multiple results at once later
+            var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
             if (defaultChoice == null) 
             {
                 return null;
@@ -106,7 +178,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
         }
 
         // move to an AIClient in API layer
-        public async Task<CompletionResponseDTO> GetCompletion(string profileName, OpenAICompletionDTO openAIRequest, int attempts)
+        public async Task<CompletionResponseDTO> GetCompletion(string profileName, StandardCompletionDTO openAIRequest, int attempts)
         {
             var maxAttempts = 5;
             while (attempts < maxAttempts)
@@ -144,7 +216,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             throw new Exception("Completion request failed to generate function call after 3 attempts for a request requiring a call.");
         }
 
-        public async Task<OpenAICompletionDTO> BuildOpenAICompletion(ChatRequestDTO chatRequest)
+        public async Task<StandardCompletionDTO> BuildOpenAICompletion(ChatRequestDTO chatRequest)
         {
             // probably move this to a seperate method
             var completionProfile = await _profileDb.GetByNameWithToolsAsync(chatRequest.ProfileName);
@@ -168,24 +240,20 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 }
             }
             
-            OpenAICompletionDTO openAIRequest;
+            StandardCompletionDTO openAIRequest;
             if (chatRequest.Modifiers != null)
             {
-                openAIRequest = new OpenAICompletionDTO(completionProfile, chatRequest.Modifiers);
+                openAIRequest = new StandardCompletionDTO(completionProfile, chatRequest.Modifiers);
             }
             else
             {
-                openAIRequest = new OpenAICompletionDTO(completionProfile);
+                openAIRequest = new StandardCompletionDTO(completionProfile);
             }
 
             if (completionProfile.Reference_Profiles != null && completionProfile.Reference_Profiles.Length > 0)
             {
                 foreach (var profile in completionProfile.Reference_Profiles)
                 {
-                    if (openAIRequest.Tools == null)
-                    {
-                        openAIRequest.Tools = new List<ToolDTO>();
-                    }
                     openAIRequest.Tools.Add(await BuildProfileReferenceTool(profile));
                 }
             }
@@ -260,12 +328,13 @@ namespace OpenAICustomFunctionCallingAPI.Business
                     ConversationId = conversationId,
                     ProfileName = tool.Function.Name
                 };
-                await ProcessCompletionRequest(completionRequest);
+                await ProcessCompletion(completionRequest);
             }
 
             // prevent recursion call overflow somehow... Maybe add a column to profiles for max recursion?
             // - This would work strangely for conversations with models that use varying lengths
             return functionResults;
         }
+        #endregion
     }
 }

@@ -7,24 +7,37 @@ This is accomplished by using a single function definition which then calls more
 Please add your own API token in appsettings.json after cloning the repo.
 
 
-Future Features:
+Future Features (Descending Priority):
+- support for alternative AI APIs (just groq.com to start)
+- API controller route for returning streaming via server side events
 - Add route profile/associate/{name}
 - Add route profile/dissociate/{name}
 - Add route profile/get/{name}/tools
-- Conversation history via id
-- Add logic to switch to fallback resources during service outages
-- Self writing database
+- Some kind of methodology for providing the entire conversation history from the client
 - RAG database support
-- Support for streaming
+- Add logic to switch to fallback resources during service outages
+- Document upload/extraction support
+- Real time internet search
 - Speech support
-- Document input/extraction support
-- Real time internet search support
+- Tool calls for reading/writing to a RAG database
 
 Technical Debt Items (Descending Priority):
-- Go through 500 status codes for _serverSidesStatusCode list
-- Clean up 
-- Clean up DTOs, particularly a few newer ones related to OpenAI API response deserialization
-- Clean up a few methods in Profile and Tool logic/DAL, particularly as it pertains to some data retrieval operations
 - Delete unused files/classes
-- Add additional properties for Tools (Name, Role, Function details). This will assist with dialogues between AI models
-- Ensure program.cs service lifteimes are properly created as well as cors policy
+- Go through 500 status codes for _serverSidesStatusCode list to ensure they are all required
+- revisit asynchronous design, particularly as it pertains to streaming
+- Use a more specialized character than commas to singnal the end of a stop sequence (possibly use recuring characters of a certain kind, like "@@@@@")
+- Ensure program.cs service lifteimes are properly created
+- Implement pagination for GenericRepository.GetAllAsync()
+- Add documentation to classes
+
+
+Refactoring Items (Descending Priority):
+- Add parameter for preventing a conversation from being saved (something to signify its a completion vs chat request?)
+- Clean up completionLogic (move streaming logic possibly)
+- Remove stream from database, assign depending on the request type instead
+- Rearchitect DTOs emphasizing reusibility (particularly a few newer ones related to OpenAI API response deserialization) (also flatten modifiers in the ChatRequestDTO somehow, (maybe make a boolean for "modified")
+- Reafactor AI Client to accept any client and seperate stream into another class (OpenAIStreamClient.cs). Maybe rename AIClient GenericAIClient
+- Completely Rearchitect the sql database, and associated DAL (Potentially add Id column for all tables and use generics wherever possible) (Only use generic map from reader methods) (also create a new database)
+- Rethink how usernames are used, especially with conversation history (remove username column from database?)
+- Clean up a few methods in Profile and Tool logic/DAL, particularly as it pertains to some data retrieval operations
+

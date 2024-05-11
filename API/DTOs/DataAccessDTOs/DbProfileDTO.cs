@@ -23,10 +23,10 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
         [Required]
         public string Name { get; set; }
         public string Model { get; set; }
-        public double? Frequency_Penalty { get; set; }
-        public double? Presence_Penalty { get; set; }
-        public double? Temperature { get; set; }
-        public double? Top_P { get; set; }
+        public float? Frequency_Penalty { get; set; }
+        public float? Presence_Penalty { get; set; }
+        public float? Temperature { get; set; }
+        public float? Top_P { get; set; }
         public int? Top_Logprobs { get; set; }
         public int? Max_Tokens { get; set; }
         public int? N { get; set; }

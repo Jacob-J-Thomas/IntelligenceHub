@@ -4,7 +4,10 @@ using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
 
 namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
 {
-    public class OpenAICompletionDTO : BaseCompletionDTO
+    // A standardized chat completion DTO based off of OpenAI's API. Several other
+    // companies have adopted OpenAI's json structures to preserve functionality
+    // accross services.
+    public class StandardCompletionDTO : BaseCompletionDTO
     {
         [JsonIgnore]
         public override string System_Message { get; set; }
@@ -14,12 +17,12 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
         public override bool? Return_Recursion { get; set; }
         public List<MessageDTO> Messages { get; set; } = new List<MessageDTO>();
 
-        public OpenAICompletionDTO(APIProfileDTO completion) : base(completion)
+        public StandardCompletionDTO(APIProfileDTO completion) : base(completion)
         {
 
         }
 
-        public OpenAICompletionDTO(APIProfileDTO completion, BaseCompletionDTO? modifiers) : base(completion, modifiers) 
+        public StandardCompletionDTO(APIProfileDTO completion, BaseCompletionDTO? modifiers) : base(completion, modifiers) 
         {
             
         }

@@ -37,7 +37,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
 
                 completionRequest.ProfileName = name ?? completionRequest.ProfileName;
 
-                var response = await _completionLogic.ProcessCompletionRequest(completionRequest);
+                var response = await _completionLogic.ProcessCompletion(completionRequest);
                 if (response != null)
                 {
                     return Ok(response);

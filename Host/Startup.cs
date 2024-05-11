@@ -53,7 +53,7 @@ namespace OpenAICustomFunctionCallingAPI.Host
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapHub<ChatHub>("/chat");
+                endpoints.MapHub<ChatHub>("/chatstream");
                 endpoints.MapControllers();
             });
         }

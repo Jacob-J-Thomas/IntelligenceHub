@@ -20,15 +20,15 @@ using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
 namespace OpenAICustomFunctionCallingAPI.Business
 {
     // this whole class needs some refactoring
-    public class ValidationLogic : IValidationLogic
+    public class ValidationLogic
     {
         public ValidationLogic() { }
 
         public string ValidateChatRequest(string name, ChatRequestDTO chatRequest)
         {
-            if (name == null && chatRequest == null)
+            if (name == null && chatRequest.ProfileName == null)
             {
-                return "An AI profile name must be included in the request body or route.";
+                return "A profile name must be included in the request body or route.";
             }
 
             if (chatRequest == null)
@@ -50,7 +50,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
         public string ValidateAPIProfile(APIProfileDTO profile)
         {
 
-
+            // create seperate validations for profiles for different APIs, such as groq
+            //      - groq.com doesn't support log_probs, and a few other related properties
+            //        for example, so these should be marked as null
 
 
             // ensure tool and profiles do not have overlapping names since there

@@ -21,7 +21,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
     public class ProfileLogic
     {
         private readonly ProfileRepository _profileDb;
-        private readonly ProfileToolsRepository _profileToolsDb;
+        private readonly ProfileToolsAssociativeRepository _profileToolsDb;
         private readonly ToolRepository _toolDb;
         private readonly PropertyRepository _propertyDb;
 
@@ -30,7 +30,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
         public ProfileLogic(string connectionString)
         {
             _profileDb = new ProfileRepository(connectionString);
-            _profileToolsDb = new ProfileToolsRepository(connectionString);
+            _profileToolsDb = new ProfileToolsAssociativeRepository(connectionString);
             _toolDb = new ToolRepository(connectionString);
             _propertyDb = new PropertyRepository(connectionString); 
 
@@ -151,7 +151,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             int rows;
             if (profileDto != null)
             {
-                if (profileDto.Tools != null)
+                if (profileDto.Tools != null && profileDto.Tools.Count > 0)
                 {
                     await _profileToolsDb.DeleteAllProfileAssociationsAsync(profileDto.Id);
                 }
@@ -184,7 +184,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
         {
             var toolIds = new List<int>();
             await _profileToolsDb.DeleteAllProfileAssociationsAsync(existingProfile.Id);
-            if (profileDto.Tools != null)
+            if (profileDto.Tools != null && profileDto.Tools.Count > 0)
             {
                 await CreateOrUpdateTools(profileDto.Tools);
                 foreach (var tool in profileDto.Tools)

@@ -1,9 +1,11 @@
-﻿using OpenAICustomFunctionCallingAPI.API.DTOs;
+﻿using Azure.AI.OpenAI;
+using OpenAICustomFunctionCallingAPI.API.DTOs;
 
 namespace OpenAICustomFunctionCallingAPI.Business
 {
     public interface ICompletionLogic
     {
-        Task<ChatResponseDTO> ProcessCompletionRequest(ChatRequestDTO request);
+        Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest, string username);
+        Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest);
     }
 }
