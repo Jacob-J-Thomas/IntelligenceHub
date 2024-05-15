@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="wwwroot\lib\signalr.js" />
-    <None Include="wwwroot\lib\signalr.min.js" />
+    <None Include="wwwroot\TestHubClient\lib\signalr.js" />
+    <None Include="wwwroot\TestHubClient\lib\signalr.min.js" />
   </ItemGroup>
 
   <ItemGroup>

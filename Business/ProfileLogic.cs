@@ -244,13 +244,13 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
                 {
                     var existingTool = new DbToolDTO(existingToolDTO);
                     await _toolDb.UpdateAsync(existingTool, dbToolDTO);
-                    await AddOrUpdateToolProperties(existingToolDTO, tool.Function.Parameters.Properties);
+                    await AddOrUpdateToolProperties(existingToolDTO, tool.Function.Parameters.properties);
                 }
                 else
                 {
                     var newTool = await _toolDb.AddAsync(dbToolDTO);
                     var newToolDTO = new ToolDTO(newTool, null);
-                    await AddOrUpdateToolProperties(newToolDTO, tool.Function.Parameters.Properties);
+                    await AddOrUpdateToolProperties(newToolDTO, tool.Function.Parameters.properties);
                 }
             }
             return null;
@@ -293,7 +293,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             var existingTool = await _toolDb.GetToolByNameAsync(name);
             if (existingTool != null)
             {
-                foreach (var property in existingTool.Function.Parameters.Properties)
+                foreach (var property in existingTool.Function.Parameters.properties)
                 {
                     var propertyDTO = new DbPropertyDTO(property.Key, property.Value);
                     await _propertyDb.DeleteAsync(propertyDTO);
@@ -314,7 +314,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
 
             foreach (var property in newProperties)
             {
-                property.Value.Id = existingTool.Id;
+                property.Value.id = existingTool.Id;
                 await _propertyDb.AddAsync(new DbPropertyDTO(property.Key, property.Value));
             }
             return true;

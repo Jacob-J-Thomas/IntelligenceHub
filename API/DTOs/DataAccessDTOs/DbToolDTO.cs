@@ -38,9 +38,9 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
             {
                 Description = tool.Function.Description;
             }
-            if (tool.Function != null && tool.Function.Parameters != null && tool.Function.Parameters.Required != null && tool.Function.Parameters.Required.Length > 0)
+            if (tool.Function != null && tool.Function.Parameters != null && tool.Function.Parameters.required != null && tool.Function.Parameters.required.Length > 0)
             {
-                Required = tool.Function.Parameters.Required.ToCommaSeparatedString();
+                Required = tool.Function.Parameters.required.ToCommaSeparatedString();
             }
         }
     }

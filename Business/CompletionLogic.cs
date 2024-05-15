@@ -72,58 +72,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 return null;// adjust this to return 404s
             }
 
-            // add below logic to the controller method as well,
-            // and remove Stream from the SQL database
             aiClientDTO.Stream = true;
-
-            //var finalData = "";
             return await _AIClient.StreamCompletion(aiClientDTO);
-
-            //await foreach (var chunk in response)
-            //{
-            //    finalData += chunk.ContentUpdate;
-            //};
-
-            //add this logic
-            //responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.ProfileName, (Guid)completionRequest.ConversationId);
-            //responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
-            //responseDTO.ConversationId = (Guid)completionRequest.ConversationId;
-
-            //return finalData;
         }
-
-        //public async Task<string> GetStreamCompletion(StandardCompletionDTO completionRequest)
-        //{
-        //    try
-        //    {
-        //        var completionResponse = await _AIClient.PostCompletion(completionRequest);
-
-        //        // improve this validation
-        //        if (completionResponse == null || completionResponse.Choices.FirstOrDefault() == null)
-        //        {
-        //            return null;
-        //        }
-        //        return completionResponse;
-        //    }
-        //    catch (HttpRequestException ex)
-        //    {
-        //        if (ex.StatusCode != null && _serverSideErrorCodes.Contains((HttpStatusCode)ex.StatusCode))
-        //        {
-
-        //            // add logic to switch to fail safe services
-
-        //            await GetCompletion(profileName, completionRequest, attempts++);
-        //        }
-        //        else
-        //        {
-        //            throw;
-        //        }
-        //    }
-        //    catch (Exception)
-        //    {
-        //        throw;
-        //    }
-        //}
         #endregion
 
         #region Standard API Controller Methods
@@ -151,6 +102,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 return null;
             }
 
+            // move this logic to the controller level like when streaming?
             responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.ProfileName, (Guid)completionRequest.ConversationId);
             responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
             responseDTO.ConversationId = (Guid)completionRequest.ConversationId;
@@ -329,6 +281,42 @@ namespace OpenAICustomFunctionCallingAPI.Business
                     ProfileName = tool.Function.Name
                 };
                 await ProcessCompletion(completionRequest);
+            }
+
+            // prevent recursion call overflow somehow... Maybe add a column to profiles for max recursion?
+            // - This would work strangely for conversations with models that use varying lengths
+            return functionResults;
+        }
+
+        public async Task<List<HttpResponseMessage>> ExecuteStreamTools(Guid conversationId, string username, List<ResponseToolDTO> tools)
+        {
+            var recursionTools = new List<ResponseToolDTO>();
+            var functionResults = new List<HttpResponseMessage>();
+            foreach (var tool in tools)
+            {
+                if (tool.Function.Name.Contains("Reference_AI_Model"))
+                {
+                    tool.Function.Name = tool.Function.Name.Replace("_Reference_AI_Model", "");
+                    recursionTools.Add(tool);
+                }
+                else
+                {
+                    var result = await _FunctionClient.CallFunction(tool);
+                    if (result != null)
+                    {
+                        functionResults.Add(result);
+                    }
+                }
+            }
+
+            foreach (var tool in recursionTools)
+            {
+                var completionRequest = new ChatRequestDTO()
+                {
+                    ConversationId = conversationId,
+                    ProfileName = tool.Function.Name
+                };
+                await StreamCompletion(completionRequest, username);
             }
 
             // prevent recursion call overflow somehow... Maybe add a column to profiles for max recursion?

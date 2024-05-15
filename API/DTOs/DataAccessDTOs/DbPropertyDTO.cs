@@ -32,13 +32,13 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
 
         public void ConvertToDbPropertyDTO(string propertyName, PropertyDTO dto)
         {
-            Id = dto.Id ?? 0;
-            ToolId = dto.Id ?? 0;
+            Id = dto.id ?? 0;
+            ToolId = dto.id ?? 0;
             Name = propertyName;
-            Type = dto.Type;
-            if (dto.Description != null)
+            Type = dto.type;
+            if (dto.description != null)
             {
-                Description = dto.Description;
+                Description = dto.description;
             }
         }
     }

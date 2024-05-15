@@ -95,23 +95,19 @@ namespace OpenAICustomFunctionCallingAPI.Client
 
 
 
-            if (completion.Tool_Choice == null && completion.Tools.Count == 0)
-            {
-                chatOptions.FunctionCall = null;
-            }
-            else if (completion.Tool_Choice == "auto")
-            {
-                chatOptions.FunctionCall = FunctionDefinition.Auto;
-            }
-            else if (completion.Tool_Choice == "none" || completion.Tool_Choice == null)
-            {
-                chatOptions.FunctionCall = FunctionDefinition.None;
-            }
-            else
+            //if (completion.Tool_Choice == "auto" || (completion.Tool_Choice == null && completion.Tools.Count > 0))
+            //{
+            //    chatOptions. = FunctionDefinition.Auto;
+            //}
+            //else if (completion.Tool_Choice == "none" || completion.Tool_Choice == null || completion.Tools.Count == 0)
+            //{
+            //    chatOptions.ToolChoice = FunctionDefinition.None;
+            //}
+            if (completion.Tool_Choice != null && (completion.Tool_Choice == "none" || completion.Tool_Choice == "auto"))
             {
                 var definition = new FunctionDefinition();
                 definition.Name = completion.Tool_Choice;
-                chatOptions.FunctionCall = definition;
+                chatOptions.ToolChoice = definition;
             }
 
             if (completion.Response_Format == "json")

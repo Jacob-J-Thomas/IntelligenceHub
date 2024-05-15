@@ -168,9 +168,9 @@ namespace OpenAICustomFunctionCallingAPI.DAL
 
                     var propDto = new PropertyDTO()
                     {
-                        Id = propertyId,
-                        Type = propertyType,
-                        Description = propertyDescription
+                        id = propertyId,
+                        type = propertyType,
+                        description = propertyDescription
                     };
 
                     // Create a PropertyDTO and add it to the dictionary
