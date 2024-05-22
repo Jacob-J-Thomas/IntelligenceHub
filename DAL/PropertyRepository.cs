@@ -28,7 +28,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 {
                     await connection.OpenAsync();
                     var query = $@"
-                        SELECT * FROM [master].[dbo].[{_table}]
+                        SELECT * FROM {_table}
                         WHERE ToolId = @Id";
 
                     using (var command = new SqlCommand(query, connection))
@@ -66,7 +66,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         .Select(p => $"{p.Name} = @{p.Name}"));
 
                     var query = $@"
-                        UPDATE [master].[dbo].[{_table}] SET {setClause} 
+                        UPDATE {_table} SET {setClause} 
                         WHERE Name = @Name
                         AND ToolID = @ToolID";
 
@@ -102,18 +102,5 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 throw;
             }
         }
-
-        //public DbPropertyDTO MapFromReader<T>(SqlDataReader reader)
-        //{
-        //    var tool = new DbPropertyDTO
-        //    {
-        //        Id = (int)reader["Id"],
-        //        Name = (string)reader["Name"],
-        //        Type = (string)reader["Type"], // this always equals function
-        //        Description = reader["Description"] as string,
-        //        ToolId = (int)reader["ToolID"]
-        //    };
-        //    return tool;
-        //}
     }
 }

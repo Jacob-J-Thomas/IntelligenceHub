@@ -147,7 +147,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             {
                 Id = (int)reader["Id"],
                 Name = (string)reader["Name"],
-                //Type = (string)reader["Type"], // this always equals function and shouldn't be needed
                 Description = reader["Description"] as string
             };
 

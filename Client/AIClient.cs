@@ -5,7 +5,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
 using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
 using OpenAICustomFunctionCallingAPI.DAL;
 using OpenAICustomFunctionCallingAPI.DAL.DTOs;
@@ -16,6 +15,7 @@ using Azure.AI.OpenAI;
 using Azure;
 using System.Text.Json;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 
 namespace OpenAICustomFunctionCallingAPI.Client
 {
@@ -32,77 +32,38 @@ namespace OpenAICustomFunctionCallingAPI.Client
             _apiKey = ApiKey;
         }
 
-        // currently this only supports openAI's API, and therefore implements their client via the official
+        // currently this only supports openAI's API (and azure OpenAI could easily be added), and therefore implements their client via the official
         // package supported by Microsoft... not even sure if others offer streaming at the moment
-        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(StandardCompletionDTO completion)
+        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(DefaultCompletionDTO completion)
         {
-            // move this logic into a method and constructor in StandardCompletionDTO
+            var chatOptions = BuildChatOptions(completion);
+
+            try
+            {
+                return await _streamingClient.GetChatCompletionsStreamingAsync(chatOptions);
+            }
+            catch(Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public ChatCompletionsOptions BuildChatOptions(DefaultCompletionDTO completion)
+        {
             var chatOptions = new ChatCompletionsOptions();
+            chatOptions.DeploymentName = completion.Model ?? null;
+            chatOptions.EnableLogProbabilities = completion.Logprobs ?? null;
+            chatOptions.LogProbabilitiesPerToken = completion.Top_Logprobs ?? null;
+            chatOptions.NucleusSamplingFactor = completion.Top_P ?? null;
+            chatOptions.Temperature = completion.Temperature ?? null;
+            chatOptions.FrequencyPenalty = completion.Frequency_Penalty ?? null;
+            chatOptions.PresencePenalty = completion.Presence_Penalty ?? null;
+            chatOptions.MaxTokens = completion.Max_Tokens ?? null;
+            chatOptions.ChoiceCount = completion.N ?? null;
+            chatOptions.Seed = completion.Seed ?? null;
+            chatOptions.User = completion.User ?? null;
+            //TokenSelectionBiases = completion.Logit_Bias ?? null;
 
-            if (completion.Model != null)
-            {
-                chatOptions.DeploymentName = completion.Model;
-            }
-            if (completion.N != null)
-            {
-                chatOptions.ChoiceCount = completion.N; // this probably should be disabled for streaming
-            }
-            if (completion.Logprobs != null)
-            {
-                chatOptions.EnableLogProbabilities = completion.Logprobs;
-            }
-            if (completion.Frequency_Penalty != null)
-            {
-                chatOptions.FrequencyPenalty = completion.Frequency_Penalty;
-            }
-            if (completion.Top_Logprobs != null)
-            {
-                chatOptions.LogProbabilitiesPerToken = completion.Top_Logprobs;
-            }
-            if (completion.Max_Tokens != null)
-            {
-                chatOptions.MaxTokens = completion.Max_Tokens;
-            }
-            if (completion.Top_P != null)
-            {
-                chatOptions.NucleusSamplingFactor = completion.Top_P;
-            }
-            if (completion.Presence_Penalty != null)
-            {
-                chatOptions.PresencePenalty = completion.Presence_Penalty;
-            }
-            if (completion.Seed != null)
-            {
-                chatOptions.Seed = completion.Seed;
-            }
-            if (completion.Temperature != null)
-            {
-                chatOptions.Temperature = completion.Temperature;
-            }
-            if (completion.User != null)
-            {
-                chatOptions.User = completion.User;
-            }
-            //if (completion.Logit_Bias != null)
-            //{
-            //    TokenSelectionBiases = completion.Logit_Bias // not implemented
-            //}
-
-
-
-
-
-
-
-
-            //if (completion.Tool_Choice == "auto" || (completion.Tool_Choice == null && completion.Tools.Count > 0))
-            //{
-            //    chatOptions. = FunctionDefinition.Auto;
-            //}
-            //else if (completion.Tool_Choice == "none" || completion.Tool_Choice == null || completion.Tools.Count == 0)
-            //{
-            //    chatOptions.ToolChoice = FunctionDefinition.None;
-            //}
             if (completion.Tool_Choice != null && (completion.Tool_Choice == "none" || completion.Tool_Choice == "auto"))
             {
                 var definition = new FunctionDefinition();
@@ -118,34 +79,20 @@ namespace OpenAICustomFunctionCallingAPI.Client
             {
                 chatOptions.ResponseFormat = ChatCompletionsResponseFormat.Text;
             }
-            // I guess only json and text are supported by Microsoft and their .net package?
-            //else if (completion.Response_Format == "srt")
-            //{
-
-            //}
-            //else if (completion.Response_Format == "verbose_json")
-            //{
-
-            //}
-            //else if (completion.Response_Format == "vtt")
-            //{
-
-            //}
 
             if (completion.Tools != null && completion.Tools.Count > 0)
-            foreach (var tool in completion.Tools)
-            {
-                var definition = new FunctionDefinition()
+                foreach (var tool in completion.Tools)
                 {
-                    Name = tool.Function.Name,
-                    Description = tool.Function.Description,
-                    Parameters = BinaryData.FromObjectAsJson<ParametersDTO>(tool.Function.Parameters)
-                };
-                chatOptions.Tools.Add(new ChatCompletionsFunctionToolDefinition(definition));
-            }
-            
-            var messageList = new List<ChatRequestMessage>();
-            foreach (var message in completion.Messages) 
+                    var definition = new FunctionDefinition()
+                    {
+                        Name = tool.Function.Name,
+                        Description = tool.Function.Description,
+                        Parameters = BinaryData.FromObjectAsJson<ParametersDTO>(tool.Function.Parameters)
+                    };
+                    chatOptions.Tools.Add(new ChatCompletionsFunctionToolDefinition(definition));
+                }
+
+            foreach (var message in completion.Messages)
             {
                 if (message.Role == "user")
                 {
@@ -189,18 +136,10 @@ namespace OpenAICustomFunctionCallingAPI.Client
             {
                 chatOptions.Messages.Add(new ChatRequestSystemMessage(completion.System_Message));
             }
-
-            try
-            {
-                return await _streamingClient.GetChatCompletionsStreamingAsync(chatOptions);
-            }
-            catch(Exception ex)
-            {
-                throw ex;
-            }
+            return chatOptions;
         }
 
-        public async Task<CompletionResponseDTO?> PostCompletion(StandardCompletionDTO completion)
+        public async Task<CompletionResponseDTO?> PostCompletion(DefaultCompletionDTO completion)
         {
             var retryPolicy = GetRetryPolicy();
 

@@ -9,7 +9,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OpenAICustomFunctionCallingAPI.Controllers.DTOs
 {
-    // extend this from a common DTO?
     public class APIProfileDTO : BaseCompletionDTO
     {
         [JsonIgnore]

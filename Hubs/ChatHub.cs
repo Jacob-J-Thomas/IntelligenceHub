@@ -1,12 +1,9 @@
-﻿using System.Threading.Tasks;
-using OpenAICustomFunctionCallingAPI.Business;
+﻿using OpenAICustomFunctionCallingAPI.Business;
 using Microsoft.AspNetCore.SignalR;
 using OpenAICustomFunctionCallingAPI.API.DTOs;
-using Azure;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
 using Azure.AI.OpenAI;
-using Nest;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 
 namespace OpenAICustomFunctionCallingAPI.Hubs
 {
@@ -19,20 +16,23 @@ namespace OpenAICustomFunctionCallingAPI.Hubs
             _completionLogic = completionLogic;
         }
 
-        public async Task Send(string? profileName, Guid? nullableConversationId, string? username, string? message)//, Guid? ConversationId)
+        public async Task Send(string? profileName, Guid? conversationId, string? username, string? message)
         {
-            var conversationId = nullableConversationId ?? Guid.NewGuid();
+            if (string.IsNullOrWhiteSpace(profileName))
+            {
+                profileName = "Musician_AI_Assistant_Orchestration";
+            }
 
             // Properties can be passed by client, or by settings/hardcoded to
             // prevent users from changing request details
             var chatDTO = new ChatRequestDTO()
             {
-                ProfileName = profileName ?? "Musician_AI_Assistant_Orchestration",
-                Completion = message ?? "Hi, how are you today?",
-                ConversationId = conversationId,
+                ProfileName = profileName,
+                Completion = message,
+                ConversationId = conversationId ?? Guid.NewGuid(),
                 Modifiers = new BaseCompletionDTO()
                 {
-                    User = username ?? "Test Account",
+                    User = username ?? "Unknown",
                 }
             };
 
@@ -53,7 +53,7 @@ namespace OpenAICustomFunctionCallingAPI.Hubs
                 }
                 else if (chunk.Role == "tool")
                 {
-                    // handle tools
+                    author = "tool";
                 }
 
                 // Return message or tool details
@@ -81,6 +81,7 @@ namespace OpenAICustomFunctionCallingAPI.Hubs
                 }
             }
 
+            // execute any tool calls that were returned in the completion
             if (tool != null)
             {
                 var toolList = new List<ResponseToolDTO>();

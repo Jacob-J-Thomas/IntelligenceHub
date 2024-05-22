@@ -23,7 +23,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             _connectionString = connectionString;
         }
 
-        public async Task<List<DbProfileToolDTO>> GetToolAssociationsAsync(int profileId) // change to delete all associations by profile
+        public async Task<List<DbProfileToolDTO>> GetToolAssociationsAsync(int profileId) 
         {
             try
             {

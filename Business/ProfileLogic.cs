@@ -1,18 +1,7 @@
-﻿using OpenAICustomFunctionCallingAPI.Client;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using Newtonsoft.Json.Linq;
-using OpenAICustomFunctionCallingAPI.Host.Config;
+﻿using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
 //using OpenAICustomFunctionCallingAPI.DAL;
-using Azure;
-using Microsoft.Data.SqlClient;
 using OpenAICustomFunctionCallingAPI.DAL;
-using System.Web.Mvc;
-using System.Net;
-using System.Net.Mail;
-using Microsoft.AspNetCore.Mvc;
-using Nest;
 using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using System.Reflection.Metadata;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
 
 namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
@@ -65,7 +54,6 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             return null;
         }
 
-        // might need to return as pageable if db starts getting big
         public async Task<IEnumerable<APIProfileDTO>> GetAllProfiles()
         {
             var response = await _profileDb.GetAllAsync();
@@ -89,6 +77,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             return apiResponseList;
         }
 
+        // refactor this
         public async Task<string> CreateOrUpdateProfile(APIProfileDTO profileDto)
         {
             var errorMessage = _validationLogic.ValidateAPIProfile(profileDto); // move to controller
@@ -144,7 +133,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             return null;
         }
 
-        // could use some refactoring
+        // could also use some refactoring
         public async Task<string> DeleteProfile(string name)
         {
             var profileDto = await _profileDb.GetByNameWithToolsAsync(name);

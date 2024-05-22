@@ -1,6 +1,6 @@
 ﻿using Azure.AI.OpenAI;
 using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 
 namespace OpenAICustomFunctionCallingAPI.Business
 {
@@ -8,6 +8,6 @@ namespace OpenAICustomFunctionCallingAPI.Business
     {
         Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest, string username);
         Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest);
-        Task<List<HttpResponseMessage>> ExecuteStreamTools(Guid conversationId, string username, List<ResponseToolDTO> tools);
+        Task<List<HttpResponseMessage>> ExecuteStreamTools(Guid? conversationId, string username, List<ResponseToolDTO> tools);
     }
 }

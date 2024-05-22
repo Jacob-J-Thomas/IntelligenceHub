@@ -1,10 +1,5 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
+﻿using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
 using OpenAICustomFunctionCallingAPI.Common.Attributes;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
-using OpenAICustomFunctionCallingAPI.DAL;
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -19,12 +14,10 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
         public string Name { get; set; }
         public string Type { get; set; }
         public string Description { get; set; }
-        //public string Enum { get; set; } //change this to "value"
         public int ToolId { get; set; }
 
         public DbPropertyDTO() { }
 
-        // combine these two constructors
         public DbPropertyDTO(string propertyName, PropertyDTO dto)
         {
             ConvertToDbPropertyDTO(propertyName, dto);

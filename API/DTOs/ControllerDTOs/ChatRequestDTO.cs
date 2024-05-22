@@ -7,7 +7,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs
     {
         public Guid? ConversationId { get; set; }
         public string ProfileName { get; set; }
-        public string Completion { get; set; } // = "Introduce yourself according to the details in your system message."
+        public string Completion { get; set; }
         public BaseCompletionDTO? Modifiers { get; set; }
     }
 }

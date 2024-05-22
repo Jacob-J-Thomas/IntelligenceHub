@@ -49,7 +49,6 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             }
             catch (Exception)
             {
-                // Logging and transient exception handling here
                 throw;
             }
         }
@@ -93,7 +92,6 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             }
             catch (Exception)
             {
-                // Logging and transient exception handling here
                 throw;
             }
         }
@@ -122,7 +120,6 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             }
             catch (Exception)
             {
-                // Logging and transient exception handling here
                 throw;
             }
         }

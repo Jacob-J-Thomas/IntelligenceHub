@@ -18,7 +18,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs
 
         public void ConvertToAPIParametersDTO(DbToolDTO tool, List<DbPropertyDTO> properties)
         {
-            foreach (var prop in properties) // need if statement here?
+            foreach (var prop in properties)
             {
                 var propDto = new PropertyDTO(prop);
                 this.properties.Add(prop.Name, propDto);

@@ -16,7 +16,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
     [TableName("Profiles")]
     public class DbProfileDTO
     {
-        // Don't think below ?'s are necessary
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
@@ -36,7 +35,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
         public string Response_Format { get; set; }
         public string User { get; set; }
         public string System_Message { get; set; }
-        public string Stop { get; set; } // need to rename in database
+        public string Stop { get; set; }
         public string Reference_Profiles { get; set; }
         public string Reference_Description { get; set; }
         public bool? Return_Recursion { get; set; }
@@ -114,106 +113,5 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
                 Reference_Profiles = updateDto.Reference_Profiles.ToCommaSeparatedString() ?? existingDto.Reference_Profiles;
             }
         }
-
-
-
-
-
-
-
-
-        //public DbProfileDTO(APIProfileDTO profileDto)
-        //{
-        //    Id = profileDto.Id;
-        //    Name = profileDto.Name;
-        //    Model = profileDto.Model;
-        //    Frequency_Penalty = profileDto.Frequency_Penalty;
-        //    Presence_Penalty = profileDto.Presence_Penalty;
-        //    Temperature = profileDto.Temperature;
-        //    Top_P = profileDto.Top_P;
-        //    Top_Logprobs = profileDto.Top_Logprobs;
-        //    Max_Tokens = profileDto.Max_Tokens;
-        //    N = profileDto.N;
-        //    Seed = profileDto.Seed;
-        //    Stream = profileDto.Stream;
-        //    Tool_Choice = profileDto.Tool_Choice;
-        //    Response_Format = profileDto.Response_Format;
-        //    User = profileDto.User;
-        //    System_Message = profileDto.System_Message;
-        //    if (profileDto.Stop != null)
-        //    {
-        //        Stop = profileDto.Stop.ToCommaSeparatedString();
-        //    }
-        //    if (profileDto.Reference_Profiles != null)
-        //    {
-        //        Reference_Profiles = profileDto.Reference_Profiles.ToCommaSeparatedString();
-        //    }
-        //}
-
-        //  Add updateDto values, or if null default to existing data. If both are
-        //  null add default values
-
-
-        // probably can combine both of below constructors using third layer of ??
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        //public DbProfileDTO(bool setDefaults, APIProfileDTO apiDto)
-        //{
-        //    Id = apiDto.Id;
-        //    Name = apiDto.Name;
-        //    N = apiDto.N;
-        //    Response_Format = apiDto.Response_Format;
-        //    Seed = apiDto.Seed;
-        //    User = apiDto.User;
-        //    Top_Logprobs = apiDto.Top_Logprobs;
-        //    Tool_Choice = apiDto.Tool_Choice;
-        //    Response_Format = apiDto.Response_Format;
-        //    User = apiDto.User;
-            
-        //    if (setDefaults)
-        //    {
-        //        Model = apiDto.Model ?? "gpt-3.5-turbo";
-        //        Frequency_Penalty = apiDto.Frequency_Penalty ?? 0;
-        //        Presence_Penalty = apiDto.Presence_Penalty ?? 0;
-        //        Max_Tokens = apiDto.Max_Tokens ?? 1200;
-        //        Temperature = apiDto.Temperature ?? 1;
-        //        Top_P = apiDto.Top_P ?? 1;
-        //        Stream = apiDto.Stream ?? false; // deafult to false for now
-        //        System_Message = apiDto.System_Message; // set some default for this
-        //    }
-        //    else
-        //    {
-        //        Model = apiDto.Model;
-        //        Frequency_Penalty = apiDto.Frequency_Penalty;
-        //        Presence_Penalty = apiDto.Presence_Penalty;
-        //        Max_Tokens = apiDto.Max_Tokens;
-        //        Temperature = apiDto.Temperature;
-        //        Top_P = apiDto.Top_P;
-        //        Stream = apiDto.Stream;
-        //        System_Message = apiDto.System_Message;
-        //    }
-
-        //    if (apiDto.Stop != null)
-        //    {
-        //        Stop = apiDto.Stop.ToCommaSeparatedString();
-        //    }
-        //    if (apiDto.Reference_Profiles != null)
-        //    {
-        //        Reference_Profiles = apiDto.Reference_Profiles.ToCommaSeparatedString();
-        //    }
-        //}
     }
 }

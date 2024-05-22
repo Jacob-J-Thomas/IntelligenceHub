@@ -1,16 +1,12 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Common;
 using OpenAICustomFunctionCallingAPI.Common.Attributes;
 using OpenAICustomFunctionCallingAPI.Common.Extensions;
-using OpenAICustomFunctionCallingAPI.DAL;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
 {
-    // extend this from a common DTO?
     [TableName("Tools")]
     public class DbToolDTO
     {

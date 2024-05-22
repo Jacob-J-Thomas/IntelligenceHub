@@ -1,22 +1,15 @@
-﻿using Azure;
-using Azure.AI.OpenAI;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Nest;
-using Newtonsoft.Json.Linq;
+﻿using Azure.AI.OpenAI;
 using OpenAICustomFunctionCallingAPI.API.DTOs;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs.ToolPresetClasses;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs.SystemTools;
 using OpenAICustomFunctionCallingAPI.Client;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
 using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-//using OpenAICustomFunctionCallingAPI.DAL;
 using OpenAICustomFunctionCallingAPI.DAL;
 using OpenAICustomFunctionCallingAPI.Host.Config;
 using System.Net;
-using static OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.CompletionResponseDTO;
 
 namespace OpenAICustomFunctionCallingAPI.Business
 {
@@ -44,15 +37,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
             { 
                 HttpStatusCode.BadGateway,
                 HttpStatusCode.GatewayTimeout,
-                HttpStatusCode.HttpVersionNotSupported,
                 HttpStatusCode.InsufficientStorage,
                 HttpStatusCode.InternalServerError,
-                HttpStatusCode.LoopDetected,
-                HttpStatusCode.NetworkAuthenticationRequired,
-                HttpStatusCode.NotExtended,
-                HttpStatusCode.NotImplemented,
                 HttpStatusCode.ServiceUnavailable,
-                HttpStatusCode.VariantAlsoNegotiates,
             };
         }
 
@@ -130,7 +117,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
         }
 
         // move to an AIClient in API layer
-        public async Task<CompletionResponseDTO> GetCompletion(string profileName, StandardCompletionDTO openAIRequest, int attempts)
+        public async Task<CompletionResponseDTO> GetCompletion(string profileName, DefaultCompletionDTO openAIRequest, int attempts)
         {
             var maxAttempts = 5;
             while (attempts < maxAttempts)
@@ -168,7 +155,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             throw new Exception("Completion request failed to generate function call after 3 attempts for a request requiring a call.");
         }
 
-        public async Task<StandardCompletionDTO> BuildOpenAICompletion(ChatRequestDTO chatRequest)
+        public async Task<DefaultCompletionDTO> BuildOpenAICompletion(ChatRequestDTO chatRequest)
         {
             // probably move this to a seperate method
             var completionProfile = await _profileDb.GetByNameWithToolsAsync(chatRequest.ProfileName);
@@ -192,14 +179,14 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 }
             }
             
-            StandardCompletionDTO openAIRequest;
+            DefaultCompletionDTO openAIRequest;
             if (chatRequest.Modifiers != null)
             {
-                openAIRequest = new StandardCompletionDTO(completionProfile, chatRequest.Modifiers);
+                openAIRequest = new DefaultCompletionDTO(completionProfile, chatRequest.Modifiers);
             }
             else
             {
-                openAIRequest = new StandardCompletionDTO(completionProfile);
+                openAIRequest = new DefaultCompletionDTO(completionProfile);
             }
 
             if (completionProfile.Reference_Profiles != null && completionProfile.Reference_Profiles.Length > 0)
@@ -288,7 +275,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return functionResults;
         }
 
-        public async Task<List<HttpResponseMessage>> ExecuteStreamTools(Guid conversationId, string username, List<ResponseToolDTO> tools)
+        public async Task<List<HttpResponseMessage>> ExecuteStreamTools(Guid? conversationId, string username, List<ResponseToolDTO> tools)
         {
             var recursionTools = new List<ResponseToolDTO>();
             var functionResults = new List<HttpResponseMessage>();

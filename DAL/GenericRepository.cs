@@ -29,7 +29,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var query = $@"SELECT * FROM [master].[dbo].[{_table}] WHERE Name = @Name";
+                    var query = $@"SELECT * FROM {_table} WHERE Name = @Name";
                     using (var command = new SqlCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@Name", name);
@@ -88,7 +88,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     var columns = string.Join(", ", properties.Select(p => $"[{p.Name}]"));
                     var values = string.Join(", ", properties.Select(p => $"@{p.Name}"));
 
-                    var query = $@"     INSERT INTO [master].[dbo].[{_table}] ({columns})
+                    var query = $@"     INSERT INTO {_table} ({columns})
                                         OUTPUT inserted.*
                                         VALUES ({values})";
 
@@ -127,19 +127,18 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     await connection.OpenAsync();
 
                     var setClause = string.Join(", ", typeof(T).GetProperties()
-                        .Where(p => p.Name != "Id" && p.Name != "Name" && p.Name != "Messages" && p.Name != "Tools") // Exclude Id, Name, and List<DbPropertyDTO> properties
+                        .Where(p => p.Name != "Id" && p.Name != "Name" && p.Name != "Messages" && p.Name != "Tools") // check if all these are still needed
                         .Select(p => $"[{p.Name}] = @{p.Name}"));
 
                     var query = $@"
-                        UPDATE [master].[dbo].[{_table}] SET {setClause} 
+                        UPDATE {_table} SET {setClause} 
                         WHERE Name = @Name";
 
                     using (var command = new SqlCommand(query, connection))
                     {
                         foreach (var property in typeof(T).GetProperties())
                         {
-                            // Exclude Id and Name properties from being updated
-                            if (property.Name != "Id" && property.Name != "Name" && property.Name != "Messages" && property.Name != "Tools")
+                            if (property.Name != "Id" && property.Name != "Name" && property.Name != "Messages" && property.Name != "Tools")// check if all these are still needed
                             {
                                 var paramName = $"@{property.Name}";
                                 var value = property.GetValue(entity) ?? DBNull.Value;
@@ -164,7 +163,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var query = $@"DELETE FROM [master].[dbo].[{_table}] WHERE Id = @Id";
+                    var query = $@"DELETE FROM {_table} WHERE Id = @Id";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -191,7 +190,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             foreach (var property in typeof(T).GetProperties())
             {
                 var columnName = property.Name;
-                if (columnName != "Messages" && columnName != "Tools")
+                if (columnName != "Messages" && columnName != "Tools")// check if all these are still needed
                 {
                     var value = reader[columnName];
                     if (value != DBNull.Value)

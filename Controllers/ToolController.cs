@@ -129,7 +129,6 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             }
             catch (Exception)
             {
-                // Logging and transient exception handling here
                 throw;
             }
         }
@@ -138,7 +137,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         [Route("associate/{name}")]
         public async Task<IActionResult> AddToolToProfiles([FromRoute] string name, List<string> profiles)
         {
-            // prevent profiles that don't exist from being added?
+            // prevent profiles that don't exist from being added
 
             try
             {

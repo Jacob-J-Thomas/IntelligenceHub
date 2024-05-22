@@ -13,7 +13,6 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
 {
     public class BaseCompletionDTO
     {
-        // move properties into OpenAICompletionDTO as needed.
         public string? Model { get; set; }
         [JsonProperty("frequency_penalty")]
         public float? Frequency_Penalty { get; set; }

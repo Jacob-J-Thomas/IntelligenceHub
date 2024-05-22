@@ -19,7 +19,6 @@ using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
 
 namespace OpenAICustomFunctionCallingAPI.Business
 {
-    // this whole class needs some refactoring
     public class ValidationLogic
     {
         public ValidationLogic() { }
@@ -96,8 +95,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 "gpt-4-32k",
                 "gpt-4-turbo-preview",
                 "gpt-4-vision-preview",
-                "mixtral",
-                "cusotom" // need to implement this still
+                "mixtral"
             };
 
             if (profile.Model != null && validModels.Contains(profile.Model) == false)

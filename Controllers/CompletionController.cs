@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
 using OpenAICustomFunctionCallingAPI.Host.Config;
 using OpenAICustomFunctionCallingAPI.Business;
-using OpenAICustomFunctionCallingAPI.DAL;
-using OpenAICustomFunctionCallingAPI.Client;
 using OpenAICustomFunctionCallingAPI.API.DTOs;
 using Nest;
 

@@ -32,7 +32,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                             t.Id AS ToolId, 
                             t.Name AS ToolName, 
                             t.Description AS ToolDescription, 
-                            t.Type AS ToolType,
                             t.Required
                         FROM profiles p
                         JOIN profiletools pt ON p.Id = pt.ProfileID
@@ -64,7 +63,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                             }
                         }
                     }
-                    return null; /// Return null if no result is found
+                    return null; // Return null if no result is found
                 }
             }
             catch (Exception)
@@ -73,35 +72,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 throw;
             }
         }
-
-        //private APIProfileDTO MapProfileFromReader(SqlDataReader reader)
-        //{
-        //    var profile = new DbProfileDTO
-        //    {
-        //        Id = (int)reader["Id"],
-        //        Name = (string)reader["Name"],
-        //        Response_Format = reader["Response_Format"] as string,
-        //        //Logprobs = reader["Logprobs"] as bool?, // value is assigned based of presence of Top_Logprobs
-        //        Reference_Profiles = reader["Reference_Profiles"] as string,
-        //        Stop = reader["Stop"] as string,
-        //        System_Message = reader["System_Message"] as string,
-        //        Model = reader["Model"] as string,
-        //        Frequency_Penalty = (float)reader["Frequency_Penalty"],
-        //        Presence_Penalty = (float)reader["Presence_Penalty"],
-        //        Temperature = (float)reader["Temperature"],
-        //        Top_P = (float)reader["Top_P"],
-        //        Stream = reader["Stream"] as bool?,
-        //        Max_Tokens = reader["Max_Tokens"] as int?,
-        //        N = reader["N"] as int?,
-        //        Top_Logprobs = reader["Top_Logprobs"] as int?,
-        //        Seed = reader["Seed"] as int?,
-        //        User = reader["User"] as string,
-        //        Tool_Choice = reader["Tool_Choice"] as string,
-        //        Return_Recursion = reader["Return_Recursion"] as bool?,
-        //        Reference_Description = reader["Reference_Description"] as string,
-        //    };
-        //    return new APIProfileDTO(profile);
-        //}
 
         private List<DbToolDTO> MapToolsFromReader(SqlDataReader reader)
         {
@@ -112,7 +82,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     Id = (int)reader["ToolId"],
                     Name = (string)reader["ToolName"],
                     Description = reader["ToolDescription"] as string,
-                    //Type = (string)reader["ToolType"],
                     Required = reader["Required"] as string,
                 }
             };
