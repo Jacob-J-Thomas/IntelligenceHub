@@ -16,6 +16,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
     public class CompletionLogic : ICompletionLogic
     {
         //private readonly IConfiguration _configuration;
+        private readonly AIStreamingClient _AIStreamingClient;
         private readonly AIClient _AIClient;
         private readonly FunctionClient _FunctionClient;
         private readonly ProfileRepository _profileDb;
@@ -30,6 +31,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             _profileToolAssocaitionDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
             _toolDb = new ToolRepository(settings.DbConnectionString);
             _AIClient = new AIClient(settings.OpenAIEndpoint, settings.OpenAIKey);
+            _AIStreamingClient = new AIStreamingClient(settings.OpenAIEndpoint, settings.OpenAIKey);
             _FunctionClient = new FunctionClient("https://Unimplemented.FunctionCallingService.NotARealWebsite.1234567890.com");
             _profileDb = new ProfileRepository(settings.DbConnectionString);
             _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
@@ -43,12 +45,11 @@ namespace OpenAICustomFunctionCallingAPI.Business
             };
         }
 
-        #region Streaming Requests
-        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest, string username)
+        #region Streaming
+        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest)
         {
             completionRequest.ConversationId = completionRequest.ConversationId ?? Guid.NewGuid();
             completionRequest.Modifiers = completionRequest.Modifiers ?? new BaseCompletionDTO();
-            completionRequest.Modifiers.User = username;
             var responseDTO = new ChatResponseDTO();
 
             await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest)); // run this without async to improve speed
@@ -60,11 +61,29 @@ namespace OpenAICustomFunctionCallingAPI.Business
             }
 
             aiClientDTO.Stream = true;
-            return await _AIClient.StreamCompletion(aiClientDTO);
+            return await _AIStreamingClient.StreamCompletion(aiClientDTO);
+        }
+
+        public string GetStreamAuthor(StreamingChatCompletionsUpdate chunk, ChatRequestDTO chatDTO)
+        {
+            var author = chunk.AuthorName;
+            if (chunk.Role == "assistant")
+            {
+                author = chatDTO.ProfileName;
+            }
+            else if (chunk.Role == "user")
+            {
+                author = chatDTO.Modifiers.User ?? "user";
+            }
+            else if (chunk.Role == "tool")
+            {
+                author = "tool";
+            }
+            return author;
         }
         #endregion
 
-        #region Standard API Controller Methods
+        #region Controller
         public async Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest)
         {
             // recursive completions contain all their chat history in the database
@@ -110,8 +129,8 @@ namespace OpenAICustomFunctionCallingAPI.Business
             // process and return completion data
             if (response.Finish_Reason == "tool_calls")
             {
-                var completionToolCalls = response.Message.Tool_Calls;
-                return await ExecuteTools(conversationId, response.Message.Tool_Calls);
+                var completionToolCalls = response.Message.Tool_Calls; 
+                return await ExecuteTools(conversationId, response.Message.Tool_Calls, streaming: false);
             }
             return null;
         }
@@ -138,7 +157,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
                     if (ex.StatusCode != null && _serverSideErrorCodes.Contains((HttpStatusCode)ex.StatusCode))
                     {
                         
-                        // add logic to switch to fail safe services
+                        // add logic to switch to backup services
 
                         await GetCompletion(profileName, openAIRequest, attempts++);
                     }
@@ -154,7 +173,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
             }
             throw new Exception("Completion request failed to generate function call after 3 attempts for a request requiring a call.");
         }
+        #endregion
 
+        #region Shared
         public async Task<DefaultCompletionDTO> BuildOpenAICompletion(ChatRequestDTO chatRequest)
         {
             // probably move this to a seperate method
@@ -239,43 +260,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
         }
 
         // seperate this into two functions probably
-        public async Task<List<HttpResponseMessage>> ExecuteTools(Guid conversationId, List<ResponseToolDTO> tools)
-        {
-            var recursionTools = new List<ResponseToolDTO>();
-            var functionResults = new List<HttpResponseMessage>();
-            foreach (var tool in tools)
-            {
-                if (tool.Function.Name.Contains("Reference_AI_Model"))
-                {
-                    tool.Function.Name = tool.Function.Name.Replace("_Reference_AI_Model", "");
-                    recursionTools.Add(tool);
-                }
-                else
-                {
-                    var result = await _FunctionClient.CallFunction(tool);
-                    if (result != null)
-                    {
-                        functionResults.Add(result);
-                    }
-                }
-            }
-            
-            foreach (var tool in recursionTools)
-            {
-                var completionRequest = new ChatRequestDTO()
-                {
-                    ConversationId = conversationId,
-                    ProfileName = tool.Function.Name
-                };
-                await ProcessCompletion(completionRequest);
-            }
-
-            // prevent recursion call overflow somehow... Maybe add a column to profiles for max recursion?
-            // - This would work strangely for conversations with models that use varying lengths
-            return functionResults;
-        }
-
-        public async Task<List<HttpResponseMessage>> ExecuteStreamTools(Guid? conversationId, string username, List<ResponseToolDTO> tools)
+        public async Task<List<HttpResponseMessage>> ExecuteTools(Guid? conversationId, List<ResponseToolDTO> tools, bool streaming)
         {
             var recursionTools = new List<ResponseToolDTO>();
             var functionResults = new List<HttpResponseMessage>();
@@ -303,7 +288,14 @@ namespace OpenAICustomFunctionCallingAPI.Business
                     ConversationId = conversationId,
                     ProfileName = tool.Function.Name
                 };
-                await StreamCompletion(completionRequest, username);
+                if (streaming)
+                {
+                    await StreamCompletion(completionRequest);
+                }
+                else
+                {
+                    await ProcessCompletion(completionRequest);
+                }
             }
 
             // prevent recursion call overflow somehow... Maybe add a column to profiles for max recursion?

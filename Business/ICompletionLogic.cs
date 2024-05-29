@@ -6,8 +6,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
 {
     public interface ICompletionLogic
     {
-        Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest, string username);
+        Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest);
+        string GetStreamAuthor(StreamingChatCompletionsUpdate chunk, ChatRequestDTO chatDTO);
         Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest);
-        Task<List<HttpResponseMessage>> ExecuteStreamTools(Guid? conversationId, string username, List<ResponseToolDTO> tools);
+        Task<List<HttpResponseMessage>> ExecuteTools(Guid? conversationId, List<ResponseToolDTO> tools, bool streaming);
     }
 }

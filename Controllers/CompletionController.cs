@@ -3,6 +3,10 @@ using OpenAICustomFunctionCallingAPI.Host.Config;
 using OpenAICustomFunctionCallingAPI.Business;
 using OpenAICustomFunctionCallingAPI.API.DTOs;
 using Nest;
+using Azure.AI.OpenAI;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+using System.Text;
+using Microsoft.AspNetCore.Http;
 
 namespace OpenAICustomFunctionCallingAPI.Controllers
 {
@@ -48,6 +52,84 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             catch (Exception)
             {
 
+                throw;
+            }
+        }
+
+        [HttpPost]
+        [Route("Chat/Stream/{name}")]
+        public async Task<IActionResult> CompletionStreaming([FromRoute] string name, [FromBody] ChatRequestDTO completionRequest)
+        {
+            try
+            {
+                var errorMessage = _validationLogic.ValidateChatRequest(name, completionRequest);
+                if (errorMessage != null)
+                {
+                    return BadRequest(errorMessage);
+                }
+
+                completionRequest.ProfileName = name ?? completionRequest.ProfileName;
+
+                var response = await _completionLogic.StreamCompletion(completionRequest);
+                if (response != null)
+                {
+                    string author = null;
+                    ResponseToolDTO tool = null;
+                    Response.Headers.Add("Content-Type", "text/event-stream");
+                    Response.Headers.Add("Cache-Control", "no-cache");
+                    Response.Headers.Add("Connection", "keep-alive");
+                    await foreach (var chunk in response)
+                    {
+                        var completionUpdate = chunk.ContentUpdate;
+                        if (chunk.ToolCallUpdate is StreamingFunctionToolCallUpdate toolCall)
+                        {
+                            if (tool == null)
+                            {
+                                tool = new ResponseToolDTO();
+                                tool.BuildFromStream(toolCall);
+                                author = tool.Function.Name;
+
+                            }
+                            if (toolCall.ArgumentsUpdate != null)
+                            {
+                                tool.Function.Arguments += toolCall.ArgumentsUpdate;
+                                completionUpdate = toolCall.ArgumentsUpdate;
+                            }
+                        }
+
+                        if (author == null)
+                        {
+                            author = _completionLogic.GetStreamAuthor(chunk, completionRequest);
+                            author = chunk.AuthorName ?? author; // chunk.AuthorName can supposedly be assigned to via instructions in the system prompt
+                        }
+
+                        var sseMessage = $"data: {author}, {completionUpdate}\n\n";
+                        var data = Encoding.UTF8.GetBytes(sseMessage);
+                        await Response.Body.WriteAsync(data, 0, data.Length);
+                        await Response.Body.FlushAsync();
+                    }
+
+                    // if tools were in the completion, execute them
+                    if (tool != null)
+                    {
+                        var toolList = new List<ResponseToolDTO>();
+                        toolList.Add(tool);
+                        var functionResponse = await _completionLogic.ExecuteTools(completionRequest.ConversationId, toolList, streaming: true);
+                        var sseMessage = $"data: {tool.Function.Name}, {functionResponse}\n\n";
+                        var data = Encoding.UTF8.GetBytes(sseMessage);
+                        await Response.Body.WriteAsync(data, 0, data.Length);
+                        await Response.Body.FlushAsync();
+                    }
+                    return new EmptyResult();
+                }
+                return BadRequest("Invalid request. Please check your request body.");
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
                 throw;
             }
         }

@@ -18,75 +18,42 @@ namespace OpenAICustomFunctionCallingAPI.Hubs
 
         public async Task Send(string? profileName, Guid? conversationId, string? username, string? message)
         {
-            if (string.IsNullOrWhiteSpace(profileName))
-            {
-                profileName = "Musician_AI_Assistant_Orchestration";
-            }
+            var chatDTO = new ChatRequestDTO();
+            chatDTO.BuildStreamRequest(profileName, conversationId, username, message);
+            var response = await _completionLogic.StreamCompletion(chatDTO);
 
-            // Properties can be passed by client, or by settings/hardcoded to
-            // prevent users from changing request details
-            var chatDTO = new ChatRequestDTO()
-            {
-                ProfileName = profileName,
-                Completion = message,
-                ConversationId = conversationId ?? Guid.NewGuid(),
-                Modifiers = new BaseCompletionDTO()
-                {
-                    User = username ?? "Unknown",
-                }
-            };
-
-            
-            var toolArguments = "";
+            // process the chunks returned from the completion request
             ResponseToolDTO tool = null;
-            var response = await _completionLogic.StreamCompletion(chatDTO, username);
             await foreach (var chunk in response)
             {
-                var author = chunk.AuthorName;
-                if (chunk.Role == "assistant")
-                {
-                    author = chatDTO.ProfileName;
-                }
-                else if (chunk.Role == "user")
-                {
-                    author = username ?? "user";
-                }
-                else if (chunk.Role == "tool")
-                {
-                    author = "tool";
-                }
+                var completionUpdate = chunk.ContentUpdate;
+                var author = _completionLogic.GetStreamAuthor(chunk, chatDTO);
 
-                // Return message or tool details
                 if (chunk.ToolCallUpdate is StreamingFunctionToolCallUpdate toolCall)
                 {
-                    if (toolCall.ArgumentsUpdate != null && tool == null)
+                    if (tool == null)
                     {
-                        // create a constructor and method for this?
-                        tool = new ResponseToolDTO()
-                        {
-                            Id = toolCall.Id,
-                            Function = new ResponseFunctionDTO()
-                            {
-                                Name = toolCall.Name
-                            }
-                        };
+                        tool = new ResponseToolDTO();
+                        tool.BuildFromStream(toolCall);
+                        author = tool.Function.Name;
+                        
                     }
-                    tool.Function.Arguments += toolCall.ArgumentsUpdate;
-                    await Clients.Caller.SendAsync("broadcastMessage", toolCall.Name, toolCall.ArgumentsUpdate);
+                    if (toolCall.ArgumentsUpdate != null)
+                    {
+                        tool.Function.Arguments += toolCall.ArgumentsUpdate;
+                        completionUpdate = toolCall.ArgumentsUpdate;
+                    }
                 }
-                else if (chunk.ContentUpdate != null)
-                {
-                    author = chunk.AuthorName ?? author; // chunk.AuthorName can supposedly be assigned to via instructions in the system prompt
-                    await Clients.Caller.SendAsync("broadcastMessage", author, chunk.ContentUpdate);
-                }
+                author = chunk.AuthorName ?? author; // chunk.AuthorName can supposedly be assigned to via instructions in the system prompt
+                await Clients.Caller.SendAsync("broadcastMessage", author, completionUpdate);
             }
 
-            // execute any tool calls that were returned in the completion
+            // if tools were in the completion, execute them
             if (tool != null)
             {
                 var toolList = new List<ResponseToolDTO>();
                 toolList.Add(tool);
-                var functionResponse = await _completionLogic.ExecuteStreamTools(conversationId, username, toolList);
+                var functionResponse = await _completionLogic.ExecuteTools(conversationId, toolList, streaming: true);
                 await Clients.Caller.SendAsync("broadcastMessage", tool.Function.Name, functionResponse);
             }
         }
