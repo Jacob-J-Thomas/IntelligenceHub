@@ -12,11 +12,8 @@ namespace OpenAICustomFunctionCallingAPI.DAL
 {
     public class ToolRepository : GenericRepository<DbToolDTO>
     {
-        private readonly string _connectionString;
-
         public ToolRepository(string connectionString) : base(connectionString)
         {
-            _connectionString = connectionString;
         }
 
         public async Task<ToolDTO> GetToolByNameAsync(string name)

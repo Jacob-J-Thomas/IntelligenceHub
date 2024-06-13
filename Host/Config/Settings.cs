@@ -2,9 +2,11 @@
 {
     public class Settings
     {
-        public string OpenAIEndpoint { get; set; }
-        public string OpenAIKey { get; set; }
-        public string OpenAIModel { get; set; }
+        public string AIEndpoint { get; set; }
+        public string AIKey { get; set; }
+        public string DefaultAGIModel { get; set; }
+        public string DefaultEmbeddingModel { get; set; }
         public string DbConnectionString { get; set; }
+        public string RagDbConnectionString { get; set; }
     }
 }

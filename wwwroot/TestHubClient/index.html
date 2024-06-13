@@ -30,13 +30,21 @@
             Test controllers and configure AI Profiles using swagger here.
         </a>
         <ul id="discussion"></ul>
-        <label type="text" for="username">AI Profile Name:</label>
+        <label type="text" for="ragDatabaseInput">Rag Database Name:</label>
+        <input type="text" id="ragDatabaseInput" />
+        <label type="text" for="ragTargetInput">Target Rag Column:</label>
+        <input type="text" id="ragTargetInput" />
+        <label type="text" for="ragDocNInput">Max Rag Documents:</label>
+        <input type="text" id="ragDocNInput" />
+        <label type="text" for="profileName">AI Profile Name:</label>
         <input type="text" id="profileName" />
-        <label type="text" for="username">Conversation ID:</label>
+        <label type="text" for="conversationId">Conversation ID:</label>
         <input type="text" id="conversationId" />
+        <label type="text" for="maxMessageHistory">Max Message History:</label>
+        <input type="text" id="maxMessageHistory" />
         <label type="text" for="username">Username:</label>
         <input type="text" id="username">
-        <label type="text" for="username">Completion Prompt:</label>
+        <label type="text" for="message">Completion Prompt:</label>
         <input type="text" id="message" lable="Prompt" />
         <input type="button" id="sendmessage" value="Send" />
     </div>
@@ -49,8 +57,12 @@
 
             var messageInput = document.getElementById('message');
             var profileNameInput = document.getElementById('profileName');
+            var maxMessageHistory = document.getElementById('maxMessageHistory');
             var conversationIdInput = document.getElementById('conversationId');
             var usernameInput = document.getElementById('username');
+            var ragDatabaseInput = document.getElementById('ragDatabaseInput');
+            var ragTargetInput = document.getElementById('ragTargetInput');
+            var ragDocNInput = document.getElementById('ragDocNInput');
 
             // Get the user name and store it to prepend to messages.
             //var name = prompt('Enter your name:', '');
@@ -85,7 +97,7 @@
                         addMessage(usernameInput.value, messageInput.value);
                         //displayMessage(usernameInput.value, messageInput.value)
                         // Call the Send method on the hub.
-                        connection.invoke('send', profileNameInput.value, conversationIdInput.value, usernameInput.value, messageInput.value);
+                        connection.invoke('send', profileNameInput.value, conversationIdInput.value, usernameInput.value, messageInput.value, maxMessageHistory.value, ragDatabaseInput.value, ragTargetInput.Value, ragDocNInput.value);
 
                         // Clear text box and reset focus for next comment.
                         messageInput.value = '';

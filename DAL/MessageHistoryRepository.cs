@@ -13,14 +13,11 @@ namespace OpenAICustomFunctionCallingAPI.DAL
 {
     public class MessageHistoryRepository : GenericRepository<DbMessageDTO>
     {
-        private readonly string _connectionString;
-
         public MessageHistoryRepository(string connectionString) : base(connectionString)
         {
-            _connectionString = connectionString;
         }
 
-        public async Task<List<DbMessageDTO>> GetConversationAsync(Guid conversationId)
+        public async Task<List<DbMessageDTO>> GetConversationAsync(Guid conversationId, int maxMessages)
         {
             try
             {
@@ -28,12 +25,13 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 {
                     await connection.OpenAsync();
                     var query = $@"
-                        SELECT *
+                        SELECT TOP(@MaxMessages) *
                         FROM MessageHistory
                         WHERE [ConversationId] = @ConversationId
                         ORDER BY timestamp DESC;";
                     using (var command = new SqlCommand(query, connection))
                     {
+                        command.Parameters.AddWithValue("@MaxMessages", maxMessages);
                         command.Parameters.AddWithValue("@ConversationId", conversationId);
                         using (var reader = await command.ExecuteReaderAsync())
                         {

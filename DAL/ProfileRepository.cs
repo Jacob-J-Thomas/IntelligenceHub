@@ -12,11 +12,9 @@ namespace OpenAICustomFunctionCallingAPI.DAL
 {
     public class ProfileRepository : GenericRepository<DbProfileDTO>
     {
-        private readonly string _connectionString;
 
         public ProfileRepository(string connectionString) : base(connectionString)
         {
-            _connectionString = connectionString;
         }
 
         public async Task<APIProfileDTO> GetByNameWithToolsAsync(string Name)

@@ -2,6 +2,7 @@
 
 namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response
 {
+    // folder structure and inheritence should be changed to accomadate for this being used by multiple other DTOs
     public class UsageDTO
     {
         public int? Prompt_Tokens { get; set; }

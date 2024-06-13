@@ -222,20 +222,20 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        private APIProfileDTO MapProfileFromReader(SqlDataReader reader)
-        {
-            var entity = new APIProfileDTO();
-            foreach (var property in typeof(APIProfileDTO).GetProperties())
-            {
-                var columnName = property.Name;
-                var value = reader[columnName];
-                if (value != DBNull.Value)
-                {
-                    property.SetValue(entity, value);
-                }
-            }
-            return entity;
-        }
+        //private APIProfileDTO MapProfileFromReader(SqlDataReader reader)
+        //{
+        //    var entity = new APIProfileDTO();
+        //    foreach (var property in typeof(APIProfileDTO).GetProperties())
+        //    {
+        //        var columnName = property.Name;
+        //        var value = reader[columnName];
+        //        if (value != DBNull.Value)
+        //        {
+        //            property.SetValue(entity, value);
+        //        }
+        //    }
+        //    return entity;
+        //}
 
         private DbProfileToolDTO MapAssociationsFromReader(SqlDataReader reader)
         {

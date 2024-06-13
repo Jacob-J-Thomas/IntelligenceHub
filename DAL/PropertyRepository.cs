@@ -11,13 +11,8 @@ namespace OpenAICustomFunctionCallingAPI.DAL
 {
     public class PropertyRepository : GenericRepository<DbPropertyDTO>
     {
-        private readonly string _connectionString;
-        private readonly string _table;
-
         public PropertyRepository(string connectionString) : base(connectionString)
         {
-            _connectionString = connectionString;
-            _table = GetTableName<DbPropertyDTO>();
         }
 
         public async Task<List<DbPropertyDTO>> GetToolProperties(int Id)

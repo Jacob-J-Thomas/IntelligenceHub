@@ -11,15 +11,22 @@ using System.Reflection;
 
 namespace OpenAICustomFunctionCallingAPI.DAL
 {
-    public class GenericRepository<T> : IRepository<T> where T : class, new()
+    public class GenericRepository<T> : IGenericRepository<T> where T : class, new()
     {
-        private readonly string _connectionString;
-        private readonly string _table;
+        protected readonly string _connectionString;
+        protected string _table;
 
         public GenericRepository(string connectionString)
         {
             _connectionString = connectionString;
             _table = GetTableName<T>();
+        }
+
+        // RAG databases names should be assigned via API request
+        public GenericRepository(string connectionString, string tableName)
+        {
+            _connectionString = connectionString;
+            _table = tableName;
         }
 
         public async Task<T> GetByNameAsync(string name)
@@ -179,12 +186,13 @@ namespace OpenAICustomFunctionCallingAPI.DAL
         }
 
         // declared as method in case reflection is desired for derived classes
-        public string GetTableName<T>()
+        protected string GetTableName<T>()
         {
-            return typeof(T).GetCustomAttribute<TableNameAttribute>().TableName;
+            var tableAttribute = typeof(T).GetCustomAttribute<TableNameAttribute>();
+            return tableAttribute != null ? tableAttribute.TableName : string.Empty;
         }
 
-        public T MapFromReader<T>(SqlDataReader reader) where T : new()
+        protected T MapFromReader<T>(SqlDataReader reader) where T : new()
         {
             var entity = new T();
             foreach (var property in typeof(T).GetProperties())

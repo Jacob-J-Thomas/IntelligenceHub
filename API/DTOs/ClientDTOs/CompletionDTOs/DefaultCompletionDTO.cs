@@ -17,8 +17,8 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
         public override bool? Return_Recursion { get; set; }
         public List<MessageDTO> Messages { get; set; } = new List<MessageDTO>();
 
+        public DefaultCompletionDTO() { }
         public DefaultCompletionDTO(APIProfileDTO completion) : base(completion) { }
-
         public DefaultCompletionDTO(APIProfileDTO completion, BaseCompletionDTO? modifiers) : base(completion, modifiers) { }
     }
 }

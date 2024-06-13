@@ -20,9 +20,9 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs
         public DbMessageDTO(ChatRequestDTO userMessage)
         {
             var name = "";
-            if (userMessage.Modifiers != null && userMessage.Modifiers.User != null)
+            if (userMessage.ProfileModifiers != null && userMessage.ProfileModifiers.User != null)
             {
-                name = userMessage.Modifiers.User;
+                name = userMessage.ProfileModifiers.User;
             }
             ConvertToDbMessageDTO(userMessage.ConversationId, "user", name, userMessage.Completion);
         }

@@ -34,9 +34,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
             {
                 return "The chatRequest object must be provided";
             }
-            if (chatRequest.Modifiers != null)
+            if (chatRequest.ProfileModifiers != null)
             {
-                var errorMessage =  ValidateBaseDTO(chatRequest.Modifiers);
+                var errorMessage =  ValidateBaseDTO(chatRequest.ProfileModifiers);
                 if (errorMessage != null)
                 {
                     return errorMessage;

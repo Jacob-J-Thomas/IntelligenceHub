@@ -28,7 +28,7 @@ namespace OpenAICustomFunctionCallingAPI.Client
         public AIStreamingClient(string ApiEndpoint, string ApiKey) 
         {
             _streamingClient = new OpenAIClient(ApiKey);
-            _apiEndpoint = ApiEndpoint;
+            _apiEndpoint = ApiEndpoint + "chat/completions";
             _apiKey = ApiKey;
         }
 

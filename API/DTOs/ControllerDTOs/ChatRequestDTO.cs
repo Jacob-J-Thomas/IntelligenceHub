@@ -1,5 +1,8 @@
 ﻿using Nest;
+using Newtonsoft.Json;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
+using System.ComponentModel;
 
 namespace OpenAICustomFunctionCallingAPI.API.DTOs
 {
@@ -8,25 +11,36 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs
         public Guid? ConversationId { get; set; }
         public string ProfileName { get; set; }
         public string Completion { get; set; }
-        public BaseCompletionDTO? Modifiers { get; set; }
+        [DefaultValue(0)]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        public int? MaxMessageHistory { get; set; }
+        public RagRequestData? RagData { get; set; }
+        public BaseCompletionDTO? ProfileModifiers { get; set; }
 
-        public ChatRequestDTO() { }
-
-        public ChatRequestDTO(string profileName, Guid? conversationId, string username, string message)
+        public ChatRequestDTO() 
         {
-            BuildStreamRequest(profileName, conversationId, username, message);
         }
 
-        public void BuildStreamRequest(string profileName, Guid? conversationId, string username, string message)
+        public void BuildStreamRequest(string profileName, Guid? conversationId, string username, string message, int? maxMessages, string? database, string? ragTarget, int? maxRagDocs)
         {
             ProfileName = profileName;
             Completion = message;
             ConversationId = conversationId ?? Guid.NewGuid();
-            Modifiers = new BaseCompletionDTO()
+            MaxMessageHistory = maxMessages ?? 0;
+            ProfileModifiers = new BaseCompletionDTO()
             {
                 User = username ?? "Unknown",
                 Stream = true
             };
+            if (database is not null && ragTarget is not null)
+            {
+                RagData = new RagRequestData()
+                {
+                    RagDatabase = database,
+                    RagTarget = ragTarget,
+                    MaxRagDocs = maxRagDocs ?? 5
+                };
+            }
         }
     }
 }

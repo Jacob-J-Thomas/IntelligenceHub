@@ -7,7 +7,6 @@ This is accomplished by using a single function definition which then calls more
 Please add your own API token in appsettings.json after cloning the repo.
 
 Future Features (Descending Priority):
-- RAG database support
 - support for alternative AI APIs (just groq.com to start)
 - Add route profile/associate/{name}
 - Add route profile/dissociate/{name}
@@ -22,6 +21,10 @@ Future Features (Descending Priority):
 - Create a library of default AI profiles
 
 Technical Debt Items (Descending Priority):
+- Rename norms "Magnitudes" (requires SQL column drop)
+- Set dimensions of vector embedding requests based off of the model
+- remove "DTO" from names
+- normalize DTO names for RAG indexing
 - Change "chatstream" to "chat/socket" for SignalR hub
 - revisit asynchronous design, particularly as it pertains to streaming
 - Use a more specialized character than commas to singnal the end of a stop sequence (possibly use recuring characters of a certain kind, like "@@@@@")
@@ -32,8 +35,16 @@ Technical Debt Items (Descending Priority):
 - Move system tool strings to an appsettings section
 
 Refactoring Items (Descending Priority):
-- instead of using constructors use the methods you built for the constructors
-- simplify completionLogic.cs possibly using interfaces
+- Remove camelcasecontract resolver and add JsonPropertyName for ALL properties instead
+- Use cascaed to potentially simplify some operations involving associative tables
+- Modify the messageHistory tables so that they can be derived and utilized like a RAG database and its associated classes
+- provide default values to query requests? Or get these from the database?
+- perform string cleaning on any AGI responses from system model profiles
+- Combine embedding and AGI clients?
+- revisit route design to increase RESTfullness
+- Create associate tables to store vector embeddings rather than only storing their norms
+- Convert DTO methods to mapper/converter classes
+- simplify completionLogic.cs possibly using interfaces to decouple from the client layer wherever possible
 - Clean up method complexity in all business logic classes (move streaming logic possibly)
 - flatten ChatRequestDTO
 - return function calling information the same way its being returned via streaming
