@@ -35,16 +35,10 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(name))
-                {
-                    return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
-                }
+                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
                 var tool = await _profileLogic.GetTool(name);
-                if (tool == null)
-                {
-                    return NotFound($"No tool with the name {name} exists");
-                }
-                return Ok(tool);
+                if (tool == null) return NotFound($"No tool with the name {name} exists");
+                else return Ok(tool);
             }
             catch (HttpRequestException ex)
             {
@@ -65,11 +59,8 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var tools = await _profileLogic.GetAllTools();
-                if (tools == null || tools.Count() < 1)
-                {
-                    return NotFound($"No tools exist. Make a post request to add some.");
-                }
-                return Ok(tools);
+                if (tools == null || tools.Count() < 1) return NotFound($"No tools exist. Make a post request to add some.");
+                else return Ok(tools);
             }
             catch (HttpRequestException ex)
             {
@@ -88,15 +79,9 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(name))
-                {
-                    return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
-                }
+                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
                 var tool = await _profileLogic.GetToolProfileAssociations(name);
-                if (tool == null)
-                {
-                    return NotFound($"The tool '{name}' is not associated with any profiles, or does not exist.");
-                }
+                if (tool == null) return NotFound($"The tool '{name}' is not associated with any profiles, or does not exist.");
                 return Ok(tool);
             }
             catch (HttpRequestException ex)
@@ -117,11 +102,8 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var errorMessage = await _profileLogic.CreateOrUpdateTools(toolList);
-                if (errorMessage != null)
-                {
-                    return BadRequest(errorMessage);
-                }
-                return NoContent();
+                if (errorMessage != null) return BadRequest(errorMessage);
+                else return NoContent();
             }
             catch (HttpRequestException ex)
             {
@@ -141,21 +123,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
 
             try
             {
-                if (string.IsNullOrEmpty(name))
-                {
-                    return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
-                }
-                if (profiles == null || profiles.Count < 1)
-                {
-                    return BadRequest($"Invalid request.'Profiles' property cannot be null or empty: {profiles}.");
-                }
-
+                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
+                if (profiles == null || profiles.Count < 1) return BadRequest($"Invalid request.'Profiles' property cannot be null or empty: {profiles}.");
                 var errorMessage = await _profileLogic.AddToolAssociations(name, profiles);
-                if (errorMessage == null)
-                {
-                    return Ok(await _profileLogic.GetToolProfileAssociations(name));
-                }
-                return NotFound(errorMessage);
+                if (errorMessage == null) return Ok(await _profileLogic.GetToolProfileAssociations(name));
+                else return NotFound(errorMessage);
             }
             catch (HttpRequestException ex)
             {
@@ -174,21 +146,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(name))
-                {
-                    return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
-                }
-                if (profiles == null || profiles.Count < 1)
-                {
-                    return BadRequest($"Invalid request.'Profiles' property cannot be null or empty: {profiles}.");
-                }
-
+                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
+                if (profiles == null || profiles.Count < 1) return BadRequest($"Invalid request.'Profiles' property cannot be null or empty: {profiles}.");
                 var errorMessage = await _profileLogic.DeleteToolAssociations(name, profiles);
-                if (errorMessage == null)
-                {
-                    return NoContent();
-                }
-                return NotFound(errorMessage);
+                if (errorMessage == null) return NoContent();
+                else return NotFound(errorMessage);
             }
             catch (HttpRequestException ex)
             {
@@ -207,16 +169,10 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(name))
-                {
-                    return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
-                }
+                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
                 var success = await _profileLogic.DeleteTool(name);
-                if (success)
-                {
-                    return NoContent();
-                }
-                return NotFound($"No tool with the name {name} exists");
+                if (success) return NoContent();
+                else return NotFound($"No tool with the name {name} exists");
             }
             catch (HttpRequestException ex)
             {

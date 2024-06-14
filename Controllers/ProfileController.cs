@@ -31,16 +31,9 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    return BadRequest("Invalid route data. Please check your input.");
-                }
-
+                if (string.IsNullOrWhiteSpace(name)) return BadRequest("Invalid route data. Please check your input.");
                 var profileDto = await _profileLogic.GetProfile(name);
-                if (profileDto != null)
-                {
-                    return Ok(profileDto);
-                }
+                if (profileDto is not null) return Ok(profileDto);
                 return NotFound($"No profile with the name {name} was found.");
             }
             catch (HttpRequestException ex)
@@ -80,11 +73,8 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var errorMessage = await _profileLogic.CreateOrUpdateProfile(profileDto);
-                if (errorMessage != null)
-                {
-                    return BadRequest(errorMessage);
-                }
-                return Ok(await _profileLogic.GetProfile(profileDto.Name));
+                if (errorMessage is not null) return BadRequest(errorMessage);
+                else return Ok(await _profileLogic.GetProfile(profileDto.Name));
             }
             catch (HttpRequestException ex)
             {
@@ -102,17 +92,10 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    return BadRequest($"Invalid request. Please check the route parameter for the profile name: {name}.");
-                }
-
+                if (string.IsNullOrWhiteSpace(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: {name}.");
                 var errorMessage = await _profileLogic.DeleteProfile(name);
-                if (errorMessage != null)
-                {
-                    return NotFound(errorMessage);
-                }
-                return NoContent();
+                if (errorMessage is not null) return NotFound(errorMessage);
+                else return NoContent();
             }
             catch (HttpRequestException ex)
             {

@@ -17,10 +17,10 @@ namespace OpenAICustomFunctionCallingAPI.Hubs
             _completionLogic = completionLogic;
         }
 
-        public async Task Send(string? profileName, Guid? conversationId, string? username, string? message, int? maxMessageHistory, string? database, string? ragTarget, int? maxRagDocs)
+        public async Task Send(string? profileName, Guid? conversationId, string? username, string? message)//, int? maxMessageHistory)//, string? database, string? ragTarget, int? maxRagDocs)
         {
             var chatDTO = new ChatRequestDTO();
-            chatDTO.BuildStreamRequest(profileName, conversationId, username, message, maxMessageHistory, database, ragTarget, maxRagDocs);
+            chatDTO.BuildStreamRequest(profileName, conversationId, username, message, 5, "string", "content", 5);// maxMessageHistory, database, ragTarget, maxRagDocs);
             var response = await _completionLogic.StreamCompletion(chatDTO);
 
             // process the chunks returned from the completion request

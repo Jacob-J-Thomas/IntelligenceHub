@@ -26,9 +26,20 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         [Route("Index/Get/{name}")]
         public async Task<IActionResult> Get([FromRoute] string name)
         {
-            var response = await _ragLogic.GetRagIndex(name);
-            if (response == null) return NotFound();
-            return Ok(response);
+            try
+            {
+                var response = await _ragLogic.GetRagIndex(name);
+                if (response is not null) return NotFound();
+                else return Ok(response);
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         [HttpGet]
@@ -38,8 +49,12 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var response = await _ragLogic.GetAllIndexesAsync();
-                if (response != null && response.Count() > 0) return Ok(response);
-                return NotFound();
+                if (response is not null && response.Count() > 0) return Ok(response);
+                else return NotFound();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {
@@ -55,7 +70,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             {
                 var response = await _ragLogic.CreateIndex(indexDefinition);
                 if (response) return Ok();
-                return BadRequest();
+                else return BadRequest();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {
@@ -71,7 +90,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             {
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);
                 if (response) return Ok();
-                return NotFound();
+                else return NotFound();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {
@@ -87,7 +110,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             {
                 var response = await _ragLogic.DeleteIndex(index);
                 if (response) return Ok();
-                return NotFound();
+                else return NotFound();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {
@@ -102,8 +129,12 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var response = await _ragLogic.QueryIndex(index, request);
-                if (response != null) return Ok(response);
-                return NotFound();
+                if (response is not null) return Ok(response);
+                else return NotFound();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {
@@ -118,8 +149,12 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var response = await _ragLogic.GetAllDocuments(index); // going to need to add pagination here
-                if (response != null) return Ok(response);
-                return NotFound();
+                if (response is not null) return Ok(response);
+                else return NotFound();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {
@@ -134,8 +169,12 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var response = await _ragLogic.GetDocument(index, document); // going to need to add pagination here
-                if (response != null) return Ok(response);
-                return NotFound();
+                if (response is not null) return Ok(response);
+                else return NotFound();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {
@@ -152,7 +191,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                 var chunkedDocuments = await _ragLogic.ChunkDocuments(index, documents);
                 var response = await _ragLogic.UpsertDocuments(index, chunkedDocuments);
                 if (response) return Ok(response);
-                return BadRequest();
+                else return BadRequest();
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {
@@ -167,8 +210,12 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var response = await _ragLogic.DeleteDocuments(index, documents);
-                if (response == 0) return NotFound();
-                return Ok(response);
+                if (response == 0) return NotFound($"The index {index} does not exist, or does not contain any of the documents in the list");
+                else return Ok(response);
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest(ex.Message);
             }
             catch (Exception)
             {

@@ -31,19 +31,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var errorMessage = _validationLogic.ValidateChatRequest(name, completionRequest);
-                if (errorMessage != null)
-                {
-                    return BadRequest(errorMessage);
-                }
-
+                if (errorMessage is not null) return BadRequest(errorMessage);
                 completionRequest.ProfileName = name ?? completionRequest.ProfileName;
-
                 var response = await _completionLogic.ProcessCompletion(completionRequest);
-                if (response != null)
-                {
-                    return Ok(response);
-                }
-                return BadRequest("Invalid request. Please check your request body.");
+                if (response is not null) return Ok(response);
+                else return BadRequest("Invalid request. Please check your request body.");
             }
             catch (HttpRequestException ex)
             {
@@ -63,15 +55,10 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var errorMessage = _validationLogic.ValidateChatRequest(name, completionRequest);
-                if (errorMessage != null)
-                {
-                    return BadRequest(errorMessage);
-                }
-
+                if (errorMessage is not null) return BadRequest(errorMessage);
                 completionRequest.ProfileName = name ?? completionRequest.ProfileName;
-
                 var response = await _completionLogic.StreamCompletion(completionRequest);
-                if (response != null)
+                if (response is not null)
                 {
                     string author = null;
                     ResponseToolDTO tool = null;
@@ -83,7 +70,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                         var completionUpdate = chunk.ContentUpdate;
                         if (chunk.ToolCallUpdate is StreamingFunctionToolCallUpdate toolCall)
                         {
-                            if (tool == null)
+                            if (tool is null)
                             {
                                 tool = new ResponseToolDTO();
                                 tool.BuildFromStream(toolCall);
@@ -96,13 +83,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                                 completionUpdate = toolCall.ArgumentsUpdate;
                             }
                         }
-
-                        if (author == null)
+                        if (author is null)
                         {
                             author = _completionLogic.GetStreamAuthor(chunk, completionRequest);
                             author = chunk.AuthorName ?? author; // chunk.AuthorName can supposedly be assigned to via instructions in the system prompt
                         }
-
                         var sseMessage = $"data: {author}, {completionUpdate}\n\n";
                         var data = Encoding.UTF8.GetBytes(sseMessage);
                         await Response.Body.WriteAsync(data, 0, data.Length);
@@ -110,7 +95,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                     }
 
                     // if tools were in the completion, execute them
-                    if (tool != null)
+                    if (tool is not null)
                     {
                         var toolList = new List<ResponseToolDTO>();
                         toolList.Add(tool);

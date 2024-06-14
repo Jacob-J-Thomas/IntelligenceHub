@@ -11,7 +11,6 @@ Future Features (Descending Priority):
 - Add route profile/associate/{name}
 - Add route profile/dissociate/{name}
 - Add route profile/get/{name}/tools
-- Controller for interacting with saved conversations
 - Some kind of methodology for providing the entire conversation history from the client and/or disabling saving of chat history
 - Add logic to switch to fallback resources during service outages
 - Document upload/extraction support
@@ -21,9 +20,10 @@ Future Features (Descending Priority):
 - Create a library of default AI profiles
 
 Technical Debt Items (Descending Priority):
-- Rename norms "Magnitudes" (requires SQL column drop)
+- Revisit how default values are applied in the streaming hub
+- Rename norms "Magnitudes" (requires SQL column drop) (or just drop this column entirely?)
 - Set dimensions of vector embedding requests based off of the model
-- remove "DTO" from names
+- remove "DTO" from DTO names
 - normalize DTO names for RAG indexing
 - Change "chatstream" to "chat/socket" for SignalR hub
 - revisit asynchronous design, particularly as it pertains to streaming
@@ -32,12 +32,12 @@ Technical Debt Items (Descending Priority):
 - Implement pagination for GenericRepository.GetAllAsync()
 - Add documentation to classes
 - Configure launchsettings.json for both a prod and dev environment
-- Move system tool strings to an appsettings section
+- Consolidate system tool strings in an appsettings section
 
 Refactoring Items (Descending Priority):
 - Remove camelcasecontract resolver and add JsonPropertyName for ALL properties instead
-- Use cascaed to potentially simplify some operations involving associative tables
-- Modify the messageHistory tables so that they can be derived and utilized like a RAG database and its associated classes
+- Use cascade to potentially simplify some operations involving associative tables
+- Modify the messageHistory tables so that they can be derived and utilized (like the RAG Database DTOs and their associated classes)
 - provide default values to query requests? Or get these from the database?
 - perform string cleaning on any AGI responses from system model profiles
 - Combine embedding and AGI clients?
