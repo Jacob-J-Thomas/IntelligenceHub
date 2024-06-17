@@ -56,9 +56,8 @@ namespace OpenAICustomFunctionCallingAPI.Business
         #region Streaming
         public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest)
         {
-            completionRequest.ConversationId = completionRequest.ConversationId ?? Guid.NewGuid();
             completionRequest.ProfileModifiers = completionRequest.ProfileModifiers ?? new BaseCompletionDTO();
-            await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest)); // run this without async to improve speed
+            if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest)); // run this without async to improve speed
             var aiClientDTO = await BuildOpenAICompletion(completionRequest); // chose which AIClient to build and execute with here
             if (aiClientDTO == null) return null;// adjust this to return 404s
             aiClientDTO.Stream = true;
@@ -79,7 +78,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
         public async Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest)
         {
             // recursive completions contain all their chat history in the database
-            completionRequest.ConversationId = completionRequest.ConversationId ?? Guid.NewGuid();
+            //completionRequest.ConversationId = completionRequest.ConversationId ?? Guid.NewGuid();
             var responseDTO = new ChatResponseDTO();
 
             if (completionRequest.RagData is not null)
@@ -91,7 +90,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             // Build request DTO
             var aiClientDTO = await BuildOpenAICompletion(completionRequest); // chose which AIClient to build and execute with here
             if (aiClientDTO is null) return null;// adjust this to return 404s
-            await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest));
+            if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest));
             var completionResponse = await GetCompletion(completionRequest.ProfileName, aiClientDTO, attempts: 0);
             var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
             if (defaultChoice is null) return null;
@@ -133,14 +132,14 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return ragInstructionData + "\n\n" + completion;
         }
 
-        public async Task<List<HttpResponseMessage>> ProcessCompletionResponse(ResponseChoiceDTO response, string profileName, Guid conversationId)
+        public async Task<List<HttpResponseMessage>> ProcessCompletionResponse(ResponseChoiceDTO response, string profileName, Guid? conversationId)
         {
             // Add response to database conversation history
             if (response.Message.Content is not null)
             {
                 var responseMessage = new DbMessageDTO();
                 responseMessage.ConvertToDbMessageDTO(conversationId, "assistant", profileName, response.Message.Content);
-                await _messageHistoryRepository.AddAsync(responseMessage);
+                if (conversationId is not null) await _messageHistoryRepository.AddAsync(responseMessage);
             }
 
             // process and return completion data
@@ -235,7 +234,8 @@ namespace OpenAICustomFunctionCallingAPI.Business
             {
                 var completionMessageCount = 1; // this will always = 1
                 var maxDbMessagesToRetrieve = maxMessageHistory ?? 5 - completionMessageCount;
-                var dbMessages = await _messageHistoryRepository.GetConversationAsync((Guid)conversationId, maxDbMessagesToRetrieve);
+                var dbMessages = new List<DbMessageDTO>();
+                if (conversationId is not null) dbMessages = await _messageHistoryRepository.GetConversationAsync((Guid)conversationId, maxDbMessagesToRetrieve);
                 foreach (var dbMessage in dbMessages)
                 {
                     var message = new MessageDTO()

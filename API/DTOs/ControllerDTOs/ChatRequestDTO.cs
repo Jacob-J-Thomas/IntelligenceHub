@@ -10,7 +10,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs
     {
         public Guid? ConversationId { get; set; }
         public string ProfileName { get; set; }
-        public string Completion { get; set; }
+        public string Completion { get; set; } // change to dictionary?
         [DefaultValue(0)]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public int? MaxMessageHistory { get; set; }
@@ -25,7 +25,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs
         {
             ProfileName = profileName;
             Completion = message;
-            ConversationId = conversationId ?? Guid.NewGuid();
+            ConversationId = conversationId;
             MaxMessageHistory = maxMessages ?? 0;
             ProfileModifiers = new BaseCompletionDTO()
             {

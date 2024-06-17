@@ -7,19 +7,15 @@ This is accomplished by using a single function definition which then calls more
 Please add your own API token in appsettings.json after cloning the repo.
 
 Future Features (Descending Priority):
-- support for alternative AI APIs (just groq.com to start)
-- Add route profile/associate/{name}
-- Add route profile/dissociate/{name}
-- Add route profile/get/{name}/tools
-- Some kind of methodology for providing the entire conversation history from the client and/or disabling saving of chat history
-- Add logic to switch to fallback resources during service outages
+- Provide conversation history from the client?
 - Document upload/extraction support
 - Real time internet search
 - Speech support
-- Tool calls for reading/writing to a RAG database
 - Create a library of default AI profiles
+- Tool calls for reading/writing to a RAG database (library of default tools)
 
 Technical Debt Items (Descending Priority):
+- Messages in the MessageHistory repository should be hashed before storage (Is there a more secure storage method?)
 - Revisit how default values are applied in the streaming hub
 - Rename norms "Magnitudes" (requires SQL column drop) (or just drop this column entirely?)
 - Set dimensions of vector embedding requests based off of the model
@@ -35,6 +31,10 @@ Technical Debt Items (Descending Priority):
 - Consolidate system tool strings in an appsettings section
 
 Refactoring Items (Descending Priority):
+- validation handler
+- error messaging handler
+- Add logic to switch to fallback resources during service outages (More than likely should be possible by setting polly settings)
+- support for alternative AI APIs (just groq.com to start)
 - Remove camelcasecontract resolver and add JsonPropertyName for ALL properties instead
 - Use cascade to potentially simplify some operations involving associative tables
 - Modify the messageHistory tables so that they can be derived and utilized (like the RAG Database DTOs and their associated classes)

@@ -82,7 +82,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                 if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
                 var tool = await _profileLogic.GetToolProfileAssociations(name);
                 if (tool == null) return NotFound($"The tool '{name}' is not associated with any profiles, or does not exist.");
-                return Ok(tool);
+                else return Ok(tool);
             }
             catch (HttpRequestException ex)
             {
@@ -119,13 +119,11 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         [Route("associate/{name}")]
         public async Task<IActionResult> AddToolToProfiles([FromRoute] string name, List<string> profiles)
         {
-            // prevent profiles that don't exist from being added
-
             try
             {
                 if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
                 if (profiles == null || profiles.Count < 1) return BadRequest($"Invalid request.'Profiles' property cannot be null or empty: {profiles}.");
-                var errorMessage = await _profileLogic.AddToolAssociations(name, profiles);
+                var errorMessage = await _profileLogic.AddToolToProfiles(name, profiles);
                 if (errorMessage == null) return Ok(await _profileLogic.GetToolProfileAssociations(name));
                 else return NotFound(errorMessage);
             }
