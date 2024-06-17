@@ -7,7 +7,6 @@ This is accomplished by using a single function definition which then calls more
 Please add your own API token in appsettings.json after cloning the repo.
 
 Future Features (Descending Priority):
-- Provide conversation history from the client?
 - Document upload/extraction support
 - Real time internet search
 - Speech support
@@ -15,6 +14,9 @@ Future Features (Descending Priority):
 - Tool calls for reading/writing to a RAG database (library of default tools)
 
 Technical Debt Items (Descending Priority):
+- change ChatHub method name to ExecuteCompletion
+- Change ChatHub to accept a DTO (construct an object in client JS)
+- change completion controller routes to reflect OpenAI vs custom DTO expectations
 - Messages in the MessageHistory repository should be hashed before storage (Is there a more secure storage method?)
 - Revisit how default values are applied in the streaming hub
 - Rename norms "Magnitudes" (requires SQL column drop) (or just drop this column entirely?)
@@ -31,8 +33,9 @@ Technical Debt Items (Descending Priority):
 - Consolidate system tool strings in an appsettings section
 
 Refactoring Items (Descending Priority):
-- validation handler
-- error messaging handler
+- Move user property out of ProfileModifiers in CompletionRequest DTO (Pretty sure this is a duplicated item in the readme for this)
+- validation handler  
+- exception handler
 - Add logic to switch to fallback resources during service outages (More than likely should be possible by setting polly settings)
 - support for alternative AI APIs (just groq.com to start)
 - Remove camelcasecontract resolver and add JsonPropertyName for ALL properties instead

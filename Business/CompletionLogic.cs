@@ -1,6 +1,7 @@
 ﻿using Azure.AI.OpenAI;
 using OpenAICustomFunctionCallingAPI.API.DTOs;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.EmbeddingDTOs;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
@@ -58,17 +59,25 @@ namespace OpenAICustomFunctionCallingAPI.Business
         {
             completionRequest.ProfileModifiers = completionRequest.ProfileModifiers ?? new BaseCompletionDTO();
             if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest)); // run this without async to improve speed
-            var aiClientDTO = await BuildOpenAICompletion(completionRequest); // chose which AIClient to build and execute with here
+            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, completionRequest.Completion, completionRequest.ProfileModifiers, completionRequest.ConversationId, completionRequest.MaxMessageHistory);
             if (aiClientDTO == null) return null;// adjust this to return 404s
             aiClientDTO.Stream = true;
             return await _AIStreamingClient.StreamCompletion(aiClientDTO);
         }
 
-        public string GetStreamAuthor(StreamingChatCompletionsUpdate chunk, ChatRequestDTO chatDTO)
+        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamClientBasedCompletion(BaseCompletionDTO completionRequest)
+        {
+            var aiClientDTO = await BuildCompletion(completionRequest.Model, null, completionRequest);
+            if (aiClientDTO == null) return null;// adjust this to return 404s
+            aiClientDTO.Stream = true;
+            return await _AIStreamingClient.StreamCompletion(aiClientDTO);
+        }
+
+        public string GetStreamAuthor(StreamingChatCompletionsUpdate chunk, string profileName, string user = "user")
         {
             var author = chunk.AuthorName;
-            if (chunk.Role == "assistant") author = chatDTO.ProfileName;
-            else if (chunk.Role == "user") author = chatDTO.ProfileModifiers.User ?? "user";
+            if (chunk.Role == "assistant") author = profileName;
+            else if (chunk.Role == "user") author = user;
             else if (chunk.Role == "tool") author = "tool";
             return author;
         }
@@ -83,12 +92,12 @@ namespace OpenAICustomFunctionCallingAPI.Business
 
             if (completionRequest.RagData is not null)
             {
-                completionRequest.Completion = await BuildRagCompletion(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Completion, completionRequest.RagData.MaxRagDocs);
+                completionRequest.Completion = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Completion, completionRequest.RagData.MaxRagDocs);
                 if (completionRequest.Completion == null) return null;
             }
 
             // Build request DTO
-            var aiClientDTO = await BuildOpenAICompletion(completionRequest); // chose which AIClient to build and execute with here
+            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, completionRequest.Completion, completionRequest.ProfileModifiers, completionRequest.ConversationId, completionRequest.MaxMessageHistory); // chose which AIClient to build and execute with here
             if (aiClientDTO is null) return null;// adjust this to return 404s
             if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest));
             var completionResponse = await GetCompletion(completionRequest.ProfileName, aiClientDTO, attempts: 0);
@@ -102,7 +111,31 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return responseDTO;
         }
 
-        public async Task<string> BuildRagCompletion(string database, string target, string completion, int? maxRagDocs)
+        public async Task<ChatResponseDTO> ProcessClientBasedCompletion(ClientBasedCompletion completionRequest)
+        {
+            // recursive completions contain all their chat history in the database
+            var responseDTO = new ChatResponseDTO();
+
+            if (completionRequest.RagData is not null)
+            {
+                completionRequest.Messages[0].Content = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Messages[0].Content, completionRequest.RagData.MaxRagDocs);
+                if (completionRequest.Messages[0].Content == null) return null;
+            }
+
+            // Build request DTO
+            var aiClientDTO = await BuildCompletion(completionRequest.Model, null, completionRequest);
+            if (aiClientDTO is null) return null;// adjust this to return 404s
+            var completionResponse = await GetCompletion(completionRequest.Model, aiClientDTO, attempts: 0);
+            var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
+            if (defaultChoice is null) return null;
+
+            // move this logic to the controller level like when streaming?
+            responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.Model, null);
+            responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
+            return responseDTO;
+        }
+
+        public async Task<string> BuildRagMessage(string database, string target, string completion, int? maxRagDocs)
         {
             var ragMetadata = await _ragMetaRepository.GetByNameAsync(database);
             if (ragMetadata is null || maxRagDocs is null || string.IsNullOrWhiteSpace(database) || string.IsNullOrWhiteSpace(completion)) return null;
@@ -192,14 +225,14 @@ namespace OpenAICustomFunctionCallingAPI.Business
         #endregion
 
         #region Shared
-        public async Task<DefaultCompletionDTO> BuildOpenAICompletion(ChatRequestDTO chatRequest)
+        public async Task<DefaultCompletionDTO> BuildCompletion(string profileName, string? completion = null, BaseCompletionDTO? modifiers = null, Guid? conversationId = null, int? maxMessageHistory = null)
         {
             // probably move this to a seperate method
-            var completionProfile = await _profileDb.GetByNameWithToolsAsync(chatRequest.ProfileName);
-            if (completionProfile == null)
+            var completionProfile = await _profileDb.GetByNameWithToolsAsync(profileName);
+            if (completionProfile is null)
             {
-                var profileWithoutTools = await _profileDb.GetByNameAsync(chatRequest.ProfileName);
-                if (profileWithoutTools == null) return null;
+                var profileWithoutTools = await _profileDb.GetByNameAsync(profileName);
+                if (profileWithoutTools is null) return null;
                 completionProfile = new APIProfileDTO(profileWithoutTools);
             }
             else
@@ -210,12 +243,11 @@ namespace OpenAICustomFunctionCallingAPI.Business
             }
             
             DefaultCompletionDTO openAIRequest;
-            if (chatRequest.ProfileModifiers != null) openAIRequest = new DefaultCompletionDTO(completionProfile, chatRequest.ProfileModifiers);
+            if (modifiers is not null) openAIRequest = new DefaultCompletionDTO(completionProfile, modifiers);
             else openAIRequest = new DefaultCompletionDTO(completionProfile);
             if (completionProfile.Reference_Profiles is not null && completionProfile.Reference_Profiles.Length > 0)
                 foreach (var profile in completionProfile.Reference_Profiles) openAIRequest.Tools.Add(await BuildProfileReferenceTool(profile));
-
-            openAIRequest.Messages = await BuildMessages(chatRequest.Completion, openAIRequest.System_Message, chatRequest.ConversationId, chatRequest.MaxMessageHistory);
+            if (completion is not null) openAIRequest.Messages = await BuildMessages(completion, openAIRequest.System_Message, conversationId, maxMessageHistory);
             return openAIRequest;
         }
 

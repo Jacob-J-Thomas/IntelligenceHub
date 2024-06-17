@@ -10,7 +10,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs
     {
         public Guid? ConversationId { get; set; }
         public string ProfileName { get; set; }
-        public string Completion { get; set; } // change to dictionary?
+        public string Completion { get; set; }
         [DefaultValue(0)]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public int? MaxMessageHistory { get; set; }
