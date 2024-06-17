@@ -9,30 +9,30 @@ Please add your own API token in appsettings.json after cloning the repo.
 Future Features (Descending Priority):
 - Document upload/extraction support
 - Real time internet search
+- Hash (or otherwise encrypt) message history repository
 - Speech support
 - Create a library of default AI profiles
 - Tool calls for reading/writing to a RAG database (library of default tools)
 
 Technical Debt Items (Descending Priority):
-- change ChatHub method name to ExecuteCompletion
-- Change ChatHub to accept a DTO (construct an object in client JS)
-- change completion controller routes to reflect OpenAI vs custom DTO expectations
-- Messages in the MessageHistory repository should be hashed before storage (Is there a more secure storage method?)
-- Revisit how default values are applied in the streaming hub
+- Add documentation to classes
+- Migrate DAL methods to entity framework core 
+- Implement pagination for GenericRepository.GetAllAsync()
+- Ensure program.cs service lifteimes are properly created
+- revisit asynchronous design, particularly as it pertains to streaming
+- Configure launchsettings.json for both a prod and dev environment
+
+Refactoring Items (Descending Priority (order needs updating)):
+- Consolidate system tool strings in an appsettings section
+- Use a more specialized character than commas to singnal the end of a stop sequence (possibly use recuring characters of a certain kind, like "@@@@@") (why did this make sense to do again?)
 - Rename norms "Magnitudes" (requires SQL column drop) (or just drop this column entirely?)
-- Set dimensions of vector embedding requests based off of the model
 - remove "DTO" from DTO names
 - normalize DTO names for RAG indexing
 - Change "chatstream" to "chat/socket" for SignalR hub
-- revisit asynchronous design, particularly as it pertains to streaming
-- Use a more specialized character than commas to singnal the end of a stop sequence (possibly use recuring characters of a certain kind, like "@@@@@")
-- Ensure program.cs service lifteimes are properly created
-- Implement pagination for GenericRepository.GetAllAsync()
-- Add documentation to classes
-- Configure launchsettings.json for both a prod and dev environment
-- Consolidate system tool strings in an appsettings section
-
-Refactoring Items (Descending Priority):
+- Revisit how default values are applied in the streaming hub
+- change ChatHub method name to ExecuteCompletion
+- Change ChatHub to accept a DTO (construct an object in client JS)
+- Set dimensions of vector embedding requests based off of the model
 - Move user property out of ProfileModifiers in CompletionRequest DTO (Pretty sure this is a duplicated item in the readme for this)
 - validation handler  
 - exception handler
