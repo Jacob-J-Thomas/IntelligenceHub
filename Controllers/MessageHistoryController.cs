@@ -58,8 +58,8 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
             try
             {
                 var response = await _messageHistoryLogic.UpsertConversation(conversation);
-                if (response) return Ok(response);
-                else return BadRequest("Something went wrong... please check your response body");
+                if (response is null || response.Count < 1) return BadRequest("Something went wrong while adding some messages to the database... please check your response body");
+                else return Ok(response);
             }
             catch (HttpRequestException ex)
             {
@@ -73,7 +73,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
 
         [HttpDelete]
         [Route("delete/conversation/{id}")]
-        public async Task<IActionResult> DeleteConversation([FromBody] Guid id)
+        public async Task<IActionResult> DeleteConversation([FromRoute] Guid id)
         {
             try
             {
@@ -97,9 +97,10 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
+                if (messageDTO.ConversationId is null) return BadRequest("The ConversationId field is missing or invalid.");
                 var response = await _messageHistoryLogic.AddMessage(messageDTO);
-                if (response) return Ok(response);
-                else return NotFound($"No Conversation with ID '{messageDTO.ConversationId}' was found");
+                if (response is not null) return Ok(response);
+                else return BadRequest($"A conversation with the ID '{messageDTO.ConversationId}' does not exist.");
             }
             catch (HttpRequestException ex)
             {
@@ -112,7 +113,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         }
 
         [HttpDelete]
-        [Route("delete/{conversationId}/{messageId}")]
+        [Route("delete/message/{conversationId}/{messageId}")]
         public async Task<IActionResult> DeleteMessage(Guid conversationId, [FromRoute] int messageId)
         {
             try

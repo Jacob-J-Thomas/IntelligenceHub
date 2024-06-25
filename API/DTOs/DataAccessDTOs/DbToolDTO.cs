@@ -16,7 +16,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
         [Required]
         public string Name { get; set; }
         public string Description { get; set; }
-        public string Type { get; private set; } = "function";
         public string Required { get; set; }
 
         public DbToolDTO() { }

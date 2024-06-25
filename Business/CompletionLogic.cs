@@ -65,9 +65,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return await _AIStreamingClient.StreamCompletion(aiClientDTO);
         }
 
-        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamClientBasedCompletion(BaseCompletionDTO completionRequest)
+        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamClientBasedCompletion(ClientBasedCompletion completionRequest)
         {
-            var aiClientDTO = await BuildCompletion(completionRequest.Model, null, completionRequest);
+            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, null, completionRequest);
             if (aiClientDTO == null) return null;// adjust this to return 404s
             aiClientDTO.Stream = true;
             return await _AIStreamingClient.StreamCompletion(aiClientDTO);
@@ -100,14 +100,14 @@ namespace OpenAICustomFunctionCallingAPI.Business
             var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, completionRequest.Completion, completionRequest.ProfileModifiers, completionRequest.ConversationId, completionRequest.MaxMessageHistory); // chose which AIClient to build and execute with here
             if (aiClientDTO is null) return null;// adjust this to return 404s
             if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest));
-            var completionResponse = await GetCompletion(completionRequest.ProfileName, aiClientDTO, attempts: 0);
+            var completionResponse = await GetCompletion(aiClientDTO, attempts: 0);
             var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
             if (defaultChoice is null) return null;
 
             // move this logic to the controller level like when streaming?
-            responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.ProfileName, (Guid)completionRequest.ConversationId);
+            responseDTO.ConversationId = completionRequest.ConversationId ?? null;
+            responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.ProfileName, responseDTO.ConversationId);
             responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
-            responseDTO.ConversationId = (Guid)completionRequest.ConversationId;
             return responseDTO;
         }
 
@@ -123,9 +123,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
             }
 
             // Build request DTO
-            var aiClientDTO = await BuildCompletion(completionRequest.Model, null, completionRequest);
+            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, null, completionRequest);
             if (aiClientDTO is null) return null;// adjust this to return 404s
-            var completionResponse = await GetCompletion(completionRequest.Model, aiClientDTO, attempts: 0);
+            var completionResponse = await GetCompletion(aiClientDTO, attempts: 0);
             var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
             if (defaultChoice is null) return null;
 
@@ -185,7 +185,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
         }
 
         // move to an AIClient in API layer
-        public async Task<CompletionResponseDTO> GetCompletion(string profileName, DefaultCompletionDTO openAIRequest, int attempts)
+        public async Task<CompletionResponseDTO> GetCompletion(DefaultCompletionDTO openAIRequest, int attempts)
         {
             var maxAttempts = 5;
             while (attempts < maxAttempts)
@@ -208,7 +208,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
                         
                         // add logic to switch to backup services
 
-                        await GetCompletion(profileName, openAIRequest, attempts++);
+                        await GetCompletion(openAIRequest, attempts++);
                     }
                     else
                     {
@@ -248,6 +248,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             if (completionProfile.Reference_Profiles is not null && completionProfile.Reference_Profiles.Length > 0)
                 foreach (var profile in completionProfile.Reference_Profiles) openAIRequest.Tools.Add(await BuildProfileReferenceTool(profile));
             if (completion is not null) openAIRequest.Messages = await BuildMessages(completion, openAIRequest.System_Message, conversationId, maxMessageHistory);
+            else if (modifiers is ClientBasedCompletion clientBasedCompletion) openAIRequest.Messages = clientBasedCompletion.Messages;
             return openAIRequest;
         }
 

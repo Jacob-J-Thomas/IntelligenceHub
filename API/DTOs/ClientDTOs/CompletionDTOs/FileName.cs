@@ -7,6 +7,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs
     public class ClientBasedCompletion : DefaultCompletionDTO
     {
         public RagRequestData RagData { get; set; }
+        public string? ProfileName { get; set; }
 
         public ClientBasedCompletion() { }
         public ClientBasedCompletion(APIProfileDTO completion) : base(completion) { }

@@ -10,9 +10,9 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
     public class DefaultCompletionDTO : BaseCompletionDTO
     {
         [JsonIgnore]
-        public override string System_Message { get; set; }
+        public override string? System_Message { get; set; }
         [JsonIgnore]
-        public override string Reference_Description { get; set; }
+        public override string? Reference_Description { get; set; }
         [JsonIgnore]
         public override bool? Return_Recursion { get; set; }
         public List<MessageDTO> Messages { get; set; } = new List<MessageDTO>();

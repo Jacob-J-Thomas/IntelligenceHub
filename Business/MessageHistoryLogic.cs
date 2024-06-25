@@ -18,14 +18,16 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return await _messageHistoryRepository.GetConversationAsync(id, count);
         }
 
-        public async Task<bool> UpsertConversation(List<DbMessageDTO> messages)
+        public async Task<List<DbMessageDTO>> UpsertConversation(List<DbMessageDTO> messages)
         {
+            var addedMessages = new List<DbMessageDTO>();
             foreach (var message in messages)
             {
                 var response = await _messageHistoryRepository.AddAsync(message);
-                if (response is null) return false;
+                if (response is null) return null;
+                addedMessages.Add(response);
             }
-            return true;
+            return addedMessages;
         }
 
         public async Task<bool> DeleteConversation(Guid id)
@@ -33,11 +35,11 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return await _messageHistoryRepository.DeleteConversationAsync(id);
         }
 
-        public async Task<bool> AddMessage(DbMessageDTO message)
+        public async Task<DbMessageDTO> AddMessage(DbMessageDTO message)
         {
-            var response = await _messageHistoryRepository.AddAsync(message);
-            if (response is null) return false;
-            else return true;
+            var conversation = await _messageHistoryRepository.GetConversationAsync((Guid)message.ConversationId, 1);
+            if (conversation is null || conversation.Count < 1) return null; 
+            return await _messageHistoryRepository.AddAsync(message);
         }
 
         public async Task<bool> DeleteMessage(Guid conversationId, int messageId)

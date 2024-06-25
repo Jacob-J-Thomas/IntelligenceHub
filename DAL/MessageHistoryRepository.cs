@@ -60,7 +60,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var query = $@"
+                    var query = @"
                         DELETE FROM MessageHistory 
                         WHERE [ConversationId] = @ConversationId;";
 

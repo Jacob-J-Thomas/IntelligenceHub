@@ -56,7 +56,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                completionRequest.Model = name ?? completionRequest.Model;
+                completionRequest.ProfileName = name ?? completionRequest.ProfileName;
                 var errorMessage = _validationLogic.ValidateBaseDTO(completionRequest);
                 if (errorMessage is not null) return BadRequest(errorMessage);
                 var response = await _completionLogic.ProcessClientBasedCompletion(completionRequest);
@@ -151,7 +151,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         {
             try
             {
-                completionRequest.Model = name ?? completionRequest.Model;
+                completionRequest.ProfileName = name ?? completionRequest.ProfileName;
                 var errorMessage = _validationLogic.ValidateBaseDTO(completionRequest);
                 if (errorMessage is not null) return BadRequest(errorMessage);
                 var response = await _completionLogic.StreamClientBasedCompletion(completionRequest);
@@ -182,7 +182,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                         }
                         if (author is null)
                         {
-                            author = _completionLogic.GetStreamAuthor(chunk, completionRequest.Model, completionRequest.User);
+                            author = _completionLogic.GetStreamAuthor(chunk, completionRequest.ProfileName, completionRequest.User);
                             author = chunk.AuthorName ?? author; // chunk.AuthorName can supposedly be assigned to via instructions in the system prompt
                         }
                         var sseMessage = $"data: {author}, {completionUpdate}\n\n";

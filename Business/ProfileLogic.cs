@@ -221,6 +221,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             foreach (var toolName in tools)
             {
                 var tool = await _toolDb.GetByNameAsync(toolName);
+                if (tool is null) return $"No tool '{toolName}' found.";
                 toolIDs.Add(tool.Id);
             }
             var profile = await _profileDb.GetByNameAsync(name);
@@ -228,7 +229,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             {
                 var success = await _profileToolsDb.AddAssociationsByProfileIdAsync(profile.Id, toolIDs);
                 if (success) return null;
-                else return "something went wrong...";
+                else return $"No profile {profile.Name} found.";
             }
             return $"The tools or profile in the request body were not found.";
         }
