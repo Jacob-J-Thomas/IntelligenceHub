@@ -7,12 +7,53 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="API\DTOs\DataAccessDTOs\RagDocument.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <_WebToolingArtifacts Remove="Properties\launchSettings.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="wwwroot\lib\signalr.js" />
-    <None Include="wwwroot\lib\signalr.min.js" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\BaseCompletionDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\DefaultCompletionDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\CompletionResponseDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ContentLogprobsDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\LogprobsDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ResponseChoiceDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ResponseFunctionDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ResponseMessageDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ResponseToolDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\TokenLogprobDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\UsageDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\MessageDTOs\MessageDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingData.cs" />
+    <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingRequestBase.cs" />
+    <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingResponse.cs" />
+    <Content Include="API\DTOs\ClientDTOs\RagDTOs\RAGQueryResult.cs" />
+    <Content Include="API\DTOs\ClientDTOs\ToolDTOs\FunctionDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\ToolDTOs\ParametersDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\ToolDTOs\PropertyDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\ToolDTOs\SystemTools\ProfileReferenceTool.cs" />
+    <Content Include="API\DTOs\ClientDTOs\ToolDTOs\ToolDTO.cs" />
+    <Content Include="API\DTOs\ControllerDTOs\APIProfileDTO.cs" />
+    <Content Include="API\DTOs\ControllerDTOs\ChatRequestDTO.cs" />
+    <Content Include="API\DTOs\ControllerDTOs\ChatResponseDTO.cs" />
+    <Content Include="API\DTOs\ControllerDTOs\DirectQueryRequest.cs" />
+    <Content Include="API\DTOs\DataAccessDTOs\DbMessageDTO.cs" />
+    <Content Include="API\DTOs\DataAccessDTOs\DbProfileDTO.cs" />
+    <Content Include="API\DTOs\DataAccessDTOs\DbProfileToolDTO.cs" />
+    <Content Include="API\DTOs\DataAccessDTOs\DbPropertyDTO.cs" />
+    <Content Include="API\DTOs\DataAccessDTOs\DbToolDTO.cs" />
+    <Content Include="API\DTOs\ClientDTOs\RagDTOs\RagDocumentBase.cs" />
+    <Content Include="API\DTOs\DataAccessDTOs\RagChunk.cs" />
+    <Content Include="API\DTOs\DataAccessDTOs\RagIndexMetaDataDTO.cs" />
+    <Content Include="API\DTOs\System\RAGTextGenerationSystemCompletionDTO.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\TestHubClient\lib\signalr.js" />
+    <None Include="wwwroot\TestHubClient\lib\signalr.min.js" />
   </ItemGroup>
 
   <ItemGroup>

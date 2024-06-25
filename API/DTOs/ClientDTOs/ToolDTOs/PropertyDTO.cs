@@ -7,9 +7,9 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs
     public class PropertyDTO
     {
         [JsonIgnore]
-        public int? Id { get; set; }
-        public string Type { get; set; }
-        public string? Description { get; set; }
+        public int? id { get; set; }
+        public string type { get; set; }
+        public string? description { get; set; }
 
         public PropertyDTO() { }
 
@@ -20,9 +20,9 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs
 
         public void ConvertToAPIPropertyDTO(DbPropertyDTO property)
         {
-            Id = property.Id;
-            Type = property.Type;
-            Description = property.Description;
+            id = property.Id;
+            type = property.Type;
+            description = property.Description;
         }
     }
 }

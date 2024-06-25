@@ -11,15 +11,22 @@ using System.Reflection;
 
 namespace OpenAICustomFunctionCallingAPI.DAL
 {
-    public class GenericRepository<T> : IRepository<T> where T : class, new()
+    public class GenericRepository<T> : IGenericRepository<T> where T : class, new()
     {
-        private readonly string _connectionString;
-        private readonly string _table;
+        protected readonly string _connectionString;
+        protected string _table;
 
         public GenericRepository(string connectionString)
         {
             _connectionString = connectionString;
             _table = GetTableName<T>();
+        }
+
+        // RAG databases names should be assigned via API request
+        public GenericRepository(string connectionString, string tableName)
+        {
+            _connectionString = connectionString;
+            _table = tableName;
         }
 
         public async Task<T> GetByNameAsync(string name)
@@ -29,7 +36,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var query = $@"SELECT * FROM [master].[dbo].[{_table}] WHERE Name = @Name";
+                    var query = $@"SELECT * FROM {_table} WHERE Name = @Name";
                     using (var command = new SqlCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@Name", name);
@@ -88,7 +95,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     var columns = string.Join(", ", properties.Select(p => $"[{p.Name}]"));
                     var values = string.Join(", ", properties.Select(p => $"@{p.Name}"));
 
-                    var query = $@"     INSERT INTO [master].[dbo].[{_table}] ({columns})
+                    var query = $@"     INSERT INTO {_table} ({columns})
                                         OUTPUT inserted.*
                                         VALUES ({values})";
 
@@ -127,19 +134,18 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     await connection.OpenAsync();
 
                     var setClause = string.Join(", ", typeof(T).GetProperties()
-                        .Where(p => p.Name != "Id" && p.Name != "Name" && p.Name != "Messages" && p.Name != "Tools") // Exclude Id, Name, and List<DbPropertyDTO> properties
+                        .Where(p => p.Name != "Id" && p.Name != "Name" && p.Name != "Messages" && p.Name != "Tools") // check if all these are still needed
                         .Select(p => $"[{p.Name}] = @{p.Name}"));
 
                     var query = $@"
-                        UPDATE [master].[dbo].[{_table}] SET {setClause} 
+                        UPDATE {_table} SET {setClause} 
                         WHERE Name = @Name";
 
                     using (var command = new SqlCommand(query, connection))
                     {
                         foreach (var property in typeof(T).GetProperties())
                         {
-                            // Exclude Id and Name properties from being updated
-                            if (property.Name != "Id" && property.Name != "Name" && property.Name != "Messages" && property.Name != "Tools")
+                            if (property.Name != "Id" && property.Name != "Name" && property.Name != "Messages" && property.Name != "Tools")// check if all these are still needed
                             {
                                 var paramName = $"@{property.Name}";
                                 var value = property.GetValue(entity) ?? DBNull.Value;
@@ -164,7 +170,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var query = $@"DELETE FROM [master].[dbo].[{_table}] WHERE Id = @Id";
+                    var query = $@"DELETE FROM {_table} WHERE Id = @Id";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -180,18 +186,19 @@ namespace OpenAICustomFunctionCallingAPI.DAL
         }
 
         // declared as method in case reflection is desired for derived classes
-        public string GetTableName<T>()
+        protected string GetTableName<T>()
         {
-            return typeof(T).GetCustomAttribute<TableNameAttribute>().TableName;
+            var tableAttribute = typeof(T).GetCustomAttribute<TableNameAttribute>();
+            return tableAttribute != null ? tableAttribute.TableName : string.Empty;
         }
 
-        public T MapFromReader<T>(SqlDataReader reader) where T : new()
+        protected T MapFromReader<T>(SqlDataReader reader) where T : new()
         {
             var entity = new T();
             foreach (var property in typeof(T).GetProperties())
             {
                 var columnName = property.Name;
-                if (columnName != "Messages" && columnName != "Tools")
+                if (columnName != "Messages" && columnName != "Tools")// check if all these are still needed
                 {
                     var value = reader[columnName];
                     if (value != DBNull.Value)

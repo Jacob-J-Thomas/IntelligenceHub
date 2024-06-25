@@ -13,7 +13,6 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
 {
     public class BaseCompletionDTO
     {
-        // move properties into OpenAICompletionDTO as needed.
         public string? Model { get; set; }
         [JsonProperty("frequency_penalty")]
         public float? Frequency_Penalty { get; set; }
@@ -37,7 +36,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
         public string? Response_Format { get; set; }
         public virtual string? System_Message { get; set; } // maybe move this
         public string[]? Stop { get; set; }
-        public List<ToolDTO> Tools { get; set; } = new List<ToolDTO>();
+        public List<ToolDTO> Tools { get; set; } //= new List<ToolDTO>();
         public virtual string? Reference_Description { get; set; } // probably move this
         public virtual bool? Return_Recursion { get; set; }
 
@@ -47,21 +46,14 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
         public BaseCompletionDTO() { }
 
         public BaseCompletionDTO(APIProfileDTO completion)
-        {
+        {   
+            // create a seperate method for this instead of passing null
             ConvertAPIProfileAndSetModifiers(completion, null);
-
-            SetTools(completion.Tools, null);
-            SetStop(completion.Stop, null);
-            SetLogProbs();
         }
 
         public BaseCompletionDTO(APIProfileDTO openAIRequest, BaseCompletionDTO? modifiers)
         {
             ConvertAPIProfileAndSetModifiers(openAIRequest, modifiers);
-
-            SetTools(openAIRequest.Tools, modifiers.Tools);
-            SetStop(openAIRequest.Stop, modifiers.Stop);
-            SetLogProbs();
         }
 
         public void ConvertAPIProfileAndSetModifiers(APIProfileDTO openAIRequest, BaseCompletionDTO? modifiers)
@@ -84,9 +76,13 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
             Tool_Choice = modifiers.Tool_Choice ?? openAIRequest.Tool_Choice;
             System_Message = modifiers.System_Message ?? openAIRequest.System_Message;
             Return_Recursion = modifiers.Return_Recursion ?? openAIRequest.Return_Recursion;
+
+            SetTools(openAIRequest.Tools, modifiers.Tools);
+            SetStop(openAIRequest.Stop, modifiers.Stop);
+            SetLogProbs();
         }
 
-        public void SetTools(List<ToolDTO>? requestTools, List<ToolDTO>? modifierTools)
+        private void SetTools(List<ToolDTO>? requestTools, List<ToolDTO>? modifierTools)
         {
             if (modifierTools != null && modifierTools.Count > 0)
             {
@@ -98,7 +94,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
             }
         }
 
-        public void SetStop(string[]? stopArray, string[]? modifierStopArray)
+        private void SetStop(string[]? stopArray, string[]? modifierStopArray)
         {
             if (modifierStopArray != null && modifierStopArray.Length > 0)
             {
@@ -110,7 +106,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
             }
         }
 
-        public void SetLogProbs()
+        private void SetLogProbs()
         {
             if (Top_Logprobs != null && Top_Logprobs > 0)
             {

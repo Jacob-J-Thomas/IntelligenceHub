@@ -19,7 +19,6 @@ using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
 
 namespace OpenAICustomFunctionCallingAPI.Business
 {
-    // this whole class needs some refactoring
     public class ValidationLogic
     {
         public ValidationLogic() { }
@@ -35,9 +34,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
             {
                 return "The chatRequest object must be provided";
             }
-            if (chatRequest.Modifiers != null)
+            if (chatRequest.ProfileModifiers != null)
             {
-                var errorMessage =  ValidateBaseDTO(chatRequest.Modifiers);
+                var errorMessage =  ValidateBaseDTO(chatRequest.ProfileModifiers);
                 if (errorMessage != null)
                 {
                     return errorMessage;
@@ -96,8 +95,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 "gpt-4-32k",
                 "gpt-4-turbo-preview",
                 "gpt-4-vision-preview",
-                "mixtral",
-                "cusotom" // need to implement this still
+                "mixtral"
             };
 
             if (profile.Model != null && validModels.Contains(profile.Model) == false)
@@ -161,20 +159,20 @@ namespace OpenAICustomFunctionCallingAPI.Business
             {
                 return "A function name is required for all tools.";
             }
-            if (tool.Function.Parameters.Required != null && tool.Function.Parameters.Required.Length > 0)
+            if (tool.Function.Parameters.required != null && tool.Function.Parameters.required.Length > 0)
             {
-                foreach (var str in  tool.Function.Parameters.Required)
+                foreach (var str in  tool.Function.Parameters.required)
                 {
-                    if (!tool.Function.Parameters.Properties.ContainsKey(str))
+                    if (!tool.Function.Parameters.properties.ContainsKey(str))
                     {
                         return $"Required property {str} does not exist in the tool {tool.Function.Name}'s properties list.";
                     }
                 }
             }
 
-            if (tool.Function.Parameters.Properties != null && tool.Function.Parameters.Properties.Count > 0)
+            if (tool.Function.Parameters.properties != null && tool.Function.Parameters.properties.Count > 0)
             {
-                var errorMessage = ValidateProperties(tool.Function.Parameters.Properties);
+                var errorMessage = ValidateProperties(tool.Function.Parameters.properties);
                 if (errorMessage != null)
                 {
                     return errorMessage;
@@ -203,13 +201,13 @@ namespace OpenAICustomFunctionCallingAPI.Business
             };
             foreach (var prop in properties)
             {
-                if (prop.Value.Type == null)
+                if (prop.Value.type == null)
                 {
                     return $"The field 'type' for property {prop.Key} is required";
                 }
-                else if (!validTypes.Contains(prop.Value.Type))
+                else if (!validTypes.Contains(prop.Value.type))
                 {
-                    return $"The 'type' field '{prop.Value.Type}' for property {prop.Key} is invalid. Please ensure one of the following types is selected: '{validTypes}'";
+                    return $"The 'type' field '{prop.Value.type}' for property {prop.Key} is invalid. Please ensure one of the following types is selected: '{validTypes}'";
                 }
             }
             return null;

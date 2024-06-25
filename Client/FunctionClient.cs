@@ -2,10 +2,7 @@
 using Newtonsoft.Json.Serialization;
 using System.Net.Http.Headers;
 using System.Text;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using Newtonsoft.Json.Linq;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
-using static OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.CompletionResponseDTO;
+using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 
 namespace OpenAICustomFunctionCallingAPI.Client
 {
@@ -32,10 +29,9 @@ namespace OpenAICustomFunctionCallingAPI.Client
             {
                 try
                 {
-                    //var response = await client.PostAsync(_endpoint, body);
-                    //response.EnsureSuccessStatusCode();
-                    //return response;
-                    return new HttpResponseMessage();
+                    var response = await client.PostAsync(_endpoint, body);
+                    response.EnsureSuccessStatusCode();
+                    return response;
                 }
                 catch (Exception ex)
                 {

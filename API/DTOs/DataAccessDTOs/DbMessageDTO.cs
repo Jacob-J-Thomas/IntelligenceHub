@@ -8,7 +8,8 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs
     [TableName("MessageHistory")]
     public class DbMessageDTO
     {
-        public string ConversationId {  get; set; }
+        public int? Id { get; set; }
+        public Guid? ConversationId {  get; set; }
         public string Name { get; set; }
         public string Role { get; set; }
         public DateTime TimeStamp {  get; set; }
@@ -20,19 +21,16 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs
         public DbMessageDTO(ChatRequestDTO userMessage)
         {
             var name = "";
-            if (userMessage.Modifiers != null && userMessage.Modifiers.User != null)
+            if (userMessage.ProfileModifiers != null && userMessage.ProfileModifiers.User != null)
             {
-                name = userMessage.Modifiers.User;
+                name = userMessage.ProfileModifiers.User;
             }
             ConvertToDbMessageDTO(userMessage.ConversationId, "user", name, userMessage.Completion);
         }
 
         public void ConvertToDbMessageDTO(Guid? conversationId, string role, string name, string completion)
         {
-            if (conversationId != null)
-            {
-                ConversationId = conversationId.ToString();
-            }
+            ConversationId = conversationId;
             Role = role;
             Name = name;
             Content = completion;

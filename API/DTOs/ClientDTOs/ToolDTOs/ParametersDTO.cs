@@ -5,9 +5,9 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs
 {
     public class ParametersDTO
     {
-        public string Type { get; private set; } = "object"; 
-        public Dictionary<string, PropertyDTO>? Properties { get; set; } = new Dictionary<string, PropertyDTO>();
-        public string[]? Required { get; set; } = new string[] { };
+        public string type { get; private set; } = "object"; 
+        public Dictionary<string, PropertyDTO>? properties { get; set; } = new Dictionary<string, PropertyDTO>();
+        public string[]? required { get; set; } = new string[] { };
 
         public ParametersDTO() { }
 
@@ -18,14 +18,14 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs
 
         public void ConvertToAPIParametersDTO(DbToolDTO tool, List<DbPropertyDTO> properties)
         {
-            foreach (var prop in properties) // need if statement here?
+            foreach (var prop in properties)
             {
                 var propDto = new PropertyDTO(prop);
-                Properties.Add(prop.Name, propDto);
+                this.properties.Add(prop.Name, propDto);
             }
             if (tool.Required != null)
             {
-                Required = tool.Required.ToStringArray();
+                required = tool.Required.ToStringArray();
             }
         }
     }

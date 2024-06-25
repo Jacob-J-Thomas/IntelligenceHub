@@ -12,11 +12,8 @@ namespace OpenAICustomFunctionCallingAPI.DAL
 {
     public class ToolRepository : GenericRepository<DbToolDTO>
     {
-        private readonly string _connectionString;
-
         public ToolRepository(string connectionString) : base(connectionString)
         {
-            _connectionString = connectionString;
         }
 
         public async Task<ToolDTO> GetToolByNameAsync(string name)
@@ -101,6 +98,46 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
+        public async Task<List<string>> GetProfileToolsAsync(string name)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    // Assuming the names of your tables and columns
+                    var query = @"
+                        SELECT t.Name
+                        FROM tools t
+                        INNER JOIN profileTools pt ON t.Id = pt.ProfileID
+                        INNER JOIN profiles p ON pt.ToolID = p.Id
+                        WHERE p.Name = @Name;";
+
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@Name", name);
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            var profileNames = new List<string>();
+
+                            while (await reader.ReadAsync())
+                            {
+                                profileNames.Add((string)reader["Name"]); // Assuming you have a MapFromReader method for Tool
+                            }
+
+                            return profileNames;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
         public async Task<List<string>> GetToolProfilesAsync(string name)
         {
             try
@@ -147,7 +184,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             {
                 Id = (int)reader["Id"],
                 Name = (string)reader["Name"],
-                //Type = (string)reader["Type"], // this always equals function and shouldn't be needed
                 Description = reader["Description"] as string
             };
 
@@ -168,9 +204,9 @@ namespace OpenAICustomFunctionCallingAPI.DAL
 
                     var propDto = new PropertyDTO()
                     {
-                        Id = propertyId,
-                        Type = propertyType,
-                        Description = propertyDescription
+                        id = propertyId,
+                        type = propertyType,
+                        description = propertyDescription
                     };
 
                     // Create a PropertyDTO and add it to the dictionary
