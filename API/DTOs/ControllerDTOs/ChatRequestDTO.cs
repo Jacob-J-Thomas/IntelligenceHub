@@ -25,7 +25,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs
         {
             ProfileName = profileName;
             Completion = message;
-            ConversationId = conversationId ?? Guid.NewGuid();
+            ConversationId = conversationId;
             MaxMessageHistory = maxMessages ?? 0;
             ProfileModifiers = new BaseCompletionDTO()
             {

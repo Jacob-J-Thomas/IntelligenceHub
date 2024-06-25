@@ -7,37 +7,40 @@ This is accomplished by using a single function definition which then calls more
 Please add your own API token in appsettings.json after cloning the repo.
 
 Future Features (Descending Priority):
-- support for alternative AI APIs (just groq.com to start)
-- Add route profile/associate/{name}
-- Add route profile/dissociate/{name}
-- Add route profile/get/{name}/tools
-- Controller for interacting with saved conversations
-- Some kind of methodology for providing the entire conversation history from the client and/or disabling saving of chat history
-- Add logic to switch to fallback resources during service outages
 - Document upload/extraction support
 - Real time internet search
+- Hash (or otherwise encrypt) message history repository
 - Speech support
-- Tool calls for reading/writing to a RAG database
 - Create a library of default AI profiles
+- Tool calls for reading/writing to a RAG database (library of default tools)
 
 Technical Debt Items (Descending Priority):
-- Rename norms "Magnitudes" (requires SQL column drop)
-- Set dimensions of vector embedding requests based off of the model
-- remove "DTO" from names
+- Add documentation to classes
+- Migrate DAL methods to entity framework core 
+- Implement pagination for GenericRepository.GetAllAsync()
+- Ensure program.cs service lifteimes are properly created
+- revisit asynchronous design, particularly as it pertains to streaming
+- Configure launchsettings.json for both a prod and dev environment
+
+Refactoring Items (Descending Priority (order needs updating)):
+- Consolidate system tool strings in an appsettings section
+- Use a more specialized character than commas to singnal the end of a stop sequence (possibly use recuring characters of a certain kind, like "@@@@@") (why did this make sense to do again?)
+- Rename norms "Magnitudes" (requires SQL column drop) (or just drop this column entirely?)
+- remove "DTO" from DTO names
 - normalize DTO names for RAG indexing
 - Change "chatstream" to "chat/socket" for SignalR hub
-- revisit asynchronous design, particularly as it pertains to streaming
-- Use a more specialized character than commas to singnal the end of a stop sequence (possibly use recuring characters of a certain kind, like "@@@@@")
-- Ensure program.cs service lifteimes are properly created
-- Implement pagination for GenericRepository.GetAllAsync()
-- Add documentation to classes
-- Configure launchsettings.json for both a prod and dev environment
-- Move system tool strings to an appsettings section
-
-Refactoring Items (Descending Priority):
+- Revisit how default values are applied in the streaming hub
+- change ChatHub method name to ExecuteCompletion
+- Change ChatHub to accept a DTO (construct an object in client JS)
+- Set dimensions of vector embedding requests based off of the model
+- Move user property out of ProfileModifiers in CompletionRequest DTO (Pretty sure this is a duplicated item in the readme for this)
+- validation handler  
+- exception handler
+- Add logic to switch to fallback resources during service outages (More than likely should be possible by setting polly settings)
+- support for alternative AI APIs (just groq.com to start)
 - Remove camelcasecontract resolver and add JsonPropertyName for ALL properties instead
-- Use cascaed to potentially simplify some operations involving associative tables
-- Modify the messageHistory tables so that they can be derived and utilized like a RAG database and its associated classes
+- Use cascade to potentially simplify some operations involving associative tables
+- Modify the messageHistory tables so that they can be derived and utilized (like the RAG Database DTOs and their associated classes)
 - provide default values to query requests? Or get these from the database?
 - perform string cleaning on any AGI responses from system model profiles
 - Combine embedding and AGI clients?

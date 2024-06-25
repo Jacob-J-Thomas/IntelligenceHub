@@ -98,6 +98,46 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
+        public async Task<List<string>> GetProfileToolsAsync(string name)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    // Assuming the names of your tables and columns
+                    var query = @"
+                        SELECT t.Name
+                        FROM tools t
+                        INNER JOIN profileTools pt ON t.Id = pt.ProfileID
+                        INNER JOIN profiles p ON pt.ToolID = p.Id
+                        WHERE p.Name = @Name;";
+
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@Name", name);
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            var profileNames = new List<string>();
+
+                            while (await reader.ReadAsync())
+                            {
+                                profileNames.Add((string)reader["Name"]); // Assuming you have a MapFromReader method for Tool
+                            }
+
+                            return profileNames;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
         public async Task<List<string>> GetToolProfilesAsync(string name)
         {
             try

@@ -139,7 +139,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        public async Task<int> DeleteAssociationAsync(int toolId, string name) // change to delete all associations by tool
+        public async Task<int> DeleteToolAssociationAsync(int toolId, string name) // change to delete all associations by tool
         {
             try
             {
@@ -150,8 +150,6 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     var query = $@"     
                         DECLARE @ProfileID int;
                         SET @ProfileID = (SELECT Id FROM profiles WHERE [Name] = @Name);
-
-                        -- Delete from profileTools if the profile exists
                         IF @ProfileID IS NOT NULL
                         BEGIN
                             DELETE FROM [master].[dbo].[profileTools] 
@@ -173,6 +171,37 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
+        public async Task<int> DeleteProfileAssociationAsync(int profileID, string name) // change to delete all associations by tool
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    var query = $@"     
+                        DECLARE @ToolID int;
+                        SET @ToolID = (SELECT Id FROM tools WHERE [Name] = @Name);
+                        IF @ToolID IS NOT NULL
+                        BEGIN
+                            DELETE FROM [master].[dbo].[profileTools] 
+                            WHERE ProfileID = @ProfileID
+                            AND ToolID = @ToolID;
+                        END";
+
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@ProfileID", profileID);
+                        command.Parameters.AddWithValue("@Name", name);
+                        return await command.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
 
         public async Task<int> DeleteAllProfileAssociationsAsync(int profileId) // change to delete all associations by profile
         {

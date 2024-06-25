@@ -101,7 +101,7 @@
                         addMessage(usernameInput.value, messageInput.value);
                         //displayMessage(usernameInput.value, messageInput.value)
                         // Call the Send method on the hub.
-                        connection.invoke('send', profileNameInput.value, conversationIdInput.value, usernameInput.value, messageInput.value, maxMessageHistory.value, ragDatabaseInput.value, ragTargetInput.Value, ragDocNInput.value);
+                        connection.invoke('send', profileNameInput.value, conversationIdInput.value, usernameInput.value, messageInput.value);//, maxMessageHistory.value, ragDatabaseInput.value, ragTargetInput.Value, ragDocNInput.value);
 
                         // Clear text box and reset focus for next comment.
                         messageInput.value = '';
