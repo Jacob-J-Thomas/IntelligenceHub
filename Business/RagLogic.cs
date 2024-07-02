@@ -128,6 +128,8 @@ namespace OpenAICustomFunctionCallingAPI.Business
                         Encoding_Format = indexData.EncodingFormat,
                         Dimensions = indexData.Dimensions
                     };
+
+                    // move these if checks to another method
                     if (indexData.GenerateContentVector)
                     {
                         var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);

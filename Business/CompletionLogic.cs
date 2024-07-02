@@ -57,6 +57,11 @@ namespace OpenAICustomFunctionCallingAPI.Business
         #region Streaming
         public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest)
         {
+            if (completionRequest.RagData is not null)
+            {
+                completionRequest.Completion = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Completion, completionRequest.RagData.MaxRagDocs);
+                if (completionRequest.Completion is null) return null;
+            }
             completionRequest.ProfileModifiers = completionRequest.ProfileModifiers ?? new BaseCompletionDTO();
             if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest)); // run this without async to improve speed
             var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, completionRequest.Completion, completionRequest.ProfileModifiers, completionRequest.ConversationId, completionRequest.MaxMessageHistory);
@@ -67,6 +72,12 @@ namespace OpenAICustomFunctionCallingAPI.Business
 
         public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamClientBasedCompletion(ClientBasedCompletion completionRequest)
         {
+            if (completionRequest.RagData is not null)
+            {
+                var lastMessage = completionRequest.Messages.LastOrDefault();
+                lastMessage.Content = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, lastMessage.Content, completionRequest.RagData.MaxRagDocs);
+                if (lastMessage.Content is null) return null;
+            }
             var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, null, completionRequest);
             if (aiClientDTO == null) return null;// adjust this to return 404s
             aiClientDTO.Stream = true;
@@ -93,7 +104,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             if (completionRequest.RagData is not null)
             {
                 completionRequest.Completion = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Completion, completionRequest.RagData.MaxRagDocs);
-                if (completionRequest.Completion == null) return null;
+                if (completionRequest.Completion is null) return null;
             }
 
             // Build request DTO
@@ -115,7 +126,6 @@ namespace OpenAICustomFunctionCallingAPI.Business
         {
             // recursive completions contain all their chat history in the database
             var responseDTO = new ChatResponseDTO();
-
             if (completionRequest.RagData is not null)
             {
                 completionRequest.Messages[0].Content = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Messages[0].Content, completionRequest.RagData.MaxRagDocs);
@@ -140,7 +150,9 @@ namespace OpenAICustomFunctionCallingAPI.Business
             var ragMetadata = await _ragMetaRepository.GetByNameAsync(database);
             if (ragMetadata is null || maxRagDocs is null || string.IsNullOrWhiteSpace(database) || string.IsNullOrWhiteSpace(completion)) return null;
             var ragInstructionData = "Below you will find a set of documents, each delimited with tripple backticks. " +
-                "Please use these documents to inform your response to the dialogue below the documents.\n\n";
+                "Please use these documents to inform your response to the dialogue below the documents. " +
+                "If you use one of the sources, please reference it in your response using markdown like so: [SourceName](SourceLink)." +
+                "If no SourceLink is present, only provide the sourcename.\n\n";
 
             _ragRepository.SetTable(database);
             EmbeddingRequestBase embeddingRequest = new()
@@ -159,8 +171,8 @@ namespace OpenAICustomFunctionCallingAPI.Business
                     $"SourceName: {doc.SourceName}\n" +
                     $"SourceLink: {doc.SourceLink}\n" +
                     $"SourceName: {doc.SourceName}\n" +
-                    $"Content: {doc.Content}" + 
-                    "\n```\n";
+                    $"Content: {doc.Content}\n" + 
+                    "```\n";
 
             return ragInstructionData + "\n\n" + completion;
         }
@@ -195,10 +207,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
                     var completionResponse = await _AIClient.PostCompletion(openAIRequest);
 
                     // improve this validation
-                    if (completionResponse is null || completionResponse.Choices.FirstOrDefault() is null)
-                    {
-                        return null;
-                    }
+                    if (completionResponse is null || completionResponse.Choices.FirstOrDefault() is null) return null;
                     return completionResponse;
                 }
                 catch (HttpRequestException ex)
@@ -206,21 +215,18 @@ namespace OpenAICustomFunctionCallingAPI.Business
                     if (ex.StatusCode != null && _serverSideErrorCodes.Contains((HttpStatusCode)ex.StatusCode))
                     {
                         
-                        // add logic to switch to backup services
+                        // add logic to switch to backup services 
 
                         await GetCompletion(openAIRequest, attempts++);
                     }
-                    else
-                    {
-                        throw;
-                    }
+                    else throw;
                 }
                 catch (Exception)
                 {
                     throw;
                 }
             }
-            throw new Exception("Completion request failed to generate function call after 3 attempts for a request requiring a call.");
+            throw new Exception("Completion request failed after 3 attempts.");
         }
         #endregion
 
@@ -288,9 +294,11 @@ namespace OpenAICustomFunctionCallingAPI.Business
         {
             var recursionTools = new List<ResponseToolDTO>();
             var functionResults = new List<HttpResponseMessage>();
+
+            // Handle recursive completions - i.e. have other models add a message before responding
             foreach (var tool in tools)
             {
-                if (tool.Function.Name.Contains("Reference_AI_Model"))
+                if (tool.Function.Name.Contains("_Reference_AI_Model"))
                 {
                     tool.Function.Name = tool.Function.Name.Replace("_Reference_AI_Model", "");
                     recursionTools.Add(tool);
@@ -301,6 +309,8 @@ namespace OpenAICustomFunctionCallingAPI.Business
                     if (result != null) functionResults.Add(result);
                 }
             }
+
+            // Handle standard tool calls
             foreach (var tool in recursionTools)
             {
                 var completionRequest = new ChatRequestDTO()
@@ -313,6 +323,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             }
             // prevent recursion call overflow somehow... Maybe add a column to profiles for max recursion?
             // - This would work strangely for conversations with models that use varying lengths
+            // - alternatively this value could be supplied by the client, and a default value would be used otherwise
             return functionResults;
         }
         #endregion

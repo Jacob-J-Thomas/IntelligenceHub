@@ -174,7 +174,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                                 author = tool.Function.Name;
 
                             }
-                            if (toolCall.ArgumentsUpdate != null)
+                            if (toolCall.ArgumentsUpdate is not null)
                             {
                                 tool.Function.Arguments += toolCall.ArgumentsUpdate;
                                 completionUpdate = toolCall.ArgumentsUpdate;

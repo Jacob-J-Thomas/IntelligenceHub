@@ -36,7 +36,7 @@ Refactoring Items (Descending Priority (order needs updating)):
 - Move user property out of ProfileModifiers in CompletionRequest DTO (Pretty sure this is a duplicated item in the readme for this)
 - validation handler  
 - exception handler
-- Add logic to switch to fallback resources during service outages (More than likely should be possible by setting polly settings)
+- Add circuit breaker for AI services (will need to implement support for alternative AI APIs in conjunction to this)
 - support for alternative AI APIs (just groq.com to start)
 - Remove camelcasecontract resolver and add JsonPropertyName for ALL properties instead
 - Use cascade to potentially simplify some operations involving associative tables
