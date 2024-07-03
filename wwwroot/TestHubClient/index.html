@@ -16,7 +16,7 @@
             align-items: flex-start;
         }
         .container input {
-            margin-bottom: 20px;
+            margin-bottom: 20px; 
         }
     </style>
 </head>
@@ -65,9 +65,6 @@
             var conversationIdInput = document.getElementById('conversationId');
             var usernameInput = document.getElementById('username');
             
-            
-            
-
             // Get the user name and store it to prepend to messages.
             //var name = prompt('Enter your name:', '');
             // Set initial focus to message input box.
@@ -75,7 +72,7 @@
 
             // Start the connection.
             var connection = new signalR.HubConnectionBuilder()
-                .withUrl('/chatstream')
+                .withUrl('https://localhost:53337/chatstream')
                 .build();
 
             function addMessage(encodedName, encodedMsg) {
@@ -98,10 +95,24 @@
                 .then(function () {
                     console.log('connection started');
                     document.getElementById('sendmessage').addEventListener('click', function (event) {
+                        // add message to display
                         addMessage(usernameInput.value, messageInput.value);
                         //displayMessage(usernameInput.value, messageInput.value)
+
+                        // build the request
+                        var request = {
+                            "ProfileName": profileNameInput.value,
+                            "ConversationId": conversationIdInput.value,
+                            "Username": usernameInput.value,
+                            "Message": messageInput.value,
+                            "MaxMessageHistory": parseInt(maxMessageHistory.value),
+                            "Database": ragDatabaseInput.value,
+                            "RagTarget": ragTargetInput.value,
+                            "MaxRagDocs": parseInt(ragDocNInput.value)
+                        }
+
                         // Call the Send method on the hub.
-                        connection.invoke('send', profileNameInput.value, conversationIdInput.value, usernameInput.value, messageInput.value);//, maxMessageHistory.value, ragDatabaseInput.value, ragTargetInput.Value, ragDocNInput.value);
+                        connection.invoke('Send', request);
 
                         // Clear text box and reset focus for next comment.
                         messageInput.value = '';

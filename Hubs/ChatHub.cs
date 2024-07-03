@@ -5,6 +5,8 @@ using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
 using Azure.AI.OpenAI;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
+using Nest;
+using OpenAICustomFunctionCallingAPI.API.DTOs.Hub;
 
 namespace OpenAICustomFunctionCallingAPI.Hubs
 {
@@ -17,10 +19,10 @@ namespace OpenAICustomFunctionCallingAPI.Hubs
             _completionLogic = completionLogic;
         }
 
-        public async Task Send(string? profileName, Guid? conversationId, string? username, string? message)//, int? maxMessageHistory)//, string? database, string? ragTarget, int? maxRagDocs)
+        public async Task Send(StreamRequest request)
         {
             var chatDTO = new ChatRequestDTO();
-            chatDTO.BuildStreamRequest(profileName, conversationId, username, message, 5, "string", "content", 5);// maxMessageHistory, database, ragTarget, maxRagDocs);
+            chatDTO.BuildStreamRequest(request.ProfileName, request.ConversationId, request.Username, request.Message, request.MaxMessageHistory, request.Database, request.RagTarget, request.MaxRagDocs);
             var response = await _completionLogic.StreamCompletion(chatDTO);
 
             // process the chunks returned from the completion request
@@ -52,12 +54,12 @@ namespace OpenAICustomFunctionCallingAPI.Hubs
             {
                 var toolList = new List<ResponseToolDTO>();
                 toolList.Add(tool);
-                var functionResponse = await _completionLogic.ExecuteTools(conversationId, toolList, streaming: true);
+                var functionResponse = await _completionLogic.ExecuteTools(request.ConversationId, toolList, streaming: true);
                 await Clients.Caller.SendAsync("broadcastMessage", tool.Function.Name, functionResponse);
             }
         }
 
-        public async Task ExecuteClientBasedCompletion(ClientBasedCompletion completionRequest)//, string? database, string? ragTarget, int? maxRagDocs)
+        public async Task ExecuteClientBasedCompletion(ClientBasedCompletion completionRequest)
         {
             var chatDTO = new ChatRequestDTO();
             chatDTO.BuildStreamRequest(completionRequest.Model, null, completionRequest.User, null, null, completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.RagData.MaxRagDocs);

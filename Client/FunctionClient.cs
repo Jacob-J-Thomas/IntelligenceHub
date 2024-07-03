@@ -30,7 +30,7 @@ namespace OpenAICustomFunctionCallingAPI.Client
                 try
                 {
                     var response = await client.PostAsync(_endpoint, body);
-                    response.EnsureSuccessStatusCode();
+                    //response.EnsureSuccessStatusCode();
                     return response;
                 }
                 catch (Exception ex)

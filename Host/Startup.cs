@@ -31,6 +31,18 @@ namespace OpenAICustomFunctionCallingAPI.Host
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI();
+
+                app.UseCors(policy =>
+                {
+                    policy.AllowAnyOrigin();
+                    policy.AllowAnyMethod();
+                    policy.AllowAnyHeader();
+                    policy.SetIsOriginAllowed((host) => true);
+                });
+            }
+            else
+            {
+                // configure prod cors policy
             }
 
             
