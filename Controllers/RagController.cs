@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.RagDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ControllerDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.DataAccessDTOs;
-using OpenAICustomFunctionCallingAPI.Business;
-using OpenAICustomFunctionCallingAPI.Host.Config;
+using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
+using IntelligenceHub.API.DTOs.ControllerDTOs;
+using IntelligenceHub.API.DTOs.DataAccessDTOs;
+using IntelligenceHub.Business;
+using IntelligenceHub.Host.Config;
 
-namespace OpenAICustomFunctionCallingAPI.Controllers
+namespace IntelligenceHub.Controllers
 {
     [Route("Rag")]
     public class RagController : ControllerBase
@@ -124,7 +124,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
 
         [HttpPost]
         [Route("Index/Query/{index}")]
-        public async Task<IActionResult> QueryIndex([FromRoute] string index, [FromBody] DirectQueryRequest request)
+        public async Task<IActionResult> QueryIndex([FromRoute] string index, [FromBody] DirectQueryRe+-quest request)
         {
             try
             {

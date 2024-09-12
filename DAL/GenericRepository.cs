@@ -1,6 +1,6 @@
 ﻿using Nest;
-using OpenAICustomFunctionCallingAPI.Common.Attributes;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+using IntelligenceHub.Common.Attributes;
+using IntelligenceHub.DAL.DTOs;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -9,7 +9,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class, new()
     {

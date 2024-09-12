@@ -1,14 +1,14 @@
-﻿using OpenAICustomFunctionCallingAPI.Business;
+﻿using IntelligenceHub.Business;
 using Microsoft.AspNetCore.SignalR;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
 using Azure.AI.OpenAI;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs;
 using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs.Hub;
+using IntelligenceHub.API.DTOs.Hub;
 
-namespace OpenAICustomFunctionCallingAPI.Hubs
+namespace IntelligenceHub.Hubs
 {
     public class ChatHub : Hub
     {

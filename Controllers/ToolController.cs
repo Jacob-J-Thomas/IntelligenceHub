@@ -1,20 +1,20 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.Host.Config;
-using OpenAICustomFunctionCallingAPI.Business;
+using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.Host.Config;
+using IntelligenceHub.Business;
 using System.Runtime;
 using Azure;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Newtonsoft.Json.Linq;
-using OpenAICustomFunctionCallingAPI.DAL;
+using IntelligenceHub.DAL;
 using Nest;
 using Azure.Core;
 using Microsoft.AspNetCore.Routing;
 using System.Reflection.Metadata;
-using OpenAICustomFunctionCallingAPI.Business.ProfileLogic;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.Business.ProfileLogic;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 
-namespace OpenAICustomFunctionCallingAPI.Controllers
+namespace IntelligenceHub.Controllers
 {
     [Route("[controller]")]
     [ApiController]

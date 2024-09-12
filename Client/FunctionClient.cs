@@ -2,34 +2,35 @@
 using Newtonsoft.Json.Serialization;
 using System.Net.Http.Headers;
 using System.Text;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 
-namespace OpenAICustomFunctionCallingAPI.Client
+namespace IntelligenceHub.Client
 {
     public class FunctionClient
     {
+        private HttpClient _client { get; set; }
         private string _endpoint;
-        public FunctionClient(string endpoint) 
+        public FunctionClient(IHttpClientFactory clientFactory) 
         {
-            _endpoint = endpoint;
+            _client = clientFactory.CreateClient("FunctionCalling"); implement FunctionCalling configuration
         }
 
-        public async Task<HttpResponseMessage> CallFunction(ResponseToolDTO tool)
+        public async Task<HttpResponseMessage> CallFunction(ResponseToolDTO tool, string endpoint)
         {
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _client = new HttpClient();
+            _client.DefaultRequestHeaders.Clear();
+            _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             JsonSerializerSettings settings = new JsonSerializerSettings();
             settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
             var json = JsonConvert.SerializeObject(tool, settings);
             var body = new StringContent(json, Encoding.UTF8, "application/json");
 
-            using (client)
+            using (_client)
             {
                 try
                 {
-                    var response = await client.PostAsync(_endpoint, body);
+                    var response = await _client.PostAsync(_endpoint, body);
                     //response.EnsureSuccessStatusCode();
                     return response;
                 }

@@ -1,10 +1,10 @@
 ﻿using Nest;
 using Newtonsoft.Json;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs;
 using System.ComponentModel;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs
+namespace IntelligenceHub.API.DTOs
 {
     public class ChatRequestDTO
     {

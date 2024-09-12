@@ -1,8 +1,8 @@
 ﻿using Azure.AI.OpenAI;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 
-namespace OpenAICustomFunctionCallingAPI.Business
+namespace IntelligenceHub.Business
 {
     public interface ICompletionLogic
     {

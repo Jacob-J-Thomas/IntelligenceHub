@@ -1,9 +1,9 @@
-﻿using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Common.Attributes;
+﻿using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.Common.Attributes;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
+namespace IntelligenceHub.DAL.DTOs
 {
     [TableName("Properties")]
     public class DbPropertyDTO

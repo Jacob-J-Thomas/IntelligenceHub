@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response
+namespace IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response
 {
     // folder structure and inheritence should be changed to accomadate for this being used by multiple other DTOs
     public class UsageDTO

@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="API\DTOs\ClientDTOs\MessageDTOs\MessageDTO.cs" />
+    <Compile Remove="API\DTOs\ControllerDTOs\APIProfileDTO.cs" />
     <Compile Remove="API\DTOs\DataAccessDTOs\RagDocument.cs" />
   </ItemGroup>
 
@@ -27,6 +29,8 @@
     <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\TokenLogprobDTO.cs" />
     <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\UsageDTO.cs" />
     <Content Include="API\DTOs\ClientDTOs\MessageDTOs\MessageDTO.cs" />
+    <Content Include="API\DTOs\ControllerDTOs\APIProfileDTO.cs" />
+    <Content Include="API\MigratedDTOs\Message.cs" />
     <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingData.cs" />
     <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingRequestBase.cs" />
     <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingResponse.cs" />
@@ -36,7 +40,7 @@
     <Content Include="API\DTOs\ClientDTOs\ToolDTOs\PropertyDTO.cs" />
     <Content Include="API\DTOs\ClientDTOs\ToolDTOs\SystemTools\ProfileReferenceTool.cs" />
     <Content Include="API\DTOs\ClientDTOs\ToolDTOs\ToolDTO.cs" />
-    <Content Include="API\DTOs\ControllerDTOs\APIProfileDTO.cs" />
+    <Content Include="API\MigratedDTOs\Profile.cs" />
     <Content Include="API\DTOs\ControllerDTOs\ChatRequestDTO.cs" />
     <Content Include="API\DTOs\ControllerDTOs\ChatResponseDTO.cs" />
     <Content Include="API\DTOs\ControllerDTOs\DirectQueryRequest.cs" />
@@ -48,7 +52,6 @@
     <Content Include="API\DTOs\ClientDTOs\RagDTOs\RagDocumentBase.cs" />
     <Content Include="API\DTOs\DataAccessDTOs\RagChunk.cs" />
     <Content Include="API\DTOs\DataAccessDTOs\RagIndexMetaDataDTO.cs" />
-    <Content Include="API\DTOs\System\RAGTextGenerationSystemCompletionDTO.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -57,7 +60,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.AI.OpenAI" Version="1.0.0-beta.17" />
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.0.0-beta.4" />
     <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="8.0.4" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.5" />

@@ -1,11 +1,11 @@
 ﻿
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+using IntelligenceHub.DAL.DTOs;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
+using IntelligenceHub.Common.Extensions;
 using System.Text.Json.Serialization;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs
+namespace IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs
 {
     public class ToolDTO
     {

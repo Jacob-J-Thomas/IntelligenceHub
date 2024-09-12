@@ -1,11 +1,11 @@
 ﻿using Newtonsoft.Json;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Common.Attributes;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.Common.Attributes;
+using IntelligenceHub.Common.Extensions;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
+namespace IntelligenceHub.DAL.DTOs
 {
     [TableName("Tools")]
     public class DbToolDTO

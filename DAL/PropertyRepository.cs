@@ -1,13 +1,13 @@
 ﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.DAL.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
     public class PropertyRepository : GenericRepository<DbPropertyDTO>
     {

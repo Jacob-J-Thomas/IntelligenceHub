@@ -1,16 +1,16 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Common;
-using OpenAICustomFunctionCallingAPI.Common.Attributes; 
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.Common;
+using IntelligenceHub.Common.Attributes; 
+using IntelligenceHub.Common.Extensions;
+using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.DAL;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
+namespace IntelligenceHub.DAL.DTOs
 {
     // extend this from a common DTO?
     [TableName("Profiles")]
@@ -42,11 +42,11 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
 
         public DbProfileDTO() { }
 
-        public DbProfileDTO(DbProfileDTO existingDto, APIProfileDTO updateDto)
+        public DbProfileDTO(DbProfileDTO existingDto, Profile updateDto)
         {
             if (updateDto == null)
             {
-                updateDto = new APIProfileDTO();
+                updateDto = new Profile();
             }
             if (existingDto == null)
             {
@@ -56,7 +56,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
             ConvertToDbDTOAndSetToExistingOrDefaults(existingDto, updateDto);
         }
 
-        public void ConvertToDbDTOAndSetToExistingOrDefaults(DbProfileDTO existingDto, APIProfileDTO updateDto)
+        public void ConvertToDbDTOAndSetToExistingOrDefaults(DbProfileDTO existingDto, Profile updateDto)
         {
             // update or set existing value
             Id = existingDto.Id;

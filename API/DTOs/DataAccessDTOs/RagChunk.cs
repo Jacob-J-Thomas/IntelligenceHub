@@ -1,6 +1,6 @@
-﻿using OpenAICustomFunctionCallingAPI.Common.Attributes;
+﻿using IntelligenceHub.Common.Attributes;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.DataAccessDTOs
+namespace IntelligenceHub.API.DTOs.DataAccessDTOs
 {
     public class RagChunk
     {

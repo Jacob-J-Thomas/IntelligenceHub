@@ -1,7 +1,7 @@
 ﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs
+namespace IntelligenceHub.API.DTOs
 {
     public class ChatResponseDTO
     {

@@ -1,7 +1,7 @@
 ﻿using Nest;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+using IntelligenceHub.DAL.DTOs;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs.SystemTools
+namespace IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs.SystemTools
 {
     public class ProfileReferenceTools : ToolDTO
     {

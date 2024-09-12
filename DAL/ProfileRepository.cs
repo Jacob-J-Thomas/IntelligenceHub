@@ -1,14 +1,14 @@
 ﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.DAL.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
     public class ProfileRepository : GenericRepository<DbProfileDTO>
     {
@@ -17,7 +17,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
         {
         }
 
-        public async Task<APIProfileDTO> GetByNameWithToolsAsync(string Name)
+        public async Task<Controllers.DTOs.Profile> GetByNameWithToolsAsync(string Name)
         {
             try
             {
@@ -50,7 +50,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                                     dbProfile.Stop = (string)reader["Stop"];
                                 }
                                 
-                                var profile = new APIProfileDTO(dbProfile);
+                                var profile = new Controllers.DTOs.Profile(dbProfile);
                                 profile.Tools = new List<ToolDTO>();
 
                                 foreach (var tool in toolList)

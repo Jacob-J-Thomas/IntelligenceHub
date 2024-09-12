@@ -1,8 +1,8 @@
 ﻿using Microsoft.Identity.Client;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
-using OpenAICustomFunctionCallingAPI.DAL;
+using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
+using IntelligenceHub.DAL;
 
-namespace OpenAICustomFunctionCallingAPI.Business
+namespace IntelligenceHub.Business
 {
     public class MessageHistoryLogic
     {

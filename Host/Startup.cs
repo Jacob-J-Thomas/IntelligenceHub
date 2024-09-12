@@ -1,8 +1,8 @@
-using OpenAICustomFunctionCallingAPI.Host.Config;
-using OpenAICustomFunctionCallingAPI.Hubs;
-using OpenAICustomFunctionCallingAPI.Business;
+using IntelligenceHub.Host.Config;
+using IntelligenceHub.Hubs;
+using IntelligenceHub.Business;
 
-namespace OpenAICustomFunctionCallingAPI.Host
+namespace IntelligenceHub.Host
 {
     public class Startup
     {

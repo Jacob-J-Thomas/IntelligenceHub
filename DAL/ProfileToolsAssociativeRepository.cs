@@ -1,8 +1,8 @@
 ﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.Common;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Common;
+using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.DAL.DTOs;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -11,10 +11,10 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
     //make this more generic
-    public class ProfileToolsAssociativeRepository : IAssociativeRepository<APIProfileDTO>
+    public class ProfileToolsAssociativeRepository : IAssociativeRepository<Controllers.DTOs.Profile>
     {
         private readonly string _connectionString;
 

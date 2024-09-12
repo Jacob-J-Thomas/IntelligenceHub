@@ -1,20 +1,23 @@
 ﻿using Azure;
 using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.EmbeddingDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.RagDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ControllerDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.DataAccessDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.System;
-using OpenAICustomFunctionCallingAPI.Client;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
-using OpenAICustomFunctionCallingAPI.DAL;
+using OpenAI.Chat;
+using IntelligenceHub.API;
+using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
+using IntelligenceHub.API.DTOs.ControllerDTOs;
+using IntelligenceHub.API.DTOs.DataAccessDTOs;
+using IntelligenceHub.API.DTOs.System;
+using IntelligenceHub.Client;
+using IntelligenceHub.Common;
+using IntelligenceHub.Common.Extensions;
+using IntelligenceHub.DAL;
 using System.Numerics;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 
-namespace OpenAICustomFunctionCallingAPI.Business
+namespace IntelligenceHub.Business
 {
     public class RagLogic
     {
@@ -254,9 +257,27 @@ namespace OpenAICustomFunctionCallingAPI.Business
 
         private async Task<string> GenerateDocumentMetadata(string dataFormat, RagChunk document)
         {
-            RAGTextGenerationSystemCompletionDTO requestDTO = new(dataFormat, _defaultAGIModel, document);
-            var response = await _aiClient.PostCompletion(requestDTO);
-            return response.Choices[0].Message.Content;
+            var completion = $"Please create {dataFormat} summarizing the below data delimited by triple " +
+                $"backticks. Your response should only contain {dataFormat} and absolutely no other textual " +
+                $"data.\n\n";
+
+            // triple backticks to delimit the data
+            completion += "```";
+            completion += $"title: {document.Title}\n\ncontent: {document.Content}";
+            completion += "\n```";
+
+            var completionRequest = new CompletionRequest()
+            {
+                Model = _defaultAGIModel,
+                Messages = new List<ChatMessage>()
+                { 
+                    new SystemChatMessage(GlobalVariables.RagRequestSystemMessage),
+                    new UserChatMessage(completion)
+                }
+            };
+
+            var response = await _aiClient.PostCompletion(completionRequest);
+            return response.Content;
         }
     }
 }

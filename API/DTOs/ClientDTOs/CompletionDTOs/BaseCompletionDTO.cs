@@ -1,15 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Newtonsoft.Json;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.Business;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
+using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.Business;
+using IntelligenceHub.DAL.DTOs;
+using IntelligenceHub.Common.Extensions;
 using System.Runtime.InteropServices;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
+namespace IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs
 {
     public class BaseCompletionDTO
     {
@@ -45,18 +45,18 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs
 
         public BaseCompletionDTO() { }
 
-        public BaseCompletionDTO(APIProfileDTO completion)
+        public BaseCompletionDTO(Profile completion)
         {   
             // create a seperate method for this instead of passing null
             ConvertAPIProfileAndSetModifiers(completion, null);
         }
 
-        public BaseCompletionDTO(APIProfileDTO openAIRequest, BaseCompletionDTO? modifiers)
+        public BaseCompletionDTO(Profile openAIRequest, BaseCompletionDTO? modifiers)
         {
             ConvertAPIProfileAndSetModifiers(openAIRequest, modifiers);
         }
 
-        public void ConvertAPIProfileAndSetModifiers(APIProfileDTO openAIRequest, BaseCompletionDTO? modifiers)
+        public void ConvertAPIProfileAndSetModifiers(Profile openAIRequest, BaseCompletionDTO? modifiers)
         {
             if (modifiers == null)
             {

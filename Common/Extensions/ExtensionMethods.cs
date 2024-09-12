@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace OpenAICustomFunctionCallingAPI.Common.Extensions
+namespace IntelligenceHub.Common.Extensions
 {
     public static class ExtensionMethods
     {

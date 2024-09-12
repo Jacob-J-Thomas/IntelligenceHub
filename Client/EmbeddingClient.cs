@@ -4,21 +4,21 @@ using Azure.Core;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
+using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.DAL;
+using IntelligenceHub.DAL.DTOs;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
 using Azure.AI.OpenAI;
 using Azure;
 using System.Text.Json;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.EmbeddingDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+using IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs;
 
-namespace OpenAICustomFunctionCallingAPI.Client
+namespace IntelligenceHub.Client
 {
     // Combine with AI client (just duplicate the GetEmbeddings method, and move repeating logic to a private method)S
     public class EmbeddingClient

@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.ComponentModel;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs
+namespace IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs
 {
     public class RagRequestData
     {

@@ -1,6 +1,6 @@
-﻿using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+﻿using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.EmbeddingDTOs
+namespace IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs
 {
     public class EmbeddingResponse
     {

@@ -1,6 +1,5 @@
-﻿namespace OpenAICustomFunctionCallingAPI.API.DTOs.Hub
+﻿namespace IntelligenceHub.API.DTOs.Hub
 {
-    //string? profileName, Guid? conversationId, string? username, string? message)//, int? maxMessageHistory)//, string? database, string? ragTarget, int? maxRagDocs)
     public class StreamRequest
     {
         public string ProfileName { get; set; }

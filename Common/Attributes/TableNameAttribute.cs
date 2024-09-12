@@ -1,4 +1,4 @@
-﻿namespace OpenAICustomFunctionCallingAPI.Common.Attributes
+﻿namespace IntelligenceHub.Common.Attributes
 {
     [AttributeUsage(AttributeTargets.Class)]
     public class TableNameAttribute : Attribute

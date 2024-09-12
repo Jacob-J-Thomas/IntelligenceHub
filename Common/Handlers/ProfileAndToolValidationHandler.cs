@@ -1,52 +1,40 @@
-﻿using OpenAICustomFunctionCallingAPI.Client;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
+﻿using IntelligenceHub.Client;
+using IntelligenceHub.Controllers.DTOs;
 using Newtonsoft.Json.Linq;
-using OpenAICustomFunctionCallingAPI.Host.Config;
+using IntelligenceHub.Host.Config;
 //using OpenAICustomFunctionCallingAPI.DAL;
 using Azure;
 using Microsoft.Data.SqlClient;
-using OpenAICustomFunctionCallingAPI.DAL;
+using IntelligenceHub.DAL;
 using System.Web.Mvc;
 using System.Net;
 using System.Net.Mail;
 using Microsoft.AspNetCore.Mvc;
 using Nest;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
+using IntelligenceHub.DAL.DTOs;
+using IntelligenceHub.API.DTOs;
 using System.Reflection.Metadata;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
+using IntelligenceHub.API.MigratedDTOs;
 
-namespace OpenAICustomFunctionCallingAPI.Business
+namespace IntelligenceHub.Common.Handlers
 {
-    public class ValidationLogic
+    public class ProfileAndToolValidationHandler
     {
-        public ValidationLogic() { }
+        public ProfileAndToolValidationHandler() { }
 
-        public string ValidateChatRequest(string name, ChatRequestDTO chatRequest)
+        public string ValidateChatRequest(CompletionRequest chatRequest)
         {
-            if (name == null && chatRequest.ProfileName == null)
-            {
-                return "A profile name must be included in the request body or route.";
-            }
+            if (chatRequest.ProfileOptions.Model == null) return "A profile name must be included in the request body or route.";
+            if (chatRequest == null) return "The chatRequest object must be provided";
 
-            if (chatRequest == null)
-            {
-                return "The chatRequest object must be provided";
-            }
-            if (chatRequest.ProfileModifiers != null)
-            {
-                var errorMessage =  ValidateBaseDTO(chatRequest.ProfileModifiers);
-                if (errorMessage != null)
-                {
-                    return errorMessage;
-                }
-            }
-
+            var errorMessage = ValidateBaseDTO(chatRequest.ProfileOptions);
+            if (errorMessage != null) return errorMessage;
             return null;
         }
 
-        public string ValidateAPIProfile(APIProfileDTO profile)
+        public string ValidateAPIProfile(Controllers.DTOs.Profile profile)
         {
 
             // create seperate validations for profiles for different APIs, such as groq
@@ -62,27 +50,15 @@ namespace OpenAICustomFunctionCallingAPI.Business
 
 
             // validate reference profiles exist (same with any other values?)
-
-            
-
-            if (string.IsNullOrWhiteSpace(profile.Name) || profile.Name == null)
-            {
-                return "The 'Name' field is required";
-            }
-            if (profile.Name.ToLower() == "all")
-            {
-                return "Profile name 'all' conflicts with the get/all route";
-            }
+            if (string.IsNullOrWhiteSpace(profile.Name) || profile.Name == null) return "The 'Name' field is required";
+            if (profile.Name.ToLower() == "all") return "Profile name 'all' conflicts with the get/all route";
 
             var errorMessage = ValidateBaseDTO(profile);
-            if (errorMessage != null)
-            {
-                return errorMessage;
-            }
+            if (errorMessage != null) return errorMessage;
             return null;
         }
 
-        public string ValidateBaseDTO(BaseCompletionDTO profile)
+        public string ValidateBaseDTO(Controllers.DTOs.Profile profile)
         {
             var validModels = new List<string>()
             {
@@ -92,6 +68,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 "gpt-3.5-turbo-16k",
                 "gpt-3.5-turbo-instruct",
                 "gpt-4",
+                "gpt-4o",
                 "gpt-4-32k",
                 "gpt-4-turbo-preview",
                 "gpt-4-vision-preview",
@@ -134,7 +111,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             {
                 return "Top_Logprobs cannot be used with gpt-4-vision-preview";
             }
-            if (profile.Response_Format != null && (profile.Response_Format != "text" && profile.Response_Format != "json_object"))
+            if (profile.Response_Format != null && profile.Response_Format != "text" && profile.Response_Format != "json_object")
             {
                 return "If Response_Type is set, it must either be equal to 'text' or 'json_object'";
             }
@@ -161,7 +138,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             }
             if (tool.Function.Parameters.required != null && tool.Function.Parameters.required.Length > 0)
             {
-                foreach (var str in  tool.Function.Parameters.required)
+                foreach (var str in tool.Function.Parameters.required)
                 {
                     if (!tool.Function.Parameters.properties.ContainsKey(str))
                     {

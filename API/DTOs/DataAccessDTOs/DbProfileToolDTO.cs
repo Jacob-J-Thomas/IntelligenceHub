@@ -1,7 +1,7 @@
-﻿using OpenAICustomFunctionCallingAPI.Common;
-using OpenAICustomFunctionCallingAPI.Common.Attributes;
+﻿using IntelligenceHub.Common;
+using IntelligenceHub.Common.Attributes;
 
-namespace OpenAICustomFunctionCallingAPI.DAL.DTOs
+namespace IntelligenceHub.DAL.DTOs
 {
     [TableName("ProfileTools")]
     public class DbProfileToolDTO

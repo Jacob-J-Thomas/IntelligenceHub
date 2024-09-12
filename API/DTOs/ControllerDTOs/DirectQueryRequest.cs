@@ -1,6 +1,6 @@
-﻿using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.EmbeddingDTOs;
+﻿using IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ControllerDTOs
+namespace IntelligenceHub.API.DTOs.ControllerDTOs
 {
     public class DirectQueryRequest : EmbeddingRequestBase
     {

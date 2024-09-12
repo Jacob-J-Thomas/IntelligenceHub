@@ -1,6 +1,6 @@
-﻿using OpenAICustomFunctionCallingAPI.API.DTOs.DataAccessDTOs;
+﻿using IntelligenceHub.API.DTOs.DataAccessDTOs;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.RagDTOs
+namespace IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs
 {
     public class RAGQueryResult
     {

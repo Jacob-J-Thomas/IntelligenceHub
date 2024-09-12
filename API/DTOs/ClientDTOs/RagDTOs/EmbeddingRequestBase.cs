@@ -1,4 +1,4 @@
-﻿namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.EmbeddingDTOs
+﻿namespace IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs
 {
     public class EmbeddingRequestBase
     {

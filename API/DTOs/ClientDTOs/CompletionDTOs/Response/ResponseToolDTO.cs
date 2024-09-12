@@ -1,7 +1,7 @@
 ﻿using Azure.AI.OpenAI;
 using System.Text.Json.Serialization;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response
+namespace IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response
 {
     public class ResponseToolDTO
     {

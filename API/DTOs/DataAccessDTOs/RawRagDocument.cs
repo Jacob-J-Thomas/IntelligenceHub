@@ -1,4 +1,4 @@
-﻿namespace OpenAICustomFunctionCallingAPI.API.DTOs.DataAccessDTOs
+﻿namespace IntelligenceHub.API.DTOs.DataAccessDTOs
 {
     public class RawRagDocument : RagDocumentBase
     {

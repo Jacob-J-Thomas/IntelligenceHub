@@ -1,25 +1,30 @@
-﻿using Azure.AI.OpenAI;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.EmbeddingDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs.SystemTools;
-using OpenAICustomFunctionCallingAPI.Client;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL;
-using OpenAICustomFunctionCallingAPI.Host.Config;
+﻿using Azure;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs.SystemTools;
+using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.Client;
+using IntelligenceHub.Common.Exceptions;
+using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.DAL;
+using IntelligenceHub.Host.Config;
+using OpenAI.Chat;
+using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
 using System.Net;
 
-namespace OpenAICustomFunctionCallingAPI.Business
+namespace IntelligenceHub.Business
 {
     public class CompletionLogic : ICompletionLogic
     {
+        // move to GlobalVariables class
+        private const int _defaultMessageHistory = 5;
+
         //private readonly IConfiguration _configuration;
-        private readonly AIStreamingClient _AIStreamingClient;
+        //private readonly AIStreamingClient _AIStreamingClient;
         private readonly AGIClient _AIClient;
         private readonly FunctionClient _functionClient;
         private readonly EmbeddingClient _embeddingClient;
@@ -29,33 +34,32 @@ namespace OpenAICustomFunctionCallingAPI.Business
         private readonly MessageHistoryRepository _messageHistoryRepository;
         private readonly RagRepository _ragRepository;
         private readonly RagMetaRepository _ragMetaRepository;
-        private readonly List<HttpStatusCode> _serverSideErrorCodes;
-
-        public CompletionLogic(Settings settings) 
-        {
-            settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _profileToolAssocaitionDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
-            _toolDb = new ToolRepository(settings.DbConnectionString);
-            _AIClient = new AGIClient(settings.AIEndpoint, settings.AIKey);
-            _embeddingClient = new EmbeddingClient(settings.AIEndpoint, settings.AIKey);
-            _AIStreamingClient = new AIStreamingClient(settings.AIEndpoint, settings.AIKey);
-            _functionClient = new FunctionClient("https://Unimplemented.FunctionCallingService.NotARealWebsite.1234567890.com");
-            _profileDb = new ProfileRepository(settings.DbConnectionString);
-            _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
-            _ragRepository = new RagRepository(settings.RagDbConnectionString);
-            _ragMetaRepository = new RagMetaRepository(settings.DbConnectionString);
-            _serverSideErrorCodes = new List<HttpStatusCode>() 
-            { 
+        private readonly List<HttpStatusCode> _serverSideErrorCodes = new List<HttpStatusCode>()
+            {
                 HttpStatusCode.BadGateway,
                 HttpStatusCode.GatewayTimeout,
                 HttpStatusCode.InsufficientStorage,
                 HttpStatusCode.InternalServerError,
                 HttpStatusCode.ServiceUnavailable,
             };
+
+        public CompletionLogic(IHttpClientFactory clientFactory, Settings settings) 
+        {
+            settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _profileToolAssocaitionDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
+            _toolDb = new ToolRepository(settings.DbConnectionString);
+            _AIClient = new AGIClient(settings.AIEndpoint, settings.AIKey);
+            _embeddingClient = new EmbeddingClient(settings.AIEndpoint, settings.AIKey);
+            //_AIStreamingClient = new AIStreamingClient(settings.AIEndpoint, settings.AIKey);
+            _functionClient = new FunctionClient(clientFactory, "https://Unimplemented.FunctionCallingService.NotARealWebsite.1234567890.com");
+            _profileDb = new ProfileRepository(settings.DbConnectionString);
+            _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
+            _ragRepository = new RagRepository(settings.RagDbConnectionString);
+            _ragMetaRepository = new RagMetaRepository(settings.DbConnectionString);
         }
 
         #region Streaming
-        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest)
+        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(CompletionRequest completionRequest)
         {
             if (completionRequest.RagData is not null)
             {
@@ -67,21 +71,10 @@ namespace OpenAICustomFunctionCallingAPI.Business
             var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, completionRequest.Completion, completionRequest.ProfileModifiers, completionRequest.ConversationId, completionRequest.MaxMessageHistory);
             if (aiClientDTO == null) return null;// adjust this to return 404s
             aiClientDTO.Stream = true;
-            return await _AIStreamingClient.StreamCompletion(aiClientDTO);
-        }
 
-        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamClientBasedCompletion(ClientBasedCompletion completionRequest)
-        {
-            if (completionRequest.RagData is not null)
-            {
-                var lastMessage = completionRequest.Messages.LastOrDefault();
-                lastMessage.Content = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, lastMessage.Content, completionRequest.RagData.MaxRagDocs);
-                if (lastMessage.Content is null) return null;
-            }
-            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, null, completionRequest);
-            if (aiClientDTO == null) return null;// adjust this to return 404s
-            aiClientDTO.Stream = true;
-            return await _AIStreamingClient.StreamCompletion(aiClientDTO);
+            ensure messages are handled properly here
+
+            return await _AIClient.StreamCompletion(aiClientDTO);
         }
 
         public string GetStreamAuthor(StreamingChatCompletionsUpdate chunk, string profileName, string user = "user")
@@ -95,143 +88,97 @@ namespace OpenAICustomFunctionCallingAPI.Business
         #endregion
 
         #region Controller
-        public async Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest)
+        public async Task<CompletionResponse> ProcessCompletion(CompletionRequest completionRequest)
         {
-            // recursive completions contain all their chat history in the database
-            //completionRequest.ConversationId = completionRequest.ConversationId ?? Guid.NewGuid();
-            var responseDTO = new ChatResponseDTO();
+            // Get and set profile details, overriding the database with any parameters that aren't null in the request
+            var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.Profile);
+            if (profile == null) throw new IntelligenceHubException(404, $"The profile '{completionRequest.Profile}' does not exist.");
+            completionRequest.ProfileOptions = BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
-            if (completionRequest.RagData is not null)
+            // add this to the BuildCompletionOptions flow
+            BuildProfileReferenceTool
+
+            // Get and attach message history if a conversation id exists
+            if (completionRequest.ConversationId is Guid conversationId)
             {
-                completionRequest.Completion = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Completion, completionRequest.RagData.MaxRagDocs);
-                if (completionRequest.Completion is null) return null;
+                completionRequest.Messages = await BuildCompletionMessages(
+                    conversationId,
+                    completionRequest.ProfileOptions.MaxMessageHistory,
+                    completionRequest.Messages);
+
+                // save the newest message to the database
+                await _messageHistoryRepository.AddAsync(conversationId, completionRequest.Messages.LastOrDefault());
             }
 
-            // Build request DTO
-            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, completionRequest.Completion, completionRequest.ProfileModifiers, completionRequest.ConversationId, completionRequest.MaxMessageHistory); // chose which AIClient to build and execute with here
-            if (aiClientDTO is null) return null;// adjust this to return 404s
-            if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest));
-            var completionResponse = await GetCompletion(aiClientDTO, attempts: 0);
-            var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
-            if (defaultChoice is null) return null;
+            var completion = await _AIClient.PostCompletion(completionRequest);
+            if (completion == null) throw new IntelligenceHubException("notSureWhatToPutHereAtTheMoment");
 
-            // move this logic to the controller level like when streaming?
-            responseDTO.ConversationId = completionRequest.ConversationId ?? null;
-            responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.ProfileName, responseDTO.ConversationId);
-            responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
-            return responseDTO;
-        }
-
-        public async Task<ChatResponseDTO> ProcessClientBasedCompletion(ClientBasedCompletion completionRequest)
-        {
-            // recursive completions contain all their chat history in the database
-            var responseDTO = new ChatResponseDTO();
-            if (completionRequest.RagData is not null)
+            // build the response object
+            var response = new CompletionResponse()
             {
-                completionRequest.Messages[0].Content = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Messages[0].Content, completionRequest.RagData.MaxRagDocs);
-                if (completionRequest.Messages[0].Content == null) return null;
-            }
-
-            // Build request DTO
-            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, null, completionRequest);
-            if (aiClientDTO is null) return null;// adjust this to return 404s
-            var completionResponse = await GetCompletion(aiClientDTO, attempts: 0);
-            var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
-            if (defaultChoice is null) return null;
-
-            // move this logic to the controller level like when streaming?
-            responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.Model, null);
-            responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
-            return responseDTO;
-        }
-
-        public async Task<string> BuildRagMessage(string database, string target, string completion, int? maxRagDocs)
-        {
-            var ragMetadata = await _ragMetaRepository.GetByNameAsync(database);
-            if (ragMetadata is null || maxRagDocs is null || string.IsNullOrWhiteSpace(database) || string.IsNullOrWhiteSpace(completion)) return null;
-            var ragInstructionData = "Below you will find a set of documents, each delimited with tripple backticks. " +
-                "Please use these documents to inform your response to the dialogue below the documents. " +
-                "If you use one of the sources, please reference it in your response using markdown like so: [SourceName](SourceLink)." +
-                "If no SourceLink is present, only provide the sourcename.\n\n";
-
-            _ragRepository.SetTable(database);
-            EmbeddingRequestBase embeddingRequest = new()
-            {
-                Input = completion,
-                Model = ragMetadata.VectorModel,
-                Encoding_Format = ragMetadata.EncodingFormat,
-                Dimensions = ragMetadata.Dimensions
+                FinishReason = completion.FinishReason.ToString(),
+                Messages = completionRequest.Messages
             };
-            var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);
-            var embeddingBinary = embedding.Data[0].Embedding.EncodeToBinary();
-            var documents = await _ragRepository.CosineSimilarityQueryAsync(target, embeddingBinary, (int)maxRagDocs);
-            foreach (var doc in documents) ragInstructionData += 
-                    "\n```\n" + 
-                    $"Title: {doc.Title}\n" +
-                    $"SourceName: {doc.SourceName}\n" +
-                    $"SourceLink: {doc.SourceLink}\n" +
-                    $"SourceName: {doc.SourceName}\n" +
-                    $"Content: {doc.Content}\n" + 
-                    "```\n";
 
-            return ragInstructionData + "\n\n" + completion;
+            // attach the completion message to the return list
+            response.Messages.Add(new Message()
+            {
+                Content = completion.Content.ToString(),
+                Role = completion.Role.ToString()
+            });
+
+            if (completionRequest.ConversationId is Guid id) await _messageHistoryRepository.AddAsync(id, completion);
+            
+            if (completion.FinishReason == ChatFinishReason.ToolCalls)
+            {
+                response.ToolExecutionResponses.AddRange(await ExecuteTools(completionRequest.ConversationId, completion, streaming: false));
+            }
+            return response;
         }
 
-        public async Task<List<HttpResponseMessage>> ProcessCompletionResponse(ResponseChoiceDTO response, string profileName, Guid? conversationId)
+        public async Task<List<Message>> BuildCompletionMessages(Guid conversationId, int? maxMessageHistory, List<Message> requestMessages)
         {
-            // Add response to database conversation history
-            if (response.Message.Content is not null)
-            {
-                var responseMessage = new DbMessageDTO();
-                responseMessage.ConvertToDbMessageDTO(conversationId, "assistant", profileName, response.Message.Content);
-                if (conversationId is not null) await _messageHistoryRepository.AddAsync(responseMessage);
-            }
+            var allMessages = new List<Message>();
+            var messageHistory = await _messageHistoryRepository.GetConversationAsync(conversationId, maxMessageHistory ?? _defaultMessageHistory);
+            if (messageHistory == null) throw new IntelligenceHubException(404, $"A conversation with id '{conversationId}' does not exist");
 
-            // process and return completion data
-            if (response.Finish_Reason == "tool_calls")
-            {
-                var completionToolCalls = response.Message.Tool_Calls; 
-                return await ExecuteTools(conversationId, response.Message.Tool_Calls, streaming: false);
-            }
-            return null;
+            // ensure the messages are properly arranged, with the user completion appearing very last
+            allMessages.AddRange(messageHistory);
+            allMessages.AddRange(requestMessages);
+            return allMessages;
         }
 
-        // move to an AIClient in API layer
-        public async Task<CompletionResponseDTO> GetCompletion(DefaultCompletionDTO openAIRequest, int attempts)
+        public Profile BuildCompletionOptions(Profile profile, Profile profileOptions)
         {
-            var maxAttempts = 5;
-            while (attempts < maxAttempts)
+            return new Profile()
             {
-                try
-                {
-                    var completionResponse = await _AIClient.PostCompletion(openAIRequest);
-
-                    // improve this validation
-                    if (completionResponse is null || completionResponse.Choices.FirstOrDefault() is null) return null;
-                    return completionResponse;
-                }
-                catch (HttpRequestException ex)
-                {
-                    if (ex.StatusCode != null && _serverSideErrorCodes.Contains((HttpStatusCode)ex.StatusCode))
-                    {
-                        
-                        // add logic to switch to backup services 
-
-                        await GetCompletion(openAIRequest, attempts++);
-                    }
-                    else throw;
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
-            }
-            throw new Exception("Completion request failed after 3 attempts.");
+                Id = profile.Id,
+                Name = profile.Name,
+                Model = profileOptions.Model ?? profile.Model,
+                RagDatabase = profileOptions.RagDatabase ?? profile.RagDatabase,
+                MaxMessageHistory = profileOptions.MaxMessageHistory ?? profile.MaxMessageHistory,
+                Max_Tokens = profileOptions.Max_Tokens ?? profile.Max_Tokens,
+                Temperature = profileOptions.Temperature ?? profile.Temperature,
+                Top_P = profileOptions.Top_P ?? profile.Top_P,
+                Frequency_Penalty = profileOptions.Frequency_Penalty ?? profile.Frequency_Penalty,
+                Presence_Penalty = profileOptions.Presence_Penalty ?? profile.Presence_Penalty,
+                Seed = profileOptions.Seed ?? profile.Seed,
+                Stop = profileOptions.Stop ?? profile.Stop,
+                Logprobs = profileOptions.Logprobs ?? profile.Logprobs,
+                Top_Logprobs = profileOptions.Top_Logprobs ?? profile.Top_Logprobs,
+                Response_Format = profileOptions.Response_Format ?? profile.Response_Format,
+                User = profileOptions.User ?? profile.User,
+                Tools = profileOptions.Tools ?? profile.Tools,
+                Tool_Choice = profileOptions.Tool_Choice ?? profile.Tool_Choice,
+                System_Message = profileOptions.System_Message ?? profile.System_Message,
+                Return_Recursion = profileOptions.Return_Recursion ?? profile.Return_Recursion,
+                Reference_Profiles = profileOptions.Reference_Profiles ?? profile.Reference_Profiles,
+            };
         }
         #endregion
 
         #region Shared
-        public async Task<DefaultCompletionDTO> BuildCompletion(string profileName, string? completion = null, BaseCompletionDTO? modifiers = null, Guid? conversationId = null, int? maxMessageHistory = null)
+        public async Task<ChatCompletion> BuildCompletion(string profileName, string? completion = null, BaseCompletionDTO? modifiers = null, Guid? conversationId = null, int? maxMessageHistory = null)
         {
             // probably move this to a seperate method
             var completionProfile = await _profileDb.GetByNameWithToolsAsync(profileName);
@@ -239,7 +186,7 @@ namespace OpenAICustomFunctionCallingAPI.Business
             {
                 var profileWithoutTools = await _profileDb.GetByNameAsync(profileName);
                 if (profileWithoutTools is null) return null;
-                completionProfile = new APIProfileDTO(profileWithoutTools);
+                completionProfile = new Profile(profileWithoutTools);
             }
             else
             {
@@ -247,10 +194,17 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 completionProfile.Tools = new List<ToolDTO>();
                 foreach (var association in profileToolDTOs) completionProfile.Tools.Add(await _toolDb.GetToolByIdAsync(association.ToolID));
             }
-            
-            DefaultCompletionDTO openAIRequest;
+
+            var openAIRequest = new ChatCompletion()
+            {
+                Content = new UserChatMessage(completion),
+                d
+            };
+
             if (modifiers is not null) openAIRequest = new DefaultCompletionDTO(completionProfile, modifiers);
             else openAIRequest = new DefaultCompletionDTO(completionProfile);
+
+
             if (completionProfile.Reference_Profiles is not null && completionProfile.Reference_Profiles.Length > 0)
                 foreach (var profile in completionProfile.Reference_Profiles) openAIRequest.Tools.Add(await BuildProfileReferenceTool(profile));
             if (completion is not null) openAIRequest.Messages = await BuildMessages(completion, openAIRequest.System_Message, conversationId, maxMessageHistory);
@@ -265,10 +219,10 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return new ProfileReferenceTools(profile);
         }
 
-        public async Task<List<MessageDTO>> BuildMessages(string completion, string? systemMessage, Guid? conversationId, int? maxMessageHistory)
+        public async Task<List<ChatMessage>> BuildMessages(string completion, string? systemMessage, Guid? conversationId, int? maxMessageHistory)
         {
-            var messages = new List<MessageDTO>();
-            if (systemMessage != null) messages.Add(new MessageDTO("system", systemMessage));
+            var messages = new List<ChatMessage>();
+            if (systemMessage != null) messages.Add(new SystemChatMessage(systemMessage));
             if (conversationId != null && maxMessageHistory > 0)
             {
                 var completionMessageCount = 1; // this will always = 1
@@ -277,30 +231,27 @@ namespace OpenAICustomFunctionCallingAPI.Business
                 if (conversationId is not null) dbMessages = await _messageHistoryRepository.GetConversationAsync((Guid)conversationId, maxDbMessagesToRetrieve);
                 foreach (var dbMessage in dbMessages)
                 {
-                    var message = new MessageDTO()
-                    {
-                        Role = dbMessage.Role,
-                        Content = dbMessage.Content,
-                    };
-                    messages.Add(message);
+                    if (dbMessage.Role == ChatMessageRole.User.ToString()) messages.Add(new UserChatMessage(dbMessage.Content));
+                    else if (dbMessage.Role == ChatMessageRole.Assistant.ToString()) messages.Add(new AssistantChatMessage(dbMessage.Content));
+                    else if (dbMessage.Role == ChatMessageRole.Tool.ToString()) messages.Add(new ToolChatMessage(dbMessage.Content));
                 }
             }
-            if (completion != null) messages.Add(new MessageDTO("user", completion));
+            if (completion != null) messages.Add(new UserChatMessage(completion));
             return messages;
         }
 
         // seperate this into two functions probably
-        public async Task<List<HttpResponseMessage>> ExecuteTools(Guid? conversationId, List<ResponseToolDTO> tools, bool streaming)
+        public async Task<List<HttpResponseMessage>> ExecuteTools(Guid? conversationId, ChatCompletion toolCompletion, bool streaming)
         {
             var recursionTools = new List<ResponseToolDTO>();
             var functionResults = new List<HttpResponseMessage>();
 
             // Handle recursive completions - i.e. have other models add a message before responding
-            foreach (var tool in tools)
+            foreach (var tool in toolCompletion.ToolCalls)
             {
-                if (tool.Function.Name.Contains("_Reference_AI_Model"))
+                if (tool.FunctionName.Contains("_Reference_AI_Model"))
                 {
-                    tool.Function.Name = tool.Function.Name.Replace("_Reference_AI_Model", "");
+                    tool.FunctionName = tool.FunctionName.Replace("_Reference_AI_Model", "");
                     recursionTools.Add(tool);
                 }
                 else

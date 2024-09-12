@@ -1,6 +1,6 @@
-﻿using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+﻿using IntelligenceHub.DAL.DTOs;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs
+namespace IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs
 {
     public class FunctionDTO
     {

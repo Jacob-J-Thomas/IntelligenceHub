@@ -1,4 +1,4 @@
-namespace OpenAICustomFunctionCallingAPI.Host
+namespace IntelligenceHub.Host
 {
     public class Program
     {

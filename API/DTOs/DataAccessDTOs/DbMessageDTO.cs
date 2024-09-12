@@ -1,9 +1,10 @@
 ﻿using Nest;
 using Newtonsoft.Json.Linq;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
-using OpenAICustomFunctionCallingAPI.Common.Attributes;
+using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs;
+using IntelligenceHub.Common.Attributes;
+using IntelligenceHub.API.MigratedDTOs;
 
-namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs
+namespace IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs
 {
     [TableName("MessageHistory")]
     public class DbMessageDTO
@@ -18,7 +19,7 @@ namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs
 
         public DbMessageDTO() { }
 
-        public DbMessageDTO(ChatRequestDTO userMessage)
+        public DbMessageDTO(Message userMessage)
         {
             var name = "";
             if (userMessage.ProfileModifiers != null && userMessage.ProfileModifiers.User != null)

@@ -1,15 +1,16 @@
 ﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.DAL.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
     public class MessageHistoryRepository : GenericRepository<DbMessageDTO>
     {
@@ -17,7 +18,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
         {
         }
 
-        public async Task<List<DbMessageDTO>> GetConversationAsync(Guid conversationId, int maxMessages)
+        public async Task<List<Message>> GetConversationAsync(Guid conversationId, int maxMessages)
         {
             try
             {
@@ -35,11 +36,12 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         command.Parameters.AddWithValue("@ConversationId", conversationId);
                         using (var reader = await command.ExecuteReaderAsync())
                         {
-                            var conversationHistory = new List<DbMessageDTO>();
+                            var conversationHistory = new List<Message>();
                             while (await reader.ReadAsync())
                             {
                                 var dbMessage = MapFromReader<DbMessageDTO>(reader);
-                                conversationHistory.Add(dbMessage);
+                                var mappedMessage = MapToObject(dbMessage);
+                                conversationHistory.Add(mappedMessage);
                             }
                             return conversationHistory;
                         }

@@ -1,10 +1,11 @@
-﻿using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
+﻿using IntelligenceHub.Controllers.DTOs;
 //using OpenAICustomFunctionCallingAPI.DAL;
-using OpenAICustomFunctionCallingAPI.DAL;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.DAL;
+using IntelligenceHub.DAL.DTOs;
+using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.Common.Handlers;
 
-namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
+namespace IntelligenceHub.Business.ProfileLogic
 {
     // this whole class needs some refactoring
     public class ProfileLogic
@@ -15,7 +16,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
         private readonly PropertyRepository _propertyDb;
 
         //private readonly ToolLogic _toolLogic;
-        private readonly ValidationLogic _validationLogic;
+        private readonly ProfileAndToolValidationHandler _validationLogic;
         public ProfileLogic(string connectionString)
         {
             _profileDb = new ProfileRepository(connectionString);
@@ -24,11 +25,11 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             _propertyDb = new PropertyRepository(connectionString); 
 
             //_toolLogic = new ToolLogic(connectionString);
-            _validationLogic = new ValidationLogic(); // move this and any logic to controller
+            _validationLogic = new ProfileAndToolValidationHandler(); // move this and any logic to controller
         }
 
         // else shouldn't be required here
-        public async Task<APIProfileDTO> GetProfile(string name)
+        public async Task<Profile> GetProfile(string name)
         {
             var dbProfile = await _profileDb.GetByNameWithToolsAsync(name);
             if (dbProfile is not null)
@@ -42,21 +43,21 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             else
             {
                 var apiProfile = await _profileDb.GetByNameAsync(name);
-                if (apiProfile != null) return new APIProfileDTO(apiProfile);
+                if (apiProfile != null) return new Profile(apiProfile);
             }
             return null;
         }
 
-        public async Task<IEnumerable<APIProfileDTO>> GetAllProfiles()
+        public async Task<IEnumerable<Profile>> GetAllProfiles()
         {
             var response = await _profileDb.GetAllAsync();
-            var apiResponseList = new List<APIProfileDTO>();
+            var apiResponseList = new List<Profile>();
             if (response is not null)
             {
                 foreach (var profile in response)
                 {
                     // package this into a seperate method (same one as in GetProfiles())
-                    var apiProfileDto = new APIProfileDTO(profile);
+                    var apiProfileDto = new Profile(profile);
                     var profileToolDTOs = await _profileToolsDb.GetToolAssociationsAsync(profile.Id);
                     apiProfileDto.Tools = new List<ToolDTO>();
                     foreach (var association in profileToolDTOs)
@@ -71,7 +72,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
         }
 
         // refactor this
-        public async Task<string> CreateOrUpdateProfile(APIProfileDTO profileDto)
+        public async Task<string> CreateOrUpdateProfile(Profile profileDto)
         {
             var errorMessage = _validationLogic.ValidateAPIProfile(profileDto); // move to controller
             if (errorMessage is not null) return errorMessage;
@@ -93,7 +94,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
             if (profileDto.Tools is not null && profileDto.Tools.Count > 0)
             {
                 if (existingProfile is null) await AddOrUpdateProfileTools(profileDto, null);
-                else await AddOrUpdateProfileTools(profileDto, new APIProfileDTO(existingProfile));
+                else await AddOrUpdateProfileTools(profileDto, new Profile(existingProfile));
             }
             var existingProfileWithTools = await _profileDb.GetByNameWithToolsAsync(profileDto.Name);
             if (success && existingProfileWithTools is not null) success = await AddOrUpdateProfileTools(profileDto, existingProfileWithTools);
@@ -127,7 +128,7 @@ namespace OpenAICustomFunctionCallingAPI.Business.ProfileLogic
         }
 
         #region Tool Logic
-        private async Task<bool> AddOrUpdateProfileTools(APIProfileDTO profileDto, APIProfileDTO existingProfile)
+        private async Task<bool> AddOrUpdateProfileTools(Profile profileDto, Profile existingProfile)
         {
             var toolIds = new List<int>();
             await _profileToolsDb.DeleteAllProfileAssociationsAsync(existingProfile.Id);

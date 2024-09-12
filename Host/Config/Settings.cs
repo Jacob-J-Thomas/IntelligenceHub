@@ -1,4 +1,4 @@
-﻿namespace OpenAICustomFunctionCallingAPI.Host.Config
+﻿namespace IntelligenceHub.Host.Config
 {
     public class Settings
     {
