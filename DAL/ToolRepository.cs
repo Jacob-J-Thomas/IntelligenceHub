@@ -10,13 +10,13 @@ using System.Linq;
 
 namespace IntelligenceHub.DAL
 {
-    public class ToolRepository : GenericRepository<DbToolDTO>
+    public class ToolRepository : GenericRepository<DbTool>
     {
         public ToolRepository(string connectionString) : base(connectionString)
         {
         }
 
-        public async Task<ToolDTO> GetToolByNameAsync(string name)
+        public async Task<Tool> GetToolByNameAsync(string name)
         {
             try
             {
@@ -57,7 +57,7 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        public async Task<ToolDTO> GetToolByIdAsync(int Id)
+        public async Task<Tool> GetToolByIdAsync(int Id)
         {
             try
             {
@@ -178,9 +178,9 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        public async Task<ToolDTO> MapToolFromReader(SqlDataReader reader)
+        public async Task<Tool> MapToolFromReader(SqlDataReader reader)
         {
-            var tool = new DbToolDTO
+            var tool = new DbTool
             {
                 Id = (int)reader["Id"],
                 Name = (string)reader["Name"],
@@ -188,7 +188,7 @@ namespace IntelligenceHub.DAL
             };
 
             // Create a dictionary to store properties
-            var propertyList = new List<DbPropertyDTO>();
+            var propertyList = new List<DbProperty>();
 
             // Check if the columns from the properties table are not null
             do
@@ -202,18 +202,18 @@ namespace IntelligenceHub.DAL
                     var propertyType = (string)reader["propertiesType"];
                     var propertyDescription = reader["propertiesDescription"] as string;
 
-                    var propDto = new PropertyDTO()
+                    var propDto = new Property()
                     {
-                        id = propertyId,
-                        type = propertyType,
-                        description = propertyDescription
+                        Id = propertyId,
+                        Type = propertyType,
+                        Description = propertyDescription
                     };
 
                     // Create a PropertyDTO and add it to the dictionary
-                    propertyList.Add(new DbPropertyDTO(propertyName, propDto));
+                    propertyList.Add(new DbProperty(propertyName, propDto));
                 }
             } while (await reader.ReadAsync());
-            return new ToolDTO(tool, propertyList);
+            return DbMappingHandler.MapFromDbTool(tool, propertyList);
         }
     }
 }

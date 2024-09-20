@@ -13,14 +13,14 @@ namespace IntelligenceHub.Business
             _messageHistoryRepository = new MessageHistoryRepository(dbConnectionString);
         }
 
-        public async Task<List<DbMessageDTO>> GetConversationHistory(Guid id, int count)
+        public async Task<List<DbMessage>> GetConversationHistory(Guid id, int count)
         {
             return await _messageHistoryRepository.GetConversationAsync(id, count);
         }
 
-        public async Task<List<DbMessageDTO>> UpsertConversation(List<DbMessageDTO> messages)
+        public async Task<List<DbMessage>> UpsertConversation(List<DbMessage> messages)
         {
-            var addedMessages = new List<DbMessageDTO>();
+            var addedMessages = new List<DbMessage>();
             foreach (var message in messages)
             {
                 var response = await _messageHistoryRepository.AddAsync(message);
@@ -35,7 +35,7 @@ namespace IntelligenceHub.Business
             return await _messageHistoryRepository.DeleteConversationAsync(id);
         }
 
-        public async Task<DbMessageDTO> AddMessage(DbMessageDTO message)
+        public async Task<DbMessage> AddMessage(DbMessage message)
         {
             var conversation = await _messageHistoryRepository.GetConversationAsync((Guid)message.ConversationId, 1);
             if (conversation is null || conversation.Count < 1) return null; 

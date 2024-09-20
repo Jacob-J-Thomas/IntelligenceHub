@@ -53,7 +53,7 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("upsert/conversation")]
-        public async Task<IActionResult> UpsertConversation([FromBody] List<DbMessageDTO> conversation)
+        public async Task<IActionResult> UpsertConversation([FromBody] List<DbMessage> conversation)
         {
             try
             {
@@ -93,7 +93,7 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("add/message")]
-        public async Task<IActionResult> AddMessage([FromBody] DbMessageDTO messageDTO)
+        public async Task<IActionResult> AddMessage([FromBody] DbMessage messageDTO)
         {
             try
             {

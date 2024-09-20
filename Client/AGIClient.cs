@@ -79,7 +79,7 @@ namespace IntelligenceHub.Client
                 EndUserId = completion.ProfileOptions.User
             };
 
-            // Potentially useful for testing, validation, and fine tuning. Maps token probabilities
+            // Potentially useful later for testing, validation, and fine tuning. Maps token probabilities
             //options.LogitBiases
 
             // set response format
@@ -96,7 +96,7 @@ namespace IntelligenceHub.Client
             }
 
             // set tools
-            if (completion.ProfileOptions.Tools.Any()) foreach (var tool in completion.ProfileOptions.Tools) 
+            if (completion.ProfileOptions.Tools != null) foreach (var tool in completion.ProfileOptions.Tools) 
                 {
                     options.Tools.Add(ChatTool.CreateFunctionTool(
                         tool.Function.Name, 

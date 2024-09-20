@@ -1,5 +1,4 @@
 ﻿using IntelligenceHub.Client;
-using IntelligenceHub.Controllers.DTOs;
 using Newtonsoft.Json.Linq;
 using IntelligenceHub.Host.Config;
 //using OpenAICustomFunctionCallingAPI.DAL;
@@ -10,13 +9,13 @@ using System.Web.Mvc;
 using System.Net;
 using System.Net.Mail;
 using Microsoft.AspNetCore.Mvc;
-using Nest;
 using IntelligenceHub.DAL.DTOs;
 using IntelligenceHub.API.DTOs;
 using System.Reflection.Metadata;
 using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
 using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 
 namespace IntelligenceHub.Common.Handlers
 {
@@ -34,7 +33,7 @@ namespace IntelligenceHub.Common.Handlers
             return null;
         }
 
-        public string ValidateAPIProfile(Controllers.DTOs.Profile profile)
+        public string ValidateAPIProfile(Profile profile)
         {
 
             // create seperate validations for profiles for different APIs, such as groq
@@ -58,7 +57,7 @@ namespace IntelligenceHub.Common.Handlers
             return null;
         }
 
-        public string ValidateBaseDTO(Controllers.DTOs.Profile profile)
+        public string ValidateBaseDTO(Profile profile)
         {
             var validModels = new List<string>()
             {
@@ -99,10 +98,6 @@ namespace IntelligenceHub.Common.Handlers
             {
                 return "Max_Tokens must be a value between 1 and 1,000,000";
             }
-            if (profile.N < 1 || profile.N > 100)
-            {
-                return "N must be a value between 1 and 100";
-            }
             if (profile.Top_Logprobs < 0 || profile.Top_Logprobs > 5)
             {
                 return "Top_Logprobs must be a value between 0 and 5";
@@ -130,26 +125,26 @@ namespace IntelligenceHub.Common.Handlers
             return null;
         }
 
-        public string ValidateTool(ToolDTO tool)
+        public string ValidateTool(Tool tool)
         {
             if (tool.Function.Name == null || string.IsNullOrEmpty(tool.Function.Name))
             {
                 return "A function name is required for all tools.";
             }
-            if (tool.Function.Parameters.required != null && tool.Function.Parameters.required.Length > 0)
+            if (tool.Function.Parameters.Required != null && tool.Function.Parameters.Required.Length > 0)
             {
-                foreach (var str in tool.Function.Parameters.required)
+                foreach (var str in tool.Function.Parameters.Required)
                 {
-                    if (!tool.Function.Parameters.properties.ContainsKey(str))
+                    if (!tool.Function.Parameters.Properties.ContainsKey(str))
                     {
                         return $"Required property {str} does not exist in the tool {tool.Function.Name}'s properties list.";
                     }
                 }
             }
 
-            if (tool.Function.Parameters.properties != null && tool.Function.Parameters.properties.Count > 0)
+            if (tool.Function.Parameters.Properties != null && tool.Function.Parameters.Properties.Count > 0)
             {
-                var errorMessage = ValidateProperties(tool.Function.Parameters.properties);
+                var errorMessage = ValidateProperties(tool.Function.Parameters.Properties);
                 if (errorMessage != null)
                 {
                     return errorMessage;
@@ -158,7 +153,7 @@ namespace IntelligenceHub.Common.Handlers
             return null;
         }
 
-        public string ValidateProperties(Dictionary<string, PropertyDTO> properties)
+        public string ValidateProperties(Dictionary<string, Property> properties)
         {
             var validTypes = new List<string>()
             {
@@ -178,13 +173,13 @@ namespace IntelligenceHub.Common.Handlers
             };
             foreach (var prop in properties)
             {
-                if (prop.Value.type == null)
+                if (prop.Value.Type == null)
                 {
                     return $"The field 'type' for property {prop.Key} is required";
                 }
-                else if (!validTypes.Contains(prop.Value.type))
+                else if (!validTypes.Contains(prop.Value.Type))
                 {
-                    return $"The 'type' field '{prop.Value.type}' for property {prop.Key} is invalid. Please ensure one of the following types is selected: '{validTypes}'";
+                    return $"The 'type' field '{prop.Value.Type}' for property {prop.Key} is invalid. Please ensure one of the following types is selected: '{validTypes}'";
                 }
             }
             return null;

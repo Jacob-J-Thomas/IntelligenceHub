@@ -1,8 +1,9 @@
 ﻿using Newtonsoft.Json;
 using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using System.ComponentModel.DataAnnotations;
+using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 
-namespace IntelligenceHub.Controllers.DTOs
+namespace IntelligenceHub.API.MigratedDTOs
 {
     public class Profile
     {
@@ -25,7 +26,7 @@ namespace IntelligenceHub.Controllers.DTOs
         public string? Response_Format { get; set; }
         public string? System_Message { get; set; }
         public string[]? Stop { get; set; }
-        public List<ToolDTO>? Tools { get; set; }
+        public List<Tool>? Tools { get; set; }
         public int? MaxMessageHistory { get; set; }
         public bool? Return_Recursion { get; set; }
         public string[]? Reference_Profiles { get; set; }

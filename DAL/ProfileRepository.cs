@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace IntelligenceHub.DAL
 {
-    public class ProfileRepository : GenericRepository<DbProfileDTO>
+    public class ProfileRepository : GenericRepository<DbProfile>
     {
 
         public ProfileRepository(string connectionString) : base(connectionString)
@@ -42,7 +42,7 @@ namespace IntelligenceHub.DAL
                         {
                             while (await reader.ReadAsync())
                             {
-                                var dbProfile = MapFromReader<DbProfileDTO>(reader);
+                                var dbProfile = MapFromReader<DbProfile>(reader);
                                 var toolList = MapToolsFromReader(reader);
 
                                 if (reader["Stop"] != DBNull.Value)
@@ -71,11 +71,11 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        private List<DbToolDTO> MapToolsFromReader(SqlDataReader reader)
+        private List<DbTool> MapToolsFromReader(SqlDataReader reader)
         {
-            var tools = new List<DbToolDTO>
+            var tools = new List<DbTool>
             {
-                new DbToolDTO
+                new DbTool
                 {
                     Id = (int)reader["ToolId"],
                     Name = (string)reader["ToolName"],

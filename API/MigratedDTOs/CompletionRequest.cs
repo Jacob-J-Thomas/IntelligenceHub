@@ -1,5 +1,5 @@
 ﻿using OpenAI.Chat;
-using IntelligenceHub.Controllers.DTOs;
+using IntelligenceHub.API.MigratedDTOs;
 
 namespace IntelligenceHub.API.MigratedDTOs
 {

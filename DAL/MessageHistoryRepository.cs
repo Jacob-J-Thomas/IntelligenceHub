@@ -12,7 +12,7 @@ using System.Linq;
 
 namespace IntelligenceHub.DAL
 {
-    public class MessageHistoryRepository : GenericRepository<DbMessageDTO>
+    public class MessageHistoryRepository : GenericRepository<DbMessage>
     {
         public MessageHistoryRepository(string connectionString) : base(connectionString)
         {
@@ -39,7 +39,7 @@ namespace IntelligenceHub.DAL
                             var conversationHistory = new List<Message>();
                             while (await reader.ReadAsync())
                             {
-                                var dbMessage = MapFromReader<DbMessageDTO>(reader);
+                                var dbMessage = MapFromReader<DbMessage>(reader);
                                 var mappedMessage = MapToObject(dbMessage);
                                 conversationHistory.Add(mappedMessage);
                             }

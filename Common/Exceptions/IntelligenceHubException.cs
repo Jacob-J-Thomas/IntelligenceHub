@@ -4,7 +4,7 @@
     {
         public IntelligenceHubException() { }
 
-        public IntelligenceHubException(int statusCode, string message) : base(message) 
+        public IntelligenceHubException(int statusCode, string? message = null) : base(message) 
         {
             StatusCode = statusCode;
         }

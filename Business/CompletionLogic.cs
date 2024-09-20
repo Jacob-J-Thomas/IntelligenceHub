@@ -7,6 +7,7 @@ using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
 using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs.SystemTools;
 using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.Controllers.DTOs;
@@ -14,6 +15,7 @@ using IntelligenceHub.DAL;
 using IntelligenceHub.Host.Config;
 using OpenAI.Chat;
 using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
+using OpenAICustomFunctionCallingAPI.DAL;
 using System.Net;
 
 namespace IntelligenceHub.Business
@@ -93,27 +95,27 @@ namespace IntelligenceHub.Business
             // Get and set profile details, overriding the database with any parameters that aren't null in the request
             var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.Profile);
             if (profile == null) throw new IntelligenceHubException(404, $"The profile '{completionRequest.Profile}' does not exist.");
-            completionRequest.ProfileOptions = BuildCompletionOptions(profile, completionRequest.ProfileOptions);
-
-            // add this to the BuildCompletionOptions flow
-            BuildProfileReferenceTool
+            completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
             // Get and attach message history if a conversation id exists
             if (completionRequest.ConversationId is Guid conversationId)
             {
-                completionRequest.Messages = await BuildCompletionMessages(
+                completionRequest.Messages = await BuildAndUpdateMessageHistory(
                     conversationId,
-                    completionRequest.ProfileOptions.MaxMessageHistory,
-                    completionRequest.Messages);
-
-                // save the newest message to the database
-                await _messageHistoryRepository.AddAsync(conversationId, completionRequest.Messages.LastOrDefault());
+                    completionRequest.Messages,
+                    completionRequest.ProfileOptions.MaxMessageHistory);
             }
 
             var completion = await _AIClient.PostCompletion(completionRequest);
-            if (completion == null) throw new IntelligenceHubException("notSureWhatToPutHereAtTheMoment");
+            if (completion == null) throw new IntelligenceHubException(500, "Something went wrong...");
 
             // build the response object
+            var responseMessage = new Message()
+            {
+                Content = completion.Content.ToString(),
+                Role = completion.Role.ToString()
+            };
+
             var response = new CompletionResponse()
             {
                 FinishReason = completion.FinishReason.ToString(),
@@ -121,35 +123,52 @@ namespace IntelligenceHub.Business
             };
 
             // attach the completion message to the return list
-            response.Messages.Add(new Message()
-            {
-                Content = completion.Content.ToString(),
-                Role = completion.Role.ToString()
-            });
+            response.Messages.Add(responseMessage);
 
-            if (completionRequest.ConversationId is Guid id) await _messageHistoryRepository.AddAsync(id, completion);
+            if (completionRequest.ConversationId is Guid id)
+            {
+                var toolsCalled = completion.ToolCalls.Select(x => x.FunctionName).ToArray();
+                var dbMessage = DbMappingHandler.MapToDbMessage(responseMessage, completionRequest.ConversationId, toolsCalled);
+                await _messageHistoryRepository.AddAsync(dbMessage);
+            }
             
             if (completion.FinishReason == ChatFinishReason.ToolCalls)
             {
-                response.ToolExecutionResponses.AddRange(await ExecuteTools(completionRequest.ConversationId, completion, streaming: false));
+                var toolExecutionResponses = await ExecuteTools(completionRequest.ConversationId, completion, streaming: false);
+                response.ToolExecutionResponses.AddRange(toolExecutionResponses);
             }
             return response;
         }
 
-        public async Task<List<Message>> BuildCompletionMessages(Guid conversationId, int? maxMessageHistory, List<Message> requestMessages)
+        public async Task<List<Message>> BuildAndUpdateMessageHistory(Guid conversationId, List<Message> requestMessages, int? maxMessageHistory = null)
         {
             var allMessages = new List<Message>();
             var messageHistory = await _messageHistoryRepository.GetConversationAsync(conversationId, maxMessageHistory ?? _defaultMessageHistory);
             if (messageHistory == null) throw new IntelligenceHubException(404, $"A conversation with id '{conversationId}' does not exist");
 
+            // add messages to the database
+            foreach (var message in messageHistory)
+            {
+                // Move to DAL layer
+                var dbMessage = DbMappingHandler.MapToDbMessage(message, conversationId);
+                await _messageHistoryRepository.AddAsync(dbMessage);
+            }
+
             // ensure the messages are properly arranged, with the user completion appearing very last
             allMessages.AddRange(messageHistory);
             allMessages.AddRange(requestMessages);
+
+            // Reduce the amount of messages to reflect the MaxMessageHistory property
+            if (maxMessageHistory is int maxMessages) allMessages.RemoveRange(maxMessages, allMessages.Count - maxMessages);
             return allMessages;
         }
 
-        public Profile BuildCompletionOptions(Profile profile, Profile profileOptions)
+        public async Task<Profile> BuildCompletionOptions(Profile profile, Profile profileOptions)
         {
+            // adds the profile references to the tools
+            if (profileOptions.Tools == null) profileOptions.Tools = new List<Tool>();
+            if (profileOptions.Reference_Profiles != null) profileOptions.Tools.AddRange(await BuildProfileReferenceTool(profileOptions.Reference_Profiles));
+
             return new Profile()
             {
                 Id = profile.Id,
@@ -178,70 +197,75 @@ namespace IntelligenceHub.Business
         #endregion
 
         #region Shared
-        public async Task<ChatCompletion> BuildCompletion(string profileName, string? completion = null, BaseCompletionDTO? modifiers = null, Guid? conversationId = null, int? maxMessageHistory = null)
+        //public async Task<ChatCompletion> BuildCompletion(string profileName, string? completion = null, BaseCompletionDTO? modifiers = null, Guid? conversationId = null, int? maxMessageHistory = null)
+        //{
+        //    // probably move this to a seperate method
+        //    var completionProfile = await _profileDb.GetByNameWithToolsAsync(profileName);
+        //    if (completionProfile is null)
+        //    {
+        //        var profileWithoutTools = await _profileDb.GetByNameAsync(profileName);
+        //        if (profileWithoutTools is null) return null;
+        //        completionProfile = new Profile(profileWithoutTools);
+        //    }
+        //    else
+        //    {
+        //        var profileToolDTOs = await _profileToolAssocaitionDb.GetToolAssociationsAsync(completionProfile.Id);
+        //        completionProfile.Tools = new List<ToolDTO>();
+        //        foreach (var association in profileToolDTOs) completionProfile.Tools.Add(await _toolDb.GetToolByIdAsync(association.ToolID));
+        //    }
+
+        //    var openAIRequest = new ChatCompletion()
+        //    {
+        //        Content = new UserChatMessage(completion),
+        //        d
+        //    };
+
+        //    if (modifiers is not null) openAIRequest = new DefaultCompletionDTO(completionProfile, modifiers);
+        //    else openAIRequest = new DefaultCompletionDTO(completionProfile);
+
+
+        //    if (completionProfile.Reference_Profiles is not null && completionProfile.Reference_Profiles.Length > 0)
+        //        foreach (var profile in completionProfile.Reference_Profiles) openAIRequest.Tools.Add(await BuildProfileReferenceTool(profile));
+        //    if (completion is not null) openAIRequest.Messages = await BuildMessages(completion, openAIRequest.System_Message, conversationId, maxMessageHistory);
+        //    else if (modifiers is ClientBasedCompletion clientBasedCompletion) openAIRequest.Messages = clientBasedCompletion.Messages;
+        //    return openAIRequest;
+        //}
+
+        public async Task<List<Tool>> BuildProfileReferenceTool(string[] profileNames)
         {
-            // probably move this to a seperate method
-            var completionProfile = await _profileDb.GetByNameWithToolsAsync(profileName);
-            if (completionProfile is null)
+            var tools = new List<Tool>();
+            foreach (var name in profileNames)
             {
-                var profileWithoutTools = await _profileDb.GetByNameAsync(profileName);
-                if (profileWithoutTools is null) return null;
-                completionProfile = new Profile(profileWithoutTools);
+                var profile = await _profileDb.GetByNameAsync(name);
+                if (profile == null) return null;
+                tools.Add(new ProfileReferenceTools(profile)); change this
             }
-            else
-            {
-                var profileToolDTOs = await _profileToolAssocaitionDb.GetToolAssociationsAsync(completionProfile.Id);
-                completionProfile.Tools = new List<ToolDTO>();
-                foreach (var association in profileToolDTOs) completionProfile.Tools.Add(await _toolDb.GetToolByIdAsync(association.ToolID));
-            }
-
-            var openAIRequest = new ChatCompletion()
-            {
-                Content = new UserChatMessage(completion),
-                d
-            };
-
-            if (modifiers is not null) openAIRequest = new DefaultCompletionDTO(completionProfile, modifiers);
-            else openAIRequest = new DefaultCompletionDTO(completionProfile);
-
-
-            if (completionProfile.Reference_Profiles is not null && completionProfile.Reference_Profiles.Length > 0)
-                foreach (var profile in completionProfile.Reference_Profiles) openAIRequest.Tools.Add(await BuildProfileReferenceTool(profile));
-            if (completion is not null) openAIRequest.Messages = await BuildMessages(completion, openAIRequest.System_Message, conversationId, maxMessageHistory);
-            else if (modifiers is ClientBasedCompletion clientBasedCompletion) openAIRequest.Messages = clientBasedCompletion.Messages;
-            return openAIRequest;
+            return tools;
         }
 
-        public async Task<ToolDTO> BuildProfileReferenceTool(string profileName)
-        {
-            var profile = await _profileDb.GetByNameAsync(profileName);
-            if (profile == null) return null;
-            return new ProfileReferenceTools(profile);
-        }
-
-        public async Task<List<ChatMessage>> BuildMessages(string completion, string? systemMessage, Guid? conversationId, int? maxMessageHistory)
-        {
-            var messages = new List<ChatMessage>();
-            if (systemMessage != null) messages.Add(new SystemChatMessage(systemMessage));
-            if (conversationId != null && maxMessageHistory > 0)
-            {
-                var completionMessageCount = 1; // this will always = 1
-                var maxDbMessagesToRetrieve = maxMessageHistory ?? 5 - completionMessageCount;
-                var dbMessages = new List<DbMessageDTO>();
-                if (conversationId is not null) dbMessages = await _messageHistoryRepository.GetConversationAsync((Guid)conversationId, maxDbMessagesToRetrieve);
-                foreach (var dbMessage in dbMessages)
-                {
-                    if (dbMessage.Role == ChatMessageRole.User.ToString()) messages.Add(new UserChatMessage(dbMessage.Content));
-                    else if (dbMessage.Role == ChatMessageRole.Assistant.ToString()) messages.Add(new AssistantChatMessage(dbMessage.Content));
-                    else if (dbMessage.Role == ChatMessageRole.Tool.ToString()) messages.Add(new ToolChatMessage(dbMessage.Content));
-                }
-            }
-            if (completion != null) messages.Add(new UserChatMessage(completion));
-            return messages;
-        }
+        //public async Task<List<ChatMessage>> BuildMessages(string completion, string? systemMessage, Guid? conversationId, int? maxMessageHistory)
+        //{
+        //    var messages = new List<ChatMessage>();
+        //    if (systemMessage != null) messages.Add(new SystemChatMessage(systemMessage));
+        //    if (conversationId != null && maxMessageHistory > 0)
+        //    {
+        //        var completionMessageCount = 1; // this will always = 1
+        //        var maxDbMessagesToRetrieve = maxMessageHistory ?? 5 - completionMessageCount;
+        //        var dbMessages = new List<DbMessage>();
+        //        if (conversationId is not null) dbMessages = await _messageHistoryRepository.GetConversationAsync((Guid)conversationId, maxDbMessagesToRetrieve);
+        //        foreach (var dbMessage in dbMessages)
+        //        {
+        //            if (dbMessage.Role == ChatMessageRole.User.ToString()) messages.Add(new UserChatMessage(dbMessage.Content));
+        //            else if (dbMessage.Role == ChatMessageRole.Assistant.ToString()) messages.Add(new AssistantChatMessage(dbMessage.Content));
+        //            else if (dbMessage.Role == ChatMessageRole.Tool.ToString()) messages.Add(new ToolChatMessage(dbMessage.Content));
+        //        }
+        //    }
+        //    if (completion != null) messages.Add(new UserChatMessage(completion));
+        //    return messages;
+        //}
 
         // seperate this into two functions probably
-        public async Task<List<HttpResponseMessage>> ExecuteTools(Guid? conversationId, ChatCompletion toolCompletion, bool streaming)
+        public async Task<List<HttpResponseMessage>> ExecuteTools(Guid? conversationId, ChatCompletion toolCompletion, bool streaming = false)
         {
             var recursionTools = new List<ResponseToolDTO>();
             var functionResults = new List<HttpResponseMessage>();
@@ -264,7 +288,7 @@ namespace IntelligenceHub.Business
             // Handle standard tool calls
             foreach (var tool in recursionTools)
             {
-                var completionRequest = new ChatRequestDTO()
+                var completionRequest = new ChatCompletion()
                 {
                     ConversationId = conversationId,
                     ProfileName = tool.Function.Name

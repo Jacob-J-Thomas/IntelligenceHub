@@ -1,6 +1,6 @@
 ﻿using IntelligenceHub.API.MigratedDTOs;
 
-namespace OpenAICustomFunctionCallingAPI.API.MigratedDTOs
+namespace IntelligenceHub.API.MigratedDTOs
 {
     public class CompletionResponse
     {

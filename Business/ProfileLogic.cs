@@ -4,6 +4,9 @@ using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.DTOs;
 using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using IntelligenceHub.Common.Handlers;
+using IntelligenceHub.DAL;
+using Nest;
+using IntelligenceHub.API.MigratedDTOs;
 
 namespace IntelligenceHub.Business.ProfileLogic
 {
@@ -36,7 +39,7 @@ namespace IntelligenceHub.Business.ProfileLogic
             {
                 // package this into a seperate method (same one as in GetAllProfiles())
                 var profileToolDTOs = await _profileToolsDb.GetToolAssociationsAsync(dbProfile.Id);
-                dbProfile.Tools = new List<ToolDTO>();
+                dbProfile.Tools = new List<Tool>();
                 foreach (var association in profileToolDTOs) dbProfile.Tools.Add(await _toolDb.GetToolByIdAsync(association.ToolID));
                 return dbProfile;
             }
@@ -59,7 +62,7 @@ namespace IntelligenceHub.Business.ProfileLogic
                     // package this into a seperate method (same one as in GetProfiles())
                     var apiProfileDto = new Profile(profile);
                     var profileToolDTOs = await _profileToolsDb.GetToolAssociationsAsync(profile.Id);
-                    apiProfileDto.Tools = new List<ToolDTO>();
+                    apiProfileDto.Tools = new List<Tool>();
                     foreach (var association in profileToolDTOs)
                     {
                         var tool = await _toolDb.GetToolByIdAsync(association.ToolID);
@@ -80,13 +83,13 @@ namespace IntelligenceHub.Business.ProfileLogic
             var success = true;
             if (existingProfile is not null)
             {
-                var updateProfileDto = new DbProfileDTO(existingProfile, profileDto);
+                var updateProfileDto = DbMappingHandler.MapToDbProfile(existingProfile, profileDto);
                 var rows = await _profileDb.UpdateAsync(existingProfile, updateProfileDto);
                 if (rows != 1) success = false;
             }
             else
             {
-                var updateProfileDto = new DbProfileDTO(null, profileDto);
+                var updateProfileDto = DbMappingHandler.MapToDbProfile(null, profileDto);
                 var newTool = await _profileDb.AddAsync(updateProfileDto);
                 if (newTool is null) success = false;
             }
@@ -94,7 +97,7 @@ namespace IntelligenceHub.Business.ProfileLogic
             if (profileDto.Tools is not null && profileDto.Tools.Count > 0)
             {
                 if (existingProfile is null) await AddOrUpdateProfileTools(profileDto, null);
-                else await AddOrUpdateProfileTools(profileDto, new Profile(existingProfile));
+                else await AddOrUpdateProfileTools(profileDto, DbMappingHandler.MapFromDbProfile(existingProfile));
             }
             var existingProfileWithTools = await _profileDb.GetByNameWithToolsAsync(profileDto.Name);
             if (success && existingProfileWithTools is not null) success = await AddOrUpdateProfileTools(profileDto, existingProfileWithTools);
@@ -110,7 +113,7 @@ namespace IntelligenceHub.Business.ProfileLogic
             if (profileDto is not null)
             {
                 if (profileDto.Tools is not null && profileDto.Tools.Count > 0) await _profileToolsDb.DeleteAllProfileAssociationsAsync(profileDto.Id);
-                var dbProfileDTO = new DbProfileDTO()
+                var dbProfileDTO = new DbProfile()
                 {
                     Id = profileDto.Id,
                     Name = profileDto.Name
@@ -145,19 +148,20 @@ namespace IntelligenceHub.Business.ProfileLogic
             return true;
         }
 
-        public async Task<ToolDTO> GetTool(string name)
+        public async Task<Tool> GetTool(string name)
         {
             return await _toolDb.GetToolByNameAsync(name);
         }
 
-        public async Task<IEnumerable<ToolDTO>> GetAllTools()
+        public async Task<IEnumerable<Tool>> GetAllTools()
         {
-            var returnList = new List<ToolDTO>();
+            var returnList = new List<Tool>();
             var dbTools = await _toolDb.GetAllAsync();
-            foreach (var tool in dbTools)
+            foreach (var dbTool in dbTools)
             {
-                var properties = await _propertyDb.GetToolProperties(tool.Id);
-                returnList.Add(new ToolDTO(tool, properties));
+                var properties = await _propertyDb.GetToolProperties(dbTool.Id);
+                var tool = DbMappingHandler.MapFromDbTool(dbTool, properties);
+                returnList.Add(tool);
             }
             return returnList;
         }
@@ -176,7 +180,7 @@ namespace IntelligenceHub.Business.ProfileLogic
             else return null;
         }
 
-        public async Task<string> CreateOrUpdateTools(List<ToolDTO> toolList)
+        public async Task<string> CreateOrUpdateTools(List<Tool> toolList)
         {
             // move below to controller
             foreach (var tool in toolList)
@@ -186,19 +190,19 @@ namespace IntelligenceHub.Business.ProfileLogic
             }
             foreach (var tool in toolList)
             {
-                var dbToolDTO = new DbToolDTO(tool);
+                var dbToolDTO = DbMappingHandler.MapToDbTool(tool);
                 var existingToolDTO = await _toolDb.GetToolByNameAsync(tool.Function.Name);
                 if (existingToolDTO != null)
                 {
-                    var existingTool = new DbToolDTO(existingToolDTO);
+                    var existingTool = DbMappingHandler.MapToDbTool(existingToolDTO);
                     await _toolDb.UpdateAsync(existingTool, dbToolDTO);
-                    await AddOrUpdateToolProperties(existingToolDTO, tool.Function.Parameters.properties);
+                    await AddOrUpdateToolProperties(existingToolDTO, tool.Function.Parameters.Properties);
                 }
                 else
                 {
-                    var newTool = await _toolDb.AddAsync(dbToolDTO);
-                    var newToolDTO = new ToolDTO(newTool, null);
-                    await AddOrUpdateToolProperties(newToolDTO, tool.Function.Parameters.properties);
+                    var newDbTool = await _toolDb.AddAsync(dbToolDTO);
+                    var newTool = DbMappingHandler.MapFromDbTool(newDbTool);
+                    await AddOrUpdateToolProperties(newTool, tool.Function.Parameters.Properties);
                 }
             }
             return null;
@@ -262,25 +266,26 @@ namespace IntelligenceHub.Business.ProfileLogic
             var existingTool = await _toolDb.GetToolByNameAsync(name);
             if (existingTool is not null)
             {
-                foreach (var property in existingTool.Function.Parameters.properties)
+                foreach (var property in existingTool.Function.Parameters.Properties)
                 {
-                    var propertyDTO = new DbPropertyDTO(property.Key, property.Value);
+                    var propertyDTO = new DbProperty(property.Key, property.Value);
                     await _propertyDb.DeleteAsync(propertyDTO);
                 }
                 await _profileToolsDb.DeleteAllToolAssociationsAsync(existingTool.Id);
-                return await _toolDb.DeleteAsync(new DbToolDTO(existingTool)) == 1;
+                var dbTool = DbMappingHandler.MapToDbTool(existingTool);
+                return await _toolDb.DeleteAsync(dbTool) == 1;
             }
             return false;
         }
 
-        public async Task<bool> AddOrUpdateToolProperties(ToolDTO existingTool, Dictionary<string, PropertyDTO> newProperties)
+        public async Task<bool> AddOrUpdateToolProperties(Tool existingTool, Dictionary<string, Property> newProperties)
         {
             var existingProperties = await _propertyDb.GetToolProperties(existingTool.Id);
             foreach (var property in existingProperties) await _propertyDb.DeleteAsync(property);
             foreach (var property in newProperties)
             {
-                property.Value.id = existingTool.Id;
-                await _propertyDb.AddAsync(new DbPropertyDTO(property.Key, property.Value));
+                property.Value.Id = existingTool.Id;
+                await _propertyDb.AddAsync(new DbProperty(property.Key, property.Value));
             }
             return true;
         }

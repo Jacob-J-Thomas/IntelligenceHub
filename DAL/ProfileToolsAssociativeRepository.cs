@@ -23,7 +23,7 @@ namespace IntelligenceHub.DAL
             _connectionString = connectionString;
         }
 
-        public async Task<List<DbProfileToolDTO>> GetToolAssociationsAsync(int profileId) 
+        public async Task<List<DbProfileTool>> GetToolAssociationsAsync(int profileId) 
         {
             try
             {
@@ -39,7 +39,7 @@ namespace IntelligenceHub.DAL
                         command.Parameters.AddWithValue("@ProfileId", profileId);
                         using (var reader = await command.ExecuteReaderAsync())
                         {
-                            var associations = new List<DbProfileToolDTO>();
+                            var associations = new List<DbProfileTool>();
                             while (await reader.ReadAsync())
                             {
                                 associations.Add(MapAssociationsFromReader(reader));
@@ -266,10 +266,10 @@ namespace IntelligenceHub.DAL
         //    return entity;
         //}
 
-        private DbProfileToolDTO MapAssociationsFromReader(SqlDataReader reader)
+        private DbProfileTool MapAssociationsFromReader(SqlDataReader reader)
         {
-            var entity = new DbProfileToolDTO();
-            foreach (var property in typeof(DbProfileToolDTO).GetProperties())
+            var entity = new DbProfileTool();
+            foreach (var property in typeof(DbProfileTool).GetProperties())
             {
                 var columnName = property.Name;
                 var value = reader[columnName];

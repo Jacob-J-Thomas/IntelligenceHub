@@ -97,7 +97,7 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("upsert")]
-        public async Task<IActionResult> AddOrUpdateTool([FromBody] List<ToolDTO> toolList)
+        public async Task<IActionResult> AddOrUpdateTool([FromBody] List<Tool> toolList)
         {
             try
             {

@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace IntelligenceHub.DAL.DTOs
 {
     [TableName("Properties")]
-    public class DbPropertyDTO
+    public class DbProperty
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -16,22 +16,22 @@ namespace IntelligenceHub.DAL.DTOs
         public string Description { get; set; }
         public int ToolId { get; set; }
 
-        public DbPropertyDTO() { }
+        public DbProperty() { }
 
-        public DbPropertyDTO(string propertyName, PropertyDTO dto)
+        public DbProperty(string propertyName, Property dto)
         {
             ConvertToDbPropertyDTO(propertyName, dto);
         }
 
-        public void ConvertToDbPropertyDTO(string propertyName, PropertyDTO dto)
+        public void ConvertToDbPropertyDTO(string propertyName, Property dto)
         {
-            Id = dto.id ?? 0;
-            ToolId = dto.id ?? 0;
+            Id = dto.Id ?? 0;
+            ToolId = dto.Id ?? 0;
             Name = propertyName;
-            Type = dto.type;
-            if (dto.description != null)
+            Type = dto.Type;
+            if (dto.Description != null)
             {
-                Description = dto.description;
+                Description = dto.Description;
             }
         }
     }
