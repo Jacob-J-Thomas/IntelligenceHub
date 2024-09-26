@@ -3,7 +3,7 @@ using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
 using IntelligenceHub.API.DTOs.DataAccessDTOs;
 using IntelligenceHub.Business;
 using IntelligenceHub.Host.Config;
-using IntelligenceHub.API.DTOs.ControllerDTOs;
+using IntelligenceHub.Common.Extensions;
 
 namespace IntelligenceHub.Controllers
 {
@@ -23,7 +23,7 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpGet]
-        [Route("Index/Get/{name}")]
+        [Route("Index/{name}")]
         public async Task<IActionResult> Get([FromRoute] string name)
         {
             try
@@ -63,7 +63,7 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpPost]
-        [Route("Index/Create")]
+        [Route("Index/")]
         public async Task<IActionResult> CreateIndex([FromBody] RagIndexMetaDataDTO indexDefinition)
         {
             try
@@ -124,26 +124,13 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("Index/Query/{index}")]
-        public async Task<IActionResult> QueryIndex([FromRoute] string index, [FromBody] DirectQueryRequest request)
+        public async Task<IActionResult> QueryIndex([FromRoute] string index, [FromBody] Object request)
         {
-            try
-            {
-                var response = await _ragLogic.QueryIndex(index, request);
-                if (response is not null) return Ok(response);
-                else return NotFound();
-            }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                throw;
-            }
+            throw new NotImplementedException("Direct queries have not been implemented for AI Search indexes for this API");
         }
 
         [HttpGet]
-        [Route("Document/GetAll/{index}")]
+        [Route("index/{index}/document/GetAll")]
         public async Task<IActionResult> GetAllDocuments([FromRoute] string index)
         {
             try
@@ -163,7 +150,7 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpGet]
-        [Route("Document/Get/{index}/{document}")]
+        [Route("index/{index}/document/{document}")]
         public async Task<IActionResult> GetDocument([FromRoute] string index, [FromRoute] string document)
         {
             try
@@ -183,7 +170,7 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpPost]
-        [Route("Document/Upsert/{index}")]
+        [Route("index/{index}/Document")]
         public async Task<IActionResult> UpsertDocuments([FromRoute] string index, [FromBody] RagUpsertRequest documents)
         {
             try
@@ -204,11 +191,12 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpDelete]
-        [Route("{index}/Document/Delete")]
-        public async Task<IActionResult> DeleteDocuments([FromRoute] string index, [FromBody] string[] documents)
+        [Route("index/{index}/Document/{commaDelimitedDocNames}")]
+        public async Task<IActionResult> DeleteDocuments([FromRoute] string index, [FromRoute] string commaDelimitedDocNames)
         {
             try
             {
+                var documents = commaDelimitedDocNames.ToStringArray();
                 var response = await _ragLogic.DeleteDocuments(index, documents);
                 if (response == 0) return NotFound($"The index {index} does not exist, or does not contain any of the documents in the list");
                 else return Ok(response);

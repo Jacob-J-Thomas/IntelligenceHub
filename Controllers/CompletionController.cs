@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using IntelligenceHub.Host.Config;
 using IntelligenceHub.Business;
-using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
 using System.Text;
 using IntelligenceHub.Common.Handlers;
 using IntelligenceHub.API.MigratedDTOs;
@@ -26,11 +25,11 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("Chat/{name}")]
-        public async Task<IActionResult> CompletionRouting([FromRoute] string name, [FromBody] CompletionRequest completionRequest)
+        public async Task<IActionResult> CompletionStandard([FromRoute] string name, [FromBody] CompletionRequest completionRequest)
         {
             try
             {
-                completionRequest.ProfileOptions.Model = name ?? completionRequest.ProfileOptions.Model;
+                completionRequest.Profile = name ?? completionRequest.Profile;
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (errorMessage is not null) return BadRequest(errorMessage);
                 var response = await _completionLogic.ProcessCompletion(completionRequest);
@@ -54,16 +53,17 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpPost]
-        [Route("Chat/Stream/{name}")]
+        [Route("Stream/{name}")]
         public async Task<IActionResult> CompletionStreaming([FromRoute] string name, [FromBody] CompletionRequest completionRequest)
         {
             try
             {
-                completionRequest.ProfileOptions.Model = name ?? completionRequest.ProfileOptions.Model;
+                completionRequest.Profile = name ?? completionRequest.Profile;
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (errorMessage is not null) return BadRequest(errorMessage);
                 var response = _completionLogic.StreamCompletion(completionRequest);
 
+                // set headers to return SSE
                 Response.Headers.Add("Content-Type", "text/event-stream");
                 Response.Headers.Add("Cache-Control", "no-cache");
                 Response.Headers.Add("Connection", "keep-alive");

@@ -1,5 +1,4 @@
-﻿using Nest;
-using IntelligenceHub.Common.Attributes;
+﻿using IntelligenceHub.Common.Attributes;
 
 namespace IntelligenceHub.API.DTOs.DataAccessDTOs
 {

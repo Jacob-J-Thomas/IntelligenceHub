@@ -1,5 +1,4 @@
-﻿using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
-
+﻿
 namespace IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs
 {
     public class EmbeddingResponse

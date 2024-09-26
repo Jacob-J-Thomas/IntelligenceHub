@@ -1,6 +1,8 @@
 ﻿using Microsoft.Identity.Client;
 using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
 using IntelligenceHub.DAL;
+using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Business
 {
@@ -35,11 +37,12 @@ namespace IntelligenceHub.Business
             return await _messageHistoryRepository.DeleteConversationAsync(id);
         }
 
-        public async Task<DbMessage> AddMessage(DbMessage message)
+        public async Task<DbMessage> AddMessage(Guid conversationId, Message message)
         {
-            var conversation = await _messageHistoryRepository.GetConversationAsync((Guid)message.ConversationId, 1);
-            if (conversation is null || conversation.Count < 1) return null; 
-            return await _messageHistoryRepository.AddAsync(message);
+            var dbMessage = DbMappingHandler.MapToDbMessage(message);
+            var conversation = await _messageHistoryRepository.GetConversationAsync(conversationId, 1);
+            if (conversation == null) throw new IntelligenceHubException(404, $"A conversations with id '{conversationId}' does not exist."); 
+            return await _messageHistoryRepository.AddAsync(dbMessage);
         }
 
         public async Task<bool> DeleteMessage(Guid conversationId, int messageId)

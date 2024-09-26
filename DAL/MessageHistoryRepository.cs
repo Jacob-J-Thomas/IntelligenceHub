@@ -1,6 +1,4 @@
-﻿using Nest;
-using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+﻿using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
 using IntelligenceHub.API.MigratedDTOs;
 using IntelligenceHub.Controllers.DTOs;
 using IntelligenceHub.DAL.DTOs;

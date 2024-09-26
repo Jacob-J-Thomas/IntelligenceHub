@@ -1,18 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.Controllers.DTOs;
 using IntelligenceHub.Host.Config;
-using IntelligenceHub.Business;
-using System.Runtime;
-using Azure;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Newtonsoft.Json.Linq;
-using IntelligenceHub.DAL;
-using Nest;
-using Azure.Core;
-using Microsoft.AspNetCore.Routing;
-using System.Reflection.Metadata;
 using IntelligenceHub.Business.ProfileLogic;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
+using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 
 namespace IntelligenceHub.Controllers
 {

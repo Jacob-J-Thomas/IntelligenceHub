@@ -1,7 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs;
-using IntelligenceHub.Common.Attributes;
-using IntelligenceHub.API.MigratedDTOs;
+﻿using IntelligenceHub.Common.Attributes;
 
 namespace IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs
 {

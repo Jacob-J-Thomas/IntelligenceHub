@@ -7,6 +7,9 @@ using static IntelligenceHub.Common.GlobalVariables;
 using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
 using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.Common;
+using OpenAI.Embeddings;
+using IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs;
+using Azure.AI.OpenAI.Chat;
 
 namespace IntelligenceHub.Client
 {
@@ -95,6 +98,13 @@ namespace IntelligenceHub.Client
             }
         }
 
+        public async Task<float[]?> GetEmbeddings(EmbeddingRequestBase completion, string embeddingModel = "text-embedding-3-small")
+        {
+            var embeddingClient = _azureOpenAIClient.GetEmbeddingClient(embeddingModel);
+            var embeddingResponse = await embeddingClient.GenerateEmbeddingAsync(completion.Input);
+            return embeddingResponse.Value.Vector.ToArray();
+        }
+
         private List<ChatMessage> BuildCompletionMessages(CompletionRequest completionRequest)
         {
             var systemMessage = completionRequest.ProfileOptions.System_Message;
@@ -156,7 +166,50 @@ namespace IntelligenceHub.Client
             else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Auto.ToString()) options.ToolChoice = ChatToolChoice.Auto;
             else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Required.ToString()) options.ToolChoice = ChatToolChoice.Required;
 
+#pragma warning disable AOAI001
+            if (!string.IsNullOrEmpty(completion.ProfileOptions.RagDatabase)) options = AttachDatabaseOptions(completion.ProfileOptions.RagDatabase, options);
             return options;
+        }
+
+        private ChatCompletionOptions AttachDatabaseOptions(string indexName, ChatCompletionOptions options)
+        {
+            var fieldMappings = new DataSourceFieldMappings();
+
+            // configure below dynamically based off of RAG database definition
+            fieldMappings.VectorFieldNames.Add("contentVector");
+            fieldMappings.VectorFieldNames.Add("titleVector");
+
+            // get below values from database
+            options.AddDataSource(new AzureSearchChatDataSource()
+            {
+                Endpoint = new Uri(_aiSearchServiceUrl), // retrieve from RagDB
+                Authentication = DataSourceAuthentication.FromApiKey(_aiSearchServiceKey), // retrieve from RagDB
+                IndexName = indexName, // create an Options property for API requests to hold this and below values
+                InScope = false, // add to DatabaseOptions
+                SemanticConfiguration = "semantic", // add to DatabaseOptions ?? defaultValue
+                QueryType = "vector", // add to DatabaseOptions ?? defaultValue
+                VectorizationSource = DataSourceVectorizer.FromDeploymentName("text-embedding-ada-002"), // add string to dbOptions
+                FieldMappings = fieldMappings,
+
+                // This should be set to the system message currently as the system message doesn't seem to work with RAG
+                RoleInformation = "You are an office assistant who works for Convergint, and helps fellow colleagues by providing information about Convergint and its processes and resources, assist with brainstorming, troubleshooting, drafting templates, and more. The sources you are provided come from knowledge base articles from Convergint's helpdesk, sharepoint document stores, and user directory information. You should only reference these documents when they relate to the users question, otherwise simply use your own internal knowledge that you were trained on to complete their request.",
+
+                // Add these
+                TopNDocuments = 5, // get from databaseOptions ?? defaultValue
+                OutputContextFlags = DataSourceOutputContextFlags.Citations | // probably just hard code value as this?
+                    DataSourceOutputContextFlags.Intent |
+                    DataSourceOutputContextFlags.AllRetrievedDocuments,
+
+                Strictness = 4, // get from databaseOptions ?? null
+                
+                // not sure if we want to set this or not
+                MaxSearchQueries = 5,
+
+
+                // probably don't use below for now
+                //AllowPartialResult = false,
+                //Filter = // seems very useful
+            });
         }
     }
 }

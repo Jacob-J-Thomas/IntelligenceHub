@@ -1,10 +1,11 @@
 ﻿using Azure.AI.OpenAI;
 using System.ClientModel;
 using OpenAI.Embeddings;
+using IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs;
 
 namespace IntelligenceHub.Client
 {
-    // Combine with AI client (just duplicate the GetEmbeddings method, and move repeating logic to a private method)S
+    // Combine with AI client (just duplicate the GetEmbeddings method, and move repeating logic to (a) private method(s)
     public class VectorEmbeddingClient
     {
         private AzureOpenAIClient _azureOpenAIClient;

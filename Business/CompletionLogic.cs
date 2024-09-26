@@ -17,11 +17,8 @@ namespace IntelligenceHub.Business
         // move to GlobalVariables class
         private const int _defaultMessageHistory = 5;
 
-        //private readonly IConfiguration _configuration;
-        //private readonly AIStreamingClient _AIStreamingClient;
         private readonly AGIClient _AIClient;
         private readonly FunctionClient _functionClient;
-        private readonly VectorEmbeddingClient _embeddingClient;
         private readonly ProfileRepository _profileDb;
         private readonly ToolRepository _toolDb;
         private readonly ProfileToolsAssociativeRepository _profileToolAssocaitionDb;
@@ -43,8 +40,6 @@ namespace IntelligenceHub.Business
             _profileToolAssocaitionDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
             _toolDb = new ToolRepository(settings.DbConnectionString);
             _AIClient = new AGIClient(settings.AIEndpoint, settings.AIKey);
-            _embeddingClient = new VectorEmbeddingClient(settings.AIEndpoint, settings.AIKey);
-            //_AIStreamingClient = new AIStreamingClient(settings.AIEndpoint, settings.AIKey);
             _functionClient = new FunctionClient(clientFactory);
             _profileDb = new ProfileRepository(settings.DbConnectionString);
             _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);

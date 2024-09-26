@@ -1,5 +1,4 @@
 ﻿using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
-using IntelligenceHub.API.DTOs.ControllerDTOs;
 using IntelligenceHub.API.DTOs.DataAccessDTOs;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common;
@@ -13,7 +12,7 @@ namespace IntelligenceHub.Business
     public class RagLogic
     {
         private readonly AGIClient _aiClient;
-        private readonly VectorEmbeddingClient _embeddingClient;
+        private readonly AGIClient _AIClient;
         private readonly RagMetaRepository _metaRepository;
         private readonly RagRepository _ragRepository;
         private readonly string _defaultEmbeddingModel;
@@ -22,7 +21,7 @@ namespace IntelligenceHub.Business
         public RagLogic(string sqlConnectionString, string ragSqlConnectionString, string aiEndpoint, string aiKey, string defaultEmbeddingModel, string defaultAGIModel) 
         {
             _aiClient = new(aiEndpoint, aiKey);
-            _embeddingClient = new(aiEndpoint, aiKey);
+            _AIClient = new(aiEndpoint, aiKey);
             _metaRepository = new(sqlConnectionString);
             _ragRepository = new(ragSqlConnectionString);
             _defaultEmbeddingModel = defaultEmbeddingModel;
@@ -78,7 +77,7 @@ namespace IntelligenceHub.Business
         {
             // other checks/configs?
             var indexData = await _metaRepository.GetByNameAsync(index);
-            var embedding = await _embeddingClient.GetEmbeddings(request);
+            var embedding = await _AIClient.GetEmbeddings(request);
             if (indexData == null || embedding == null) return null;
 
             _ragRepository.SetTable(index);
@@ -130,7 +129,7 @@ namespace IntelligenceHub.Business
                     if (chunk.Topic != null && indexData.GenerateTopicVector) embeddingRequest.Input = chunk.Topic;
                     if (chunk.KeyWords != null && indexData.GenerateKeywordVector) embeddingRequest.Input = chunk.KeyWords;
 
-                    var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);
+                    var embedding = await _AIClient.GetEmbeddings(embeddingRequest);
                     if (embedding == null) throw new IntelligenceHubException(500, "Something went wrong when generating embeddings");
                     chunk.KeywordVectorNorm = CalculateNorm(embedding);
                     chunk.KeywordVector = embedding.EncodeToBinary();

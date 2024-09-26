@@ -6,6 +6,23 @@ This is accomplished by using a single function definition which then calls more
 
 Please add your own API token in appsettings.json after cloning the repo.
 
+AzureOpenAISDKMigration TODO:
+- Convert DTOs for these controllers
+	- MessageHistoryController
+	- RagController
+- Add CogSearch support for RAG index
+	- Update AGIClient
+	- Rearchitect the SQL database
+		- Ensure change tracking is enabled
+		- chunk documents
+		- update index and indexer definitions during new rag db creation
+		- Update models
+- Ensure all controllers have the updated exception handling criteria, and throw these exceptions instead of returning null
+- See if the OpenAI SDK has any newer versions and update 
+- Ensure additional response data returned by RAG is properly processed
+- Test
+	
+
 Future Features (Descending Priority):
 - Document upload/extraction support
 - Real time internet search
