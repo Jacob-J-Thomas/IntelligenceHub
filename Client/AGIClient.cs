@@ -1,22 +1,12 @@
 ﻿using Azure.AI.OpenAI;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using OpenAI.Assistants;
 using OpenAI.Chat;
-using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
-using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.Common;
-using Polly;
-using Polly.Contrib.WaitAndRetry;
-using Polly.Retry;
-using System;
 using System.ClientModel;
-using System.ClientModel.Primitives;
-using System.Net.Http.Headers;
-using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
+using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
+using IntelligenceHub.Common.Exceptions;
+using IntelligenceHub.Common;
 
 namespace IntelligenceHub.Client
 {
@@ -32,20 +22,77 @@ namespace IntelligenceHub.Client
             _azureOpenAIClient = new AzureOpenAIClient(resourceUri, credential);
         }
 
-        public async Task<ChatCompletion?> PostCompletion(CompletionRequest completionRequest)
+        public async Task<CompletionResponse?> PostCompletion(CompletionRequest completionRequest)
         {
             var options = BuildCompletionOptions(completionRequest);
             var messages = BuildCompletionMessages(completionRequest);
             var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
-            return await chatClient.CompleteChatAsync(messages, options);
+            var completionResult = await chatClient.CompleteChatAsync(messages, options);
+
+            var toolCalls = new Dictionary<string, string>();
+            foreach (var tool in completionResult.Value.ToolCalls) toolCalls.Add(tool.FunctionName, tool.FunctionArguments);
+
+            // build the response object
+            var responseMessage = new Message()
+            {
+                Content = completionResult.Value.Content.ToString() ?? string.Empty,
+                Role = GlobalVariables.ConvertStringToRole(completionResult.Value.Role.ToString())
+            };
+
+            var response = new CompletionResponse()
+            {
+                FinishReason = ConvertStringToFinishReason(completionResult.Value.FinishReason.ToString()),
+                Messages = completionRequest.Messages,
+                ToolCalls = toolCalls
+            };
+            response.Messages.Add(responseMessage);
+            return response;
         }
 
-        public AsyncCollectionResult<StreamingChatCompletionUpdate> StreamCompletion(CompletionRequest completionRequest)
+        public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
             var options = BuildCompletionOptions(completionRequest);
             var messages = BuildCompletionMessages(completionRequest);
             var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
-            return chatClient.CompleteChatStreamingAsync(messages, options);
+            var resultCollection = chatClient.CompleteChatStreamingAsync(messages, options);
+
+            var chunkId = 0;
+            var role = string.Empty;
+            var finishReason = string.Empty;
+            var currentTool = string.Empty;
+            var currentToolArgs = string.Empty;
+            var toolCalls = new Dictionary<string, string>();
+            await foreach (var result in resultCollection)
+            {
+                role = result.Role.ToString() ?? role;
+                finishReason = result.FinishReason.ToString() ?? finishReason;
+                var content = result.ContentUpdate.ToString() ?? string.Empty;
+
+                // handle tool conversion - move to seperate method
+                foreach (var update in result.ToolCallUpdates)
+                {
+                    // capture current values
+                    if (string.IsNullOrEmpty(currentTool)) currentTool = update.FunctionName;
+                    if (currentTool == update.FunctionName) currentToolArgs += update.FunctionArgumentsUpdate;
+                    else
+                    {
+                        currentTool = update.FunctionName;
+                        currentToolArgs = update.FunctionArgumentsUpdate;
+                    }
+
+                    if (toolCalls.ContainsKey(currentTool)) toolCalls[currentTool] = currentToolArgs;
+                    else toolCalls.Add(currentTool, currentToolArgs);
+                }
+
+                yield return new CompletionStreamChunk()
+                {
+                    Id = chunkId++,
+                    Role = GlobalVariables.ConvertStringToRole(role),
+                    CompletionUpdate = content,
+                    FinishReason = ConvertStringToFinishReason(finishReason),
+                    ToolCalls = toolCalls
+                };
+            }
         }
 
         private List<ChatMessage> BuildCompletionMessages(CompletionRequest completionRequest)
@@ -55,8 +102,8 @@ namespace IntelligenceHub.Client
             if (!string.IsNullOrWhiteSpace(systemMessage)) completionMessages.Add(new SystemChatMessage(systemMessage));
             foreach (var message in completionRequest.Messages)
             {
-                if (message.Role == MessageRole.User.ToString()) completionMessages.Add(new UserChatMessage(message.Content));
-                else if (message.Role == MessageRole.Assistant.ToString()) completionMessages.Add(new AssistantChatMessage(message.Content));
+                if (message.Role.ToString() == MessageRole.User.ToString()) completionMessages.Add(new UserChatMessage(message.Content));
+                else if (message.Role.ToString() == MessageRole.Assistant.ToString()) completionMessages.Add(new AssistantChatMessage(message.Content));
             }
             return completionMessages;
         }

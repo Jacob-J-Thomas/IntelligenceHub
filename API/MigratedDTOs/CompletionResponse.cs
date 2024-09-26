@@ -1,12 +1,14 @@
-﻿using IntelligenceHub.API.MigratedDTOs;
+﻿
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.API.MigratedDTOs
 {
     public class CompletionResponse
     {
         //public List<ToolCall>
-        public List<Message> Messages { get; set; }
+        public List<Message> Messages { get; set; } // flatten this to just the content string?
+        public Dictionary<string, string> ToolCalls { get; set; }
         public List<HttpResponseMessage> ToolExecutionResponses { get; set; }
-        public string FinishReason { get; set; }
+        public FinishReason FinishReason { get; set; }
     }
 }

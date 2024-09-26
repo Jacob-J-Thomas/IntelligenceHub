@@ -2,20 +2,19 @@
 using Newtonsoft.Json.Serialization;
 using System.Net.Http.Headers;
 using System.Text;
-using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.ToolDTOs;
 
 namespace IntelligenceHub.Client
 {
     public class FunctionClient
     {
         private HttpClient _client { get; set; }
-        private string _endpoint;
         public FunctionClient(IHttpClientFactory clientFactory) 
         {
-            _client = clientFactory.CreateClient("FunctionCalling"); implement FunctionCalling configuration
+            _client = clientFactory.CreateClient();
         }
 
-        public async Task<HttpResponseMessage> CallFunction(ResponseToolDTO tool, string endpoint)
+        public async Task<HttpResponseMessage> CallFunction(string toolName, string toolArgs, string endpoint, string httpMethod = "Post")
         {
             _client = new HttpClient();
             _client.DefaultRequestHeaders.Clear();
@@ -23,22 +22,25 @@ namespace IntelligenceHub.Client
 
             JsonSerializerSettings settings = new JsonSerializerSettings();
             settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-            var json = JsonConvert.SerializeObject(tool, settings);
+
+            var json = string.Empty;
+            if (!string.IsNullOrEmpty(toolArgs))
+            {
+                var tool = new ToolExecutionCall()
+                {
+                    ToolName = toolName,
+                    Arguments = toolArgs,   
+                };
+                json = JsonConvert.SerializeObject(tool, settings);
+            }
             var body = new StringContent(json, Encoding.UTF8, "application/json");
 
-            using (_client)
-            {
-                try
-                {
-                    var response = await _client.PostAsync(_endpoint, body);
-                    //response.EnsureSuccessStatusCode();
-                    return response;
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception(ex.Message);
-                }
-            }
+            if (httpMethod == HttpMethod.Post.ToString()) return await _client.PostAsync(endpoint, body);
+            else if (httpMethod == HttpMethod.Get.ToString()) return await _client.GetAsync(endpoint);
+            else if (httpMethod == HttpMethod.Put.ToString()) return await _client.PutAsync(endpoint, body);
+            else if (httpMethod == HttpMethod.Patch.ToString()) return await _client.PatchAsync(endpoint, body);
+            else if (httpMethod == HttpMethod.Delete.ToString()) return await _client.DeleteAsync(endpoint);
+            else return new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
         }
     }
 }

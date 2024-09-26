@@ -1,5 +1,6 @@
 ﻿using OpenAI.Chat;
 using IntelligenceHub.API;
+using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Common
 {
@@ -35,6 +36,45 @@ namespace IntelligenceHub.Common
             Required,
             Auto,
             None,
+        }
+
+        public enum FinishReason
+        {
+            Stop,
+            Length,
+            ToolCalls,
+            ContentFilter,
+        }
+
+        public enum Role
+        {
+            User,
+            Assistant,
+            System,
+            Tool
+        }
+
+        // Move these to an extension method class for the above
+        public static FinishReason ConvertStringToFinishReason(string finishReason)
+        {
+            if (finishReason == ChatFinishReason.Stop.ToString()) return FinishReason.Stop;
+            if (finishReason == ChatFinishReason.Length.ToString()) return FinishReason.Length;
+            if (finishReason == ChatFinishReason.ToolCalls.ToString()) return FinishReason.ToolCalls;
+            if (finishReason == ChatFinishReason.FunctionCall.ToString()) return FinishReason.ToolCalls;
+            if (finishReason == ChatFinishReason.ContentFilter.ToString()) return FinishReason.ContentFilter;
+
+            throw new IntelligenceHubException(500, "Could not convert chat finish reason to system finish reason");
+        }
+
+        public static Role ConvertStringToRole(string role)
+        {
+            if (role == ChatMessageRole.Assistant.ToString()) return Role.Assistant;
+            if (role == ChatMessageRole.User.ToString()) return Role.User;
+            if (role == ChatMessageRole.Tool.ToString()) return Role.Tool;
+            if (role == ChatMessageRole.Function.ToString()) return Role.Tool;
+            if (role == ChatMessageRole.System.ToString()) return Role.System;
+
+            throw new IntelligenceHubException(500, "Could not convert chat role to system role");
         }
     }
 }

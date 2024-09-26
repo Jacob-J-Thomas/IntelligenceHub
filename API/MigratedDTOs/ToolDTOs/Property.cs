@@ -1,6 +1,4 @@
 ﻿using Newtonsoft.Json;
-using IntelligenceHub.Common.Extensions;
-using IntelligenceHub.DAL.DTOs;
 
 namespace IntelligenceHub.API.MigratedDTOs.ToolDTOs
 {

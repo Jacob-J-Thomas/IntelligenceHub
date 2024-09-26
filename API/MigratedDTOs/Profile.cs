@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using System.ComponentModel.DataAnnotations;
 using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 

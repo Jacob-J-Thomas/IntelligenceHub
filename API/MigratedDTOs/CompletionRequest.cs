@@ -1,6 +1,4 @@
-﻿using OpenAI.Chat;
-using IntelligenceHub.API.MigratedDTOs;
-
+﻿
 namespace IntelligenceHub.API.MigratedDTOs
 {
     public class CompletionRequest

@@ -1,12 +1,6 @@
-﻿using Nest;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
-using IntelligenceHub.Common.Extensions;
-using IntelligenceHub.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using IntelligenceHub.DAL.DTOs;
 using System.Data.SqlClient;
-using System.Linq;
+using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 
 namespace IntelligenceHub.DAL
 {
@@ -210,7 +204,7 @@ namespace IntelligenceHub.DAL
                     };
 
                     // Create a PropertyDTO and add it to the dictionary
-                    propertyList.Add(new DbProperty(propertyName, propDto));
+                    propertyList.Add(DbMappingHandler.MapToDbProperty(propertyName, propDto));
                 }
             } while (await reader.ReadAsync());
             return DbMappingHandler.MapFromDbTool(tool, propertyList);

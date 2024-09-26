@@ -1,8 +1,6 @@
-﻿using Nest;
-using IntelligenceHub.DAL.DTOs;
-using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
+﻿using IntelligenceHub.DAL.DTOs;
 
-namespace IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs.SystemTools
+namespace IntelligenceHub.API.MigratedDTOs.ToolDTOs
 {
     public class ProfileReferenceTools : Tool
     {
@@ -21,7 +19,7 @@ namespace IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs.SystemTools
             {
                 Name = profile.Name + "_Reference_AI_Model", // add this to the criteria for validating tools
                 Description = "A call to a large language model that can be used to generate recursive chat completions between other AI models." +
-                              $"Here is a description of this particular AI model configuration: {profile.Reference_Description}",
+                              $"Here is a description of this particular AI model configuration: {profile.ReferenceDescription}",
             };
 
             Function.Parameters.Properties.Add("prompt_response", dialogueHistoryProperty);

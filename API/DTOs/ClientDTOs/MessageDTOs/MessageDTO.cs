@@ -1,22 +1,22 @@
-﻿namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs
-{
-    public class MessageDTO
-    {
-        public string Role { get; set; }
-        public string Content { get; set; }
-        public string ToolCallID { get; set; }
+﻿//namespace OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs
+//{
+//    public class MessageDTO
+//    {
+//        public string Role { get; set; }
+//        public string Content { get; set; }
+//        public string ToolCallID { get; set; }
 
-        public MessageDTO() { }
+//        public MessageDTO() { }
 
-        public MessageDTO(string role, string content)
-        {
-            // validate role
+//        public MessageDTO(string role, string content)
+//        {
+//            // validate role
 
-            Role = role;
-            Content = content;
+//            Role = role;
+//            Content = content;
 
-            // add additional properties
+//            // add additional properties
 
-        }
-    }
-}
+//        }
+//    }
+//}

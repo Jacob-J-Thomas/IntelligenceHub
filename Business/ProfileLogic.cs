@@ -1,12 +1,8 @@
-﻿using IntelligenceHub.Controllers.DTOs;
-//using OpenAICustomFunctionCallingAPI.DAL;
-using IntelligenceHub.DAL;
+﻿using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.DTOs;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using IntelligenceHub.Common.Handlers;
-using IntelligenceHub.DAL;
-using Nest;
 using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 
 namespace IntelligenceHub.Business.ProfileLogic
 {
@@ -46,7 +42,7 @@ namespace IntelligenceHub.Business.ProfileLogic
             else
             {
                 var apiProfile = await _profileDb.GetByNameAsync(name);
-                if (apiProfile != null) return new Profile(apiProfile);
+                if (apiProfile != null) return DbMappingHandler.MapFromDbProfile(apiProfile);
             }
             return null;
         }
@@ -60,7 +56,7 @@ namespace IntelligenceHub.Business.ProfileLogic
                 foreach (var profile in response)
                 {
                     // package this into a seperate method (same one as in GetProfiles())
-                    var apiProfileDto = new Profile(profile);
+                    var apiProfileDto = DbMappingHandler.MapFromDbProfile(profile);
                     var profileToolDTOs = await _profileToolsDb.GetToolAssociationsAsync(profile.Id);
                     apiProfileDto.Tools = new List<Tool>();
                     foreach (var association in profileToolDTOs)
@@ -268,7 +264,7 @@ namespace IntelligenceHub.Business.ProfileLogic
             {
                 foreach (var property in existingTool.Function.Parameters.Properties)
                 {
-                    var propertyDTO = new DbProperty(property.Key, property.Value);
+                    var propertyDTO = DbMappingHandler.MapToDbProperty(property.Key, property.Value);
                     await _propertyDb.DeleteAsync(propertyDTO);
                 }
                 await _profileToolsDb.DeleteAllToolAssociationsAsync(existingTool.Id);
@@ -285,7 +281,7 @@ namespace IntelligenceHub.Business.ProfileLogic
             foreach (var property in newProperties)
             {
                 property.Value.Id = existingTool.Id;
-                await _propertyDb.AddAsync(new DbProperty(property.Key, property.Value));
+                await _propertyDb.AddAsync(DbMappingHandler.MapToDbProperty(property.Key, property.Value));
             }
             return true;
         }

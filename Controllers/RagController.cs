@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
-using IntelligenceHub.API.DTOs.ControllerDTOs;
 using IntelligenceHub.API.DTOs.DataAccessDTOs;
 using IntelligenceHub.Business;
 using IntelligenceHub.Host.Config;
+using IntelligenceHub.API.DTOs.ControllerDTOs;
 
 namespace IntelligenceHub.Controllers
 {
@@ -124,7 +124,7 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("Index/Query/{index}")]
-        public async Task<IActionResult> QueryIndex([FromRoute] string index, [FromBody] DirectQueryRe+-quest request)
+        public async Task<IActionResult> QueryIndex([FromRoute] string index, [FromBody] DirectQueryRequest request)
         {
             try
             {

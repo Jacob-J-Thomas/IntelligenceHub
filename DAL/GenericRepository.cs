@@ -1,12 +1,6 @@
-﻿using Nest;
-using IntelligenceHub.Common.Attributes;
-using IntelligenceHub.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using IntelligenceHub.Common.Attributes;
 using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
 using System.Reflection;
 
 namespace IntelligenceHub.DAL

@@ -38,7 +38,7 @@
     <Content Include="API\MigratedDTOs\ToolDTOs\Function.cs" />
     <Content Include="API\MigratedDTOs\ToolDTOs\Parameters.cs" />
     <Content Include="API\MigratedDTOs\ToolDTOs\Property.cs" />
-    <Content Include="API\DTOs\ClientDTOs\ToolDTOs\SystemTools\ProfileReferenceTool.cs" />
+    <Content Include="API\MigratedDTOs\ToolDTOs\ProfileReferenceTool.cs" />
     <Content Include="API\MigratedDTOs\ToolDTOs\Tool.cs" />
     <Content Include="API\MigratedDTOs\Profile.cs" />
     <Content Include="API\DTOs\ControllerDTOs\ChatRequestDTO.cs" />
@@ -70,6 +70,10 @@
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="API\DTOs\ClientDTOs\ToolDTOs\SystemTools\" />
   </ItemGroup>
 
 </Project>

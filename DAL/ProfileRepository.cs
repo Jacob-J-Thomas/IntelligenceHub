@@ -1,12 +1,7 @@
-﻿using Nest;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
-using IntelligenceHub.Controllers.DTOs;
+﻿using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 using IntelligenceHub.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
 
 namespace IntelligenceHub.DAL
 {
@@ -15,9 +10,10 @@ namespace IntelligenceHub.DAL
 
         public ProfileRepository(string connectionString) : base(connectionString)
         {
+
         }
 
-        public async Task<Controllers.DTOs.Profile> GetByNameWithToolsAsync(string Name)
+        public async Task<Profile> GetByNameWithToolsAsync(string Name)
         {
             try
             {
@@ -50,12 +46,12 @@ namespace IntelligenceHub.DAL
                                     dbProfile.Stop = (string)reader["Stop"];
                                 }
                                 
-                                var profile = new Controllers.DTOs.Profile(dbProfile);
-                                profile.Tools = new List<ToolDTO>();
+                                var profile = DbMappingHandler.MapFromDbProfile(dbProfile);
+                                profile.Tools = new List<Tool>();
 
                                 foreach (var tool in toolList)
                                 {
-                                    profile.Tools.Add(new ToolDTO(tool, null));
+                                    profile.Tools.Add(DbMappingHandler.MapFromDbTool(tool, null));
                                 }
                                 return profile;
                             }

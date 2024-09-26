@@ -1,14 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.Controllers.DTOs;
 using IntelligenceHub.Host.Config;
-using IntelligenceHub.Business;
-using System.Runtime;
-using Azure;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Newtonsoft.Json.Linq;
-using IntelligenceHub.DAL;
-using Nest;
 using IntelligenceHub.Business.ProfileLogic;
+using IntelligenceHub.API.MigratedDTOs;
 
 namespace IntelligenceHub.Controllers
 {
@@ -68,7 +61,7 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("upsert")]
-        public async Task<IActionResult> AddOrUpdateProfile([FromBody] DTOs.Profile profileDto)
+        public async Task<IActionResult> AddOrUpdateProfile([FromBody] Profile profileDto)
         {
             try
             {

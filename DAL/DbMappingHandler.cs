@@ -1,20 +1,43 @@
 ﻿using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using IntelligenceHub.API.MigratedDTOs;
 using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL.DTOs;
 using static IntelligenceHub.Common.GlobalVariables;
 using System.Reflection;
+using IntelligenceHub.Common;
 
 namespace IntelligenceHub.DAL
 {
     public static class DbMappingHandler
     {
         #region Profiles
-        public static Profile MapFromDbProfile(DbProfile dbProfile)
+        public static Profile MapFromDbProfile(DbProfile dbProfile, List<Tool>? tools = null)
         {
-            throw new NotImplementedException();
+            var profile = new Profile()
+            {
+                Id = dbProfile.Id,
+                Name = dbProfile.Name,
+                Model = dbProfile.Model,
+                Frequency_Penalty = dbProfile.FrequencyPenalty,
+                Presence_Penalty = dbProfile.PresencePenalty,
+                Temperature = dbProfile.Temperature,
+                Top_P = dbProfile.TopP,
+                Max_Tokens = dbProfile.MaxTokens,
+                Top_Logprobs = dbProfile.TopLogprobs,
+                Response_Format = dbProfile.ResponseFormat,
+                Seed = dbProfile.Seed,
+                User = dbProfile.User,
+                System_Message = dbProfile.SystemMessage,
+                Stop = dbProfile.Stop.ToStringArray(),
+                Reference_Profiles = dbProfile.ReferenceProfiles.ToStringArray(),
+                Tool_Choice = dbProfile.ToolChoice,
+                Tools = tools,
+                MaxMessageHistory = dbProfile.MaxMessageHistory,
+                Return_Recursion = dbProfile.ReturnRecursion,
+            };
+            profile.Logprobs = profile.Top_Logprobs > 0 ? true : false;
+            return profile;
         }
 
         public static DbProfile MapToDbProfile(DbProfile? existingProfile = null, Profile? profileUpdate = null)
@@ -24,43 +47,43 @@ namespace IntelligenceHub.DAL
                 // update or set existing value
                 Id = existingProfile.Id,
                 Name = profileUpdate.Name ?? existingProfile.Name,
-                Response_Format = profileUpdate.Response_Format ?? existingProfile.Response_Format,
+                ResponseFormat = profileUpdate.Response_Format ?? existingProfile.ResponseFormat,
                 Seed = profileUpdate.Seed ?? existingProfile.Seed,
                 User = profileUpdate.User ?? existingProfile.User,
-                System_Message = profileUpdate.System_Message ?? existingProfile.System_Message,
-                Top_Logprobs = profileUpdate.Top_Logprobs ?? existingProfile.Top_Logprobs,
-                Tool_Choice = profileUpdate.Tool_Choice ?? existingProfile.Tool_Choice,
+                SystemMessage = profileUpdate.System_Message ?? existingProfile.SystemMessage,
+                TopLogprobs = profileUpdate.Top_Logprobs ?? existingProfile.TopLogprobs,
+                ToolChoice = profileUpdate.Tool_Choice ?? existingProfile.ToolChoice,
 
                 // Variables with default values during first database entry
                 Model = profileUpdate.Model
                     ?? existingProfile.Model
                     ?? "gpt-3.5-turbo",
 
-                Frequency_Penalty = profileUpdate.Frequency_Penalty
-                    ?? existingProfile.Frequency_Penalty
+                FrequencyPenalty = profileUpdate.Frequency_Penalty
+                    ?? existingProfile.FrequencyPenalty
                     ?? 0,
 
-                Presence_Penalty = profileUpdate.Presence_Penalty
-                    ?? existingProfile.Presence_Penalty
+                PresencePenalty = profileUpdate.Presence_Penalty
+                    ?? existingProfile.PresencePenalty
                     ?? 0,
 
                 Temperature = profileUpdate.Temperature
                     ?? existingProfile.Temperature
                     ?? 1,
 
-                Top_P = profileUpdate.Top_P
-                    ?? existingProfile.Top_P
+                TopP = profileUpdate.Top_P
+                    ?? existingProfile.TopP
                     ?? 1,
 
-                Max_Tokens = profileUpdate.Max_Tokens
-                    ?? existingProfile.Max_Tokens
+                MaxTokens = profileUpdate.Max_Tokens
+                    ?? existingProfile.MaxTokens
                     ?? 1200,
 
-                Return_Recursion = profileUpdate.Return_Recursion
-                    ?? existingProfile.Return_Recursion
+                ReturnRecursion = profileUpdate.Return_Recursion
+                    ?? existingProfile.ReturnRecursion
                     ?? false,
                 Stop = profileUpdate.Stop?.ToCommaSeparatedString() ?? existingProfile.Stop,
-                Reference_Profiles = profileUpdate.Reference_Profiles?.ToCommaSeparatedString() ?? existingProfile.Reference_Profiles,
+                ReferenceProfiles = profileUpdate.Reference_Profiles?.ToCommaSeparatedString() ?? existingProfile.ReferenceProfiles,
             };
         }
         #endregion
@@ -87,6 +110,7 @@ namespace IntelligenceHub.DAL
                     Description = property.Description,
                 };
                 tool.Function.Parameters.Properties.Add(property.Name, convertedProp);
+                tool.Function.Parameters.Required = dbTool.Required.ToStringArray();
             }
             return tool;
         }
@@ -101,6 +125,18 @@ namespace IntelligenceHub.DAL
                 Required = tool.Function.Parameters.Required?.ToCommaSeparatedString() ?? string.Empty,
             };
         }
+
+        public static DbProperty MapToDbProperty(string name, Property property)
+        {
+            return new DbProperty()
+            {
+                Id = property.Id ?? 0,
+                ToolId = property.Id ?? 0,
+                Name = name,
+                Type = property.Type,
+                Description = property.Description ?? string.Empty,
+            };
+        }
         #endregion
 
         #region Messaging
@@ -109,7 +145,7 @@ namespace IntelligenceHub.DAL
             return new Message()
             {
                 Content = dbMessage.Content,
-                Role = dbMessage.Role,
+                Role = GlobalVariables.ConvertStringToRole(dbMessage.Role),
             };
         }
 
@@ -118,7 +154,7 @@ namespace IntelligenceHub.DAL
             return new DbMessage()
             {
                 Content = message.Content,
-                Role = message.Role,
+                Role = message.Role.ToString(),
                 ConversationId = conversationId,
                 ToolsCalled = toolsCalled?.ToCommaSeparatedString() ?? string.Empty,
                 TimeStamp = DateTime.UtcNow,

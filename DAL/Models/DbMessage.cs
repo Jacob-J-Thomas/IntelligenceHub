@@ -1,5 +1,4 @@
-﻿using Nest;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs;
 using IntelligenceHub.Common.Attributes;
 using IntelligenceHub.API.MigratedDTOs;

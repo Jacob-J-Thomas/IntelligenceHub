@@ -1,28 +1,19 @@
-﻿using Azure;
-using Nest;
-using OpenAI.Chat;
-using IntelligenceHub.API;
-using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
-using IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs;
-using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
-using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
+﻿using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
 using IntelligenceHub.API.DTOs.ControllerDTOs;
 using IntelligenceHub.API.DTOs.DataAccessDTOs;
-using IntelligenceHub.API.DTOs.System;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL;
-using System.Numerics;
-using System.Reflection.Metadata;
-using System.Runtime.CompilerServices;
+using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Business
 {
     public class RagLogic
     {
         private readonly AGIClient _aiClient;
-        private readonly EmbeddingClient _embeddingClient;
+        private readonly VectorEmbeddingClient _embeddingClient;
         private readonly RagMetaRepository _metaRepository;
         private readonly RagRepository _ragRepository;
         private readonly string _defaultEmbeddingModel;
@@ -87,13 +78,13 @@ namespace IntelligenceHub.Business
         {
             // other checks/configs?
             var indexData = await _metaRepository.GetByNameAsync(index);
-            var queryEmbeddingData = await _embeddingClient.GetEmbeddings(request);
-            if (indexData == null || queryEmbeddingData == null) return null;
+            var embedding = await _embeddingClient.GetEmbeddings(request);
+            if (indexData == null || embedding == null) return null;
 
             _ragRepository.SetTable(index);
-            var binaryEmbedding = queryEmbeddingData.Data[0].Embedding.EncodeToBinary();
+            var binaryEmbedding = embedding.EncodeToBinary();
             var matches = await _ragRepository.CosineSimilarityQueryAsync(request.QueryTarget, binaryEmbedding, request.DocNum);
-            if (indexData.TrackDocumentAccessCount) foreach (var match in matches) _ragRepository.UpdateAccessCountAsync(index, match.Id);
+            if (indexData.TrackDocumentAccessCount) foreach (var match in matches) await _ragRepository.UpdateAccessCountAsync(index, match.Id);
             return matches;
         }
 
@@ -131,37 +122,18 @@ namespace IntelligenceHub.Business
                         Encoding_Format = indexData.EncodingFormat,
                         Dimensions = indexData.Dimensions
                     };
+                    
+                    if (indexData.GenerateTitleVector) embeddingRequest.Input = chunk.Title;
 
-                    // move these if checks to another method
-                    if (indexData.GenerateContentVector)
-                    {
-                        var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);
-                        chunk.ContentVectorNorm = CalculateNorm(embedding.Data[0].Embedding);
-                        chunk.ContentVector = embedding.Data[0].Embedding.EncodeToBinary();
-                    }
-                    if (indexData.GenerateTitleVector)
-                    {
-                        embeddingRequest.Input = chunk.Title;
-                        var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);
-                        chunk.TitleVectorNorm = CalculateNorm(embedding.Data[0].Embedding);
-                        chunk.TitleVector = embedding.Data[0].Embedding.EncodeToBinary();
-                    }
                     // these topic and keyword null checks shouldn't be needed
                     // after validation is added
-                    if (chunk.Topic != null && indexData.GenerateTopicVector)
-                    {
-                        embeddingRequest.Input = chunk.Topic;
-                        var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);
-                        chunk.TopicVectorNorm = CalculateNorm(embedding.Data[0].Embedding);
-                        chunk.TopicVector = embedding.Data[0].Embedding.EncodeToBinary();
-                    }
-                    if (chunk.KeyWords != null && indexData.GenerateKeywordVector)
-                    {
-                        embeddingRequest.Input = chunk.KeyWords;
-                        var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);
-                        chunk.KeywordVectorNorm = CalculateNorm(embedding.Data[0].Embedding);
-                        chunk.KeywordVector = embedding.Data[0].Embedding.EncodeToBinary();
-                    }
+                    if (chunk.Topic != null && indexData.GenerateTopicVector) embeddingRequest.Input = chunk.Topic;
+                    if (chunk.KeyWords != null && indexData.GenerateKeywordVector) embeddingRequest.Input = chunk.KeyWords;
+
+                    var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);
+                    if (embedding == null) throw new IntelligenceHubException(500, "Something went wrong when generating embeddings");
+                    chunk.KeywordVectorNorm = CalculateNorm(embedding);
+                    chunk.KeywordVector = embedding.EncodeToBinary();
                     await _ragRepository.AddAsync(chunk);
                 }
             }
@@ -268,16 +240,16 @@ namespace IntelligenceHub.Business
 
             var completionRequest = new CompletionRequest()
             {
-                Model = _defaultAGIModel,
-                Messages = new List<ChatMessage>()
+                Profile = _defaultAGIModel,
+                Messages = new List<Message>()
                 { 
-                    new SystemChatMessage(GlobalVariables.RagRequestSystemMessage),
-                    new UserChatMessage(completion)
+                    new Message() { Role = GlobalVariables.Role.System, Content = GlobalVariables.RagRequestSystemMessage },
+                    new Message() { Role = GlobalVariables.Role.User, Content = completion }
                 }
             };
 
             var response = await _aiClient.PostCompletion(completionRequest);
-            return response.Content;
+            return response?.Messages.Last(m => m.Role == GlobalVariables.Role.Assistant).Content ?? string.Empty;
         }
     }
 }

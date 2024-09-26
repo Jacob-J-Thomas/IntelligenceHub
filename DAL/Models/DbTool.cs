@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
 using IntelligenceHub.Common.Attributes;
 using IntelligenceHub.Common.Extensions;
 using System.ComponentModel.DataAnnotations;
@@ -17,5 +16,7 @@ namespace IntelligenceHub.DAL.DTOs
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Required { get; set; } = string.Empty;
+        public string? ExecutionUrl { get; set; }  
+        public string? ExecutionMethod { get; set; }
     }
 }

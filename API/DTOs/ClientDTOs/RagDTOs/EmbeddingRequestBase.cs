@@ -3,7 +3,8 @@
     public class EmbeddingRequestBase
     {
         public string Input { get; set; }
-        public string Model { get; set; } = "text-embedding-3-small";
+        public string Model { get; set; } = "text-embedding-3-small"; // no longer makes much sense to include this in the request body,
+                                                                      // might be better to store in the database definition
         public string Encoding_Format { get; set; } = "float";
         public int Dimensions { get; set; } = 1536;
         public string User { get; set; } = "user"; // as far as I can tell this shouldn't be required,

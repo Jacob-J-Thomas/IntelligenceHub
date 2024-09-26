@@ -1,9 +1,9 @@
-﻿using System.Text.Json.Serialization;
+﻿//using System.Text.Json.Serialization;
 
-namespace IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response
-{
-    public class LogprobsDTO
-    {
-        public List<ContentLogprobsDTO>? Content { get; set; }
-    }
-}
+//namespace IntelligenceHub.API.DTOs.ClientDTOs.CompletionDTOs.Response
+//{
+//    public class LogprobsDTO
+//    {
+//        public List<ContentLogprobsDTO>? Content { get; set; }
+//    }
+//}

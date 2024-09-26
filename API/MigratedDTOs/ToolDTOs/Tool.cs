@@ -1,9 +1,4 @@
-﻿
-using IntelligenceHub.DAL.DTOs;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using IntelligenceHub.Common.Extensions;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace IntelligenceHub.API.MigratedDTOs.ToolDTOs
 {

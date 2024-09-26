@@ -1,6 +1,4 @@
-﻿using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
-using IntelligenceHub.DAL.DTOs;
-
+﻿
 namespace IntelligenceHub.API.MigratedDTOs.ToolDTOs
 {
     public class Function
