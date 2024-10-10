@@ -5,10 +5,7 @@ using IntelligenceHub.API.MigratedDTOs;
 using System.ClientModel;
 using static IntelligenceHub.Common.GlobalVariables;
 using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
-using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.Common;
-using OpenAI.Embeddings;
-using IntelligenceHub.API.DTOs.ClientDTOs.EmbeddingDTOs;
 using Azure.AI.OpenAI.Chat;
 
 namespace IntelligenceHub.Client
@@ -16,6 +13,9 @@ namespace IntelligenceHub.Client
     public class AGIClient
     {
         private AzureOpenAIClient _azureOpenAIClient;
+        private readonly string _aiSearchServiceKey;
+        private readonly string _aiSearchServiceUrl;
+        private readonly string _embeddingModel = "text-embedding-3-small";
 
         public AGIClient(string apiEndpoint, string apiKey) 
         {
@@ -39,7 +39,8 @@ namespace IntelligenceHub.Client
             var responseMessage = new Message()
             {
                 Content = completionResult.Value.Content.ToString() ?? string.Empty,
-                Role = GlobalVariables.ConvertStringToRole(completionResult.Value.Role.ToString())
+                Role = GlobalVariables.ConvertStringToRole(completionResult.Value.Role.ToString()),
+                TimeStamp = DateTime.UtcNow
             };
 
             var response = new CompletionResponse()
@@ -98,13 +99,6 @@ namespace IntelligenceHub.Client
             }
         }
 
-        public async Task<float[]?> GetEmbeddings(EmbeddingRequestBase completion, string embeddingModel = "text-embedding-3-small")
-        {
-            var embeddingClient = _azureOpenAIClient.GetEmbeddingClient(embeddingModel);
-            var embeddingResponse = await embeddingClient.GenerateEmbeddingAsync(completion.Input);
-            return embeddingResponse.Value.Vector.ToArray();
-        }
-
         private List<ChatMessage> BuildCompletionMessages(CompletionRequest completionRequest)
         {
             var systemMessage = completionRequest.ProfileOptions.System_Message;
@@ -112,7 +106,19 @@ namespace IntelligenceHub.Client
             if (!string.IsNullOrWhiteSpace(systemMessage)) completionMessages.Add(new SystemChatMessage(systemMessage));
             foreach (var message in completionRequest.Messages)
             {
-                if (message.Role.ToString() == MessageRole.User.ToString()) completionMessages.Add(new UserChatMessage(message.Content));
+                if (message.Role.ToString() == MessageRole.User.ToString())
+                {
+                    completionMessages.Add(new UserChatMessage(message.Content));
+
+                    // Add an image if necessary
+                    if (!string.IsNullOrEmpty(message.Base64Image)) completionMessages.Add(new UserChatMessage(message.Base64Image));
+
+
+                    // might need to do something like this to get the above to work
+                    //
+                    // $"data:image/jpeg;base64,{encodedImage}"
+
+                }
                 else if (message.Role.ToString() == MessageRole.Assistant.ToString()) completionMessages.Add(new AssistantChatMessage(message.Content));
             }
             return completionMessages;
@@ -122,7 +128,7 @@ namespace IntelligenceHub.Client
         {
             var options = new ChatCompletionOptions()
             {
-                MaxTokens = completion.ProfileOptions.Max_Tokens,
+                MaxOutputTokenCount = completion.ProfileOptions.Max_Tokens,
                 Temperature = completion.ProfileOptions.Temperature,
                 TopP = completion.ProfileOptions.Top_P,
                 FrequencyPenalty = completion.ProfileOptions.Frequency_Penalty,
@@ -130,8 +136,10 @@ namespace IntelligenceHub.Client
                 IncludeLogProbabilities = completion.ProfileOptions.Logprobs,
 
                 // test if below works
-                //ParallelToolCallsEnabled = true,
-                
+                ParallelToolCallsEnabled = true,
+
+
+
                 Seed = completion.ProfileOptions.Seed,
                 EndUserId = completion.ProfileOptions.User
             };
@@ -140,8 +148,8 @@ namespace IntelligenceHub.Client
             //options.LogitBiases
 
             // set response format
-            if (completion.ProfileOptions.Response_Format == ResponseFormat.Json.ToString()) options.ResponseFormat = ChatResponseFormat.JsonObject;
-            else if (completion.ProfileOptions.Response_Format == ResponseFormat.Text.ToString()) options.ResponseFormat = ChatResponseFormat.Text;
+            if (completion.ProfileOptions.Response_Format == ResponseFormat.Json.ToString()) options.ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat();
+            else if (completion.ProfileOptions.Response_Format == ResponseFormat.Text.ToString()) options.ResponseFormat = ChatResponseFormat.CreateTextFormat();
 
             // set log probability
             if (options.IncludeLogProbabilities == true) options.TopLogProbabilityCount = completion.ProfileOptions.Top_Logprobs;
@@ -162,13 +170,22 @@ namespace IntelligenceHub.Client
                 };
 
             // Set tool choice
-            if (completion.ProfileOptions.Tool_Choice == null || completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.None.ToString()) options.ToolChoice = ChatToolChoice.None;
-            else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Auto.ToString()) options.ToolChoice = ChatToolChoice.Auto;
-            else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Required.ToString()) options.ToolChoice = ChatToolChoice.Required;
+            if (completion.ProfileOptions.Tool_Choice == null || completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Auto.ToString()) options.ToolChoice = ChatToolChoice.CreateAutoChoice();
+            else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.None.ToString()) options.ToolChoice = ChatToolChoice.CreateNoneChoice();
+            else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Required.ToString()) options.ToolChoice = ChatToolChoice.CreateRequiredChoice();
+            else options.ToolChoice = ChatToolChoice.CreateFunctionChoice(completion.ProfileOptions.Tool_Choice);
 
-#pragma warning disable AOAI001
-            if (!string.IsNullOrEmpty(completion.ProfileOptions.RagDatabase)) options = AttachDatabaseOptions(completion.ProfileOptions.RagDatabase, options);
+            // Tools and RAG DBs are not supported simultaneously, therefore RAG data is being attached at the business logic level via a direct query for now
+            //if (!string.IsNullOrEmpty(completion.ProfileOptions.RagDatabase)) options = AttachDatabaseOptions(completion.ProfileOptions.RagDatabase, options);
             return options;
+        }
+
+        public async Task<float[]?> GetEmbeddings(string completion, string? embeddingModel = null)
+        {
+            embeddingModel = embeddingModel ?? _embeddingModel;
+            var embeddingClient = _azureOpenAIClient.GetEmbeddingClient(embeddingModel);
+            var embeddingResponse = await embeddingClient.GenerateEmbeddingAsync(completion);
+            return embeddingResponse.Value.ToFloats().ToArray();
         }
 
         private ChatCompletionOptions AttachDatabaseOptions(string indexName, ChatCompletionOptions options)
@@ -188,28 +205,28 @@ namespace IntelligenceHub.Client
                 InScope = false, // add to DatabaseOptions
                 SemanticConfiguration = "semantic", // add to DatabaseOptions ?? defaultValue
                 QueryType = "vector", // add to DatabaseOptions ?? defaultValue
-                VectorizationSource = DataSourceVectorizer.FromDeploymentName("text-embedding-ada-002"), // add string to dbOptions
+                VectorizationSource = DataSourceVectorizer.FromDeploymentName(_embeddingModel), // add string to dbOptions
                 FieldMappings = fieldMappings,
-
-                // This should be set to the system message currently as the system message doesn't seem to work with RAG
-                RoleInformation = "You are an office assistant who works for Convergint, and helps fellow colleagues by providing information about Convergint and its processes and resources, assist with brainstorming, troubleshooting, drafting templates, and more. The sources you are provided come from knowledge base articles from Convergint's helpdesk, sharepoint document stores, and user directory information. You should only reference these documents when they relate to the users question, otherwise simply use your own internal knowledge that you were trained on to complete their request.",
 
                 // Add these
                 TopNDocuments = 5, // get from databaseOptions ?? defaultValue
-                OutputContextFlags = DataSourceOutputContextFlags.Citations | // probably just hard code value as this?
-                    DataSourceOutputContextFlags.Intent |
-                    DataSourceOutputContextFlags.AllRetrievedDocuments,
+                OutputContextFlags = DataSourceOutputContexts.Citations | // probably just hard code value as this?
+                    DataSourceOutputContexts.Intent |
+                    DataSourceOutputContexts.AllRetrievedDocuments,
 
                 Strictness = 4, // get from databaseOptions ?? null
                 
                 // not sure if we want to set this or not
                 MaxSearchQueries = 5,
+                
 
 
                 // probably don't use below for now
                 //AllowPartialResult = false,
                 //Filter = // seems very useful
             });
+
+            return options;
         }
     }
 }

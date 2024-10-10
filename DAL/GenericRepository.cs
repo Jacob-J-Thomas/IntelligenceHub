@@ -77,10 +77,12 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        public async Task<T> AddAsync(T entity)
+        public async Task<T?> AddAsync(T entity, string? tableOverride = null)
         {
             try
             {
+                var table = tableOverride ?? _table;
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
@@ -89,7 +91,7 @@ namespace IntelligenceHub.DAL
                     var columns = string.Join(", ", properties.Select(p => $"[{p.Name}]"));
                     var values = string.Join(", ", properties.Select(p => $"@{p.Name}"));
 
-                    var query = $@"     INSERT INTO {_table} ({columns})
+                    var query = $@"     INSERT INTO {table} ({columns})
                                         OUTPUT inserted.*
                                         VALUES ({values})";
 
@@ -119,10 +121,12 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        public async Task<int> UpdateAsync(T existingEntity, T entity)
+        public async Task<int> UpdateAsync(T existingEntity, T entity, string? tableOverride = null) // override exists purely for the RAG repository. A better strategy could likely be achieved during migration to EFCore
         {
             try
             {
+                var table = tableOverride ?? _table;
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
@@ -132,7 +136,7 @@ namespace IntelligenceHub.DAL
                         .Select(p => $"[{p.Name}] = @{p.Name}"));
 
                     var query = $@"
-                        UPDATE {_table} SET {setClause} 
+                        UPDATE {table} SET {setClause} 
                         WHERE Name = @Name";
 
                     using (var command = new SqlCommand(query, connection))
@@ -157,14 +161,16 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        public async Task<int> DeleteAsync(T entity)
+        public async Task<int> DeleteAsync(T entity, string? overrideTable = null)
         {
             try
             {
+                var table = overrideTable ?? _table;
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var query = $@"DELETE FROM {_table} WHERE Id = @Id";
+                    var query = $@"DELETE FROM {table} WHERE Id = @Id";
 
                     using (var command = new SqlCommand(query, connection))
                     {

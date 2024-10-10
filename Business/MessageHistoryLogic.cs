@@ -3,6 +3,7 @@ using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
 using IntelligenceHub.DAL;
 using IntelligenceHub.API.MigratedDTOs;
 using IntelligenceHub.Common.Exceptions;
+using IntelligenceHub.Common;
 
 namespace IntelligenceHub.Business
 {
@@ -15,19 +16,20 @@ namespace IntelligenceHub.Business
             _messageHistoryRepository = new MessageHistoryRepository(dbConnectionString);
         }
 
-        public async Task<List<DbMessage>> GetConversationHistory(Guid id, int count)
+        public async Task<List<Message>> GetConversationHistory(Guid id, int count)
         {
             return await _messageHistoryRepository.GetConversationAsync(id, count);
         }
 
-        public async Task<List<DbMessage>> UpsertConversation(List<DbMessage> messages)
+        public async Task<List<Message>> UpsertConversation(Guid conversationId, List<Message> messages)
         {
-            var addedMessages = new List<DbMessage>();
+            var addedMessages = new List<Message>();
             foreach (var message in messages)
             {
-                var response = await _messageHistoryRepository.AddAsync(message);
-                if (response is null) return null;
-                addedMessages.Add(response);
+                var dbMessage = DbMappingHandler.MapToDbMessage(message, conversationId);
+                var addedMessage = await _messageHistoryRepository.AddAsync(dbMessage);
+                if (addedMessage is null) return addedMessages;
+                addedMessages.Add(message);
             }
             return addedMessages;
         }
@@ -39,7 +41,7 @@ namespace IntelligenceHub.Business
 
         public async Task<DbMessage> AddMessage(Guid conversationId, Message message)
         {
-            var dbMessage = DbMappingHandler.MapToDbMessage(message);
+            var dbMessage = DbMappingHandler.MapToDbMessage(message, conversationId);
             var conversation = await _messageHistoryRepository.GetConversationAsync(conversationId, 1);
             if (conversation == null) throw new IntelligenceHubException(404, $"A conversations with id '{conversationId}' does not exist."); 
             return await _messageHistoryRepository.AddAsync(dbMessage);

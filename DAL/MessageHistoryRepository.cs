@@ -1,12 +1,6 @@
 ﻿using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
 using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.Controllers.DTOs;
-using IntelligenceHub.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
 
 namespace IntelligenceHub.DAL
 {
@@ -38,7 +32,7 @@ namespace IntelligenceHub.DAL
                             while (await reader.ReadAsync())
                             {
                                 var dbMessage = MapFromReader<DbMessage>(reader);
-                                var mappedMessage = MapToObject(dbMessage);
+                                var mappedMessage = DbMappingHandler.MapFromDbMessage(dbMessage);
                                 conversationHistory.Add(mappedMessage);
                             }
                             return conversationHistory;

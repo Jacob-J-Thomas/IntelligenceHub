@@ -1,4 +1,6 @@
-﻿using IntelligenceHub.API.MigratedDTOs;
+﻿using Azure.Search.Documents;
+using Azure.Search.Documents.Models;
+using IntelligenceHub.API.MigratedDTOs;
 using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common;
@@ -7,6 +9,7 @@ using IntelligenceHub.DAL;
 using IntelligenceHub.Host.Config;
 using OpenAI.Chat;
 using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
+using OpenAICustomFunctionCallingAPI.Client;
 using System.Net;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -18,6 +21,7 @@ namespace IntelligenceHub.Business
         private const int _defaultMessageHistory = 5;
 
         private readonly AGIClient _AIClient;
+        private readonly AISearchServiceClient _searchClient;
         private readonly FunctionClient _functionClient;
         private readonly ProfileRepository _profileDb;
         private readonly ToolRepository _toolDb;
@@ -45,14 +49,17 @@ namespace IntelligenceHub.Business
             _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
             _ragRepository = new RagRepository(settings.RagDbConnectionString);
             _ragMetaRepository = new RagMetaRepository(settings.DbConnectionString);
+            _searchClient = new AISearchServiceClient(settings.SearchServiceEndpoint, settings.SearchServiceKey, settings.PlaceholderConnectionString, settings.AIEndpoint, settings.AIKey);
         }
 
         #region Streaming
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
+            var userMessageTimestamp = DateTime.UtcNow;
+
             // Get and set profile details, overriding the database with any parameters that aren't null in the request
-            var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.Profile);
-            if (profile == null) throw new IntelligenceHubException(404, $"The profile '{completionRequest.Profile}' does not exist.");
+            var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
+            if (profile == null) throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
             completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
             // Get and attach message history if a conversation id exists
@@ -62,6 +69,15 @@ namespace IntelligenceHub.Business
                     conversationId,
                     completionRequest.Messages,
                     completionRequest.ProfileOptions.MaxMessageHistory);
+            }
+
+            // Add data retrieved from RAG indexing
+            if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
+            {
+                var completionMessage = completionRequest.Messages.LastOrDefault();
+                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionMessage);
+                completionRequest.Messages.Remove(completionMessage);
+                completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
             var completionCollection = _AIClient.StreamCompletion(completionRequest);
@@ -83,38 +99,41 @@ namespace IntelligenceHub.Business
                     dbMessageRole = GlobalVariables.ConvertStringToRole(roleString);
                     update.Role = dbMessageRole;
                 }
-             
                 yield return update;
             }
 
             if (toolCallDictionary.Any())
             {
-                if (!string.IsNullOrEmpty(allCompletionChunks)) completionRequest.Messages.Add(new Message() { Content = allCompletionChunks, Role = Role.Assistant });
+                if (!string.IsNullOrEmpty(allCompletionChunks)) completionRequest.Messages.Add(new Message() { Content = allCompletionChunks, Role = Role.Assistant, TimeStamp = DateTime.UtcNow });
                 var toolExecutionResponses = await ExecuteTools(toolCallDictionary, completionRequest.Messages, completionRequest.ProfileOptions, completionRequest.ConversationId, streaming: true);
                 yield return new CompletionStreamChunk()
                 {
-                    ToolExecutionResponses = toolExecutionResponses
+                    ToolCalls = toolCallDictionary,
+                    ToolExecutionResponses = toolExecutionResponses,
+                    FinishReason = FinishReason.ToolCalls,
                 };
             }
 
             // save new messages to database
-            if (completionRequest.ConversationId is Guid)
+            if (completionRequest.ConversationId is Guid id)
             {
-                var dbMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.Assistant, Content = allCompletionChunks }, completionRequest.ConversationId, toolCallDictionary.Keys.ToArray());
+                var dbMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.Assistant, Content = allCompletionChunks, TimeStamp = DateTime.UtcNow }, id, toolCallDictionary.Keys.ToArray());
                 await _messageHistoryRepository.AddAsync(dbMessage);
 
-                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = completionRequest.Messages.Last(m => m.Role == Role.User).Content }, completionRequest.ConversationId, null);
+                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = completionRequest.Messages.Last(m => m.Role == Role.User).Content, TimeStamp = userMessageTimestamp }, id, null);
                 await _messageHistoryRepository.AddAsync(dbUserMessage);
             }
         }
         #endregion
 
         #region Controller
-        public async Task<CompletionResponse> ProcessCompletion(CompletionRequest completionRequest)
+        public async Task<CompletionResponse?> ProcessCompletion(CompletionRequest completionRequest)
         {
+            if (!completionRequest.Messages.Any()) return null;
+
             // Get and set profile details, overriding the database with any parameters that aren't null in the request
-            var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.Profile);
-            if (profile == null) throw new IntelligenceHubException(404, $"The profile '{completionRequest.Profile}' does not exist.");
+            var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
+            if (profile == null) throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
             completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
             // Get and attach message history if a conversation id exists
@@ -126,15 +145,25 @@ namespace IntelligenceHub.Business
                     completionRequest.ProfileOptions.MaxMessageHistory);
             }
 
+            // Add data retrieved from RAG indexing
+            if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
+            {
+                var completionMessage = completionRequest.Messages.LastOrDefault();
+                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionMessage);
+                completionRequest.Messages.Remove(completionMessage);
+                completionRequest.Messages.Add(completionMessageWithRagData);
+            }
+
+
             var completion = await _AIClient.PostCompletion(completionRequest);
             if (completion == null) throw new IntelligenceHubException(500, "Something went wrong...");
 
             if (completionRequest.ConversationId is Guid id)
             {
-                var dbMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.Assistant || m.Role == Role.Tool), completionRequest.ConversationId, completion.ToolCalls.Keys.ToArray());
+                var dbMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.Assistant || m.Role == Role.Tool), id, completion.ToolCalls.Keys.ToArray());
                 await _messageHistoryRepository.AddAsync(dbMessage);
 
-                var dbUserMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.User), completionRequest.ConversationId, null);
+                var dbUserMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.User), id, null);
                 await _messageHistoryRepository.AddAsync(dbUserMessage);
             }
             
@@ -194,7 +223,6 @@ namespace IntelligenceHub.Business
                 Response_Format = profileOptions.Response_Format ?? profile.Response_Format,
                 User = profileOptions.User ?? profile.User,
                 Tools = profileOptions.Tools ?? profile.Tools,
-                Tool_Choice = profileOptions.Tool_Choice ?? profile.Tool_Choice,
                 System_Message = profileOptions.System_Message ?? profile.System_Message,
                 Return_Recursion = profileOptions.Return_Recursion ?? profile.Return_Recursion,
                 Reference_Profiles = profileOptions.Reference_Profiles ?? profile.Reference_Profiles,
@@ -233,13 +261,12 @@ namespace IntelligenceHub.Business
                 else
                 {
                     var dbTool = await _toolDb.GetByNameAsync(toolName);
-                    var toolExecutionUrl = dbTool.ExecutionUrl;
                     var toolExecutionMethod = dbTool.ExecutionMethod ?? HttpMethod.Post.ToString();
 
                     // how do we determine if the below is a post, get etc.?
-                    if (!string.IsNullOrEmpty(toolExecutionUrl))
+                    if (!string.IsNullOrEmpty(dbTool.ExecutionUrl))
                     {
-                        functionResults.Add(await _functionClient.CallFunction(tool.Key, tool.Value, toolExecutionUrl, toolExecutionMethod));
+                        functionResults.Add(await _functionClient.CallFunction(tool.Key, tool.Value, dbTool.ExecutionUrl, toolExecutionMethod));
                     }
                 }
             }
@@ -250,9 +277,8 @@ namespace IntelligenceHub.Business
                 var completionRequest = new CompletionRequest()
                 {
                     ConversationId = conversationId,
-                    Profile = tool.Key,
                     Messages = messages,
-                    ProfileOptions = options ?? new Profile()
+                    ProfileOptions = options ?? new Profile() { Name = tool.Key }
                 };
 
                 // add anything the previous model wanted to forward
@@ -264,6 +290,46 @@ namespace IntelligenceHub.Business
                 else await ProcessCompletion(completionRequest);
             }
             return functionResults;
+        }
+
+        private async Task<Message> RetrieveRagData(string indexName, Message completion)
+        {
+            var indexData = await _ragMetaRepository.GetByNameAsync(indexName);
+            var ragData = await _searchClient.SearchIndex(indexData, completion.Content);
+
+            var resultCollection = ragData.GetResultsAsync();
+            var ragDataString = string.Empty;
+            await foreach (var item in resultCollection)
+            {
+                if (indexData.QueryType == SearchQueryType.Semantic.ToString())
+                {
+                    var semanticResult = item.SemanticSearch;
+                    ragDataString += $"\n```\n" +
+                                     $"\nTitle: {item.Document.title}" +
+                                     $"\nSource: {item.Document.source}" +
+                                     $"\nCreation Date: {item.Document.created.ToString("yyyy-MM-ddTHH:mm:ss")}" +
+                                     $"\nLast Updated Date: {item.Document.modified.ToString("yyyy-MM-ddTHH:mm:ss")}";
+                    foreach (var caption in semanticResult.Captions) ragDataString += $"\nContent Chunk: {caption.Text}";
+                    ragDataString += $"\n```\n";
+                }
+                else
+                {
+                    ragDataString += $"\n```\n" +
+                                     $"\nTitle: {item.Document.title}" +
+                                     $"\nSource: {item.Document.source}" +
+                                     $"\nCreation Date: {item.Document.created.ToString("yyyy-MM-ddTHH:mm:ss")}" +
+                                     $"\nLast Updated Date: {item.Document.modified.ToString("yyyy-MM-ddTHH:mm:ss")}" +
+                                     $"\nContent: {item.Document.content}" +
+                                     $"\n```\n";
+                }
+            }
+
+            completion.Content = $"\n\nIf pertinent, use the below documents, each of which is delimited with triple backticks, " +
+                $"to respond to assist with your response to the following prompt, and provide their sources in your response if you use them: " +
+                $"{completion.Content}\n\n" 
+                + ragDataString;
+
+            return completion;
         }
         #endregion
     }

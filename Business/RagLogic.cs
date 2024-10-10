@@ -1,54 +1,73 @@
-﻿using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
-using IntelligenceHub.API.DTOs.DataAccessDTOs;
+﻿using IntelligenceHub.API.DTOs.DataAccessDTOs;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL;
 using IntelligenceHub.API.MigratedDTOs;
 using IntelligenceHub.Common.Exceptions;
+using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.RAG;
+using System.Text.RegularExpressions;
+using System;
+using OpenAICustomFunctionCallingAPI.Client;
+using Azure.Search.Documents;
 
 namespace IntelligenceHub.Business
 {
     public class RagLogic
     {
+        private readonly AISearchServiceClient _searchClient;
         private readonly AGIClient _aiClient;
-        private readonly AGIClient _AIClient;
         private readonly RagMetaRepository _metaRepository;
         private readonly RagRepository _ragRepository;
-        private readonly string _defaultEmbeddingModel;
         private readonly string _defaultAGIModel;
 
-        public RagLogic(string sqlConnectionString, string ragSqlConnectionString, string aiEndpoint, string aiKey, string defaultEmbeddingModel, string defaultAGIModel) 
+        private readonly string _defaultEmbeddingModel = "text-embedding-3-large";
+
+        public RagLogic(string sqlConnectionString, string ragSqlConnectionString, string aiEndpoint, string aiKey, string searchServiceUrl, string searchServiceKey) 
         {
-            _aiClient = new(aiEndpoint, aiKey);
-            _AIClient = new(aiEndpoint, aiKey);
-            _metaRepository = new(sqlConnectionString);
-            _ragRepository = new(ragSqlConnectionString);
-            _defaultEmbeddingModel = defaultEmbeddingModel;
-            _defaultAGIModel = defaultAGIModel;
+            _searchClient = new AISearchServiceClient(searchServiceUrl, searchServiceKey, ragSqlConnectionString, aiEndpoint, aiKey);
+            _aiClient = new AGIClient(aiEndpoint, aiKey);
+            _metaRepository = new RagMetaRepository(sqlConnectionString);
+            _ragRepository = new RagRepository(ragSqlConnectionString);
         }
 
-        public async Task<RagIndexMetaDataDTO> GetRagIndex(string index)
+        public async Task<IndexMetadata> GetRagIndex(string index)
         {
             return await _metaRepository.GetByNameAsync(index);
         }
 
-        public async Task<IEnumerable<RagIndexMetaDataDTO>> GetAllIndexesAsync()
+        public async Task<IEnumerable<IndexMetadata>> GetAllIndexesAsync()
         {
             return await _metaRepository.GetAllAsync();
         }
 
-        public async Task<bool> CreateIndex(RagIndexMetaDataDTO indexDefinition)
+        public async Task<bool> CreateIndex(IndexMetadata indexDefinition)
         {
+            if (!IsValidIndexName(indexDefinition.Name)) return false;
             var existing = await _metaRepository.GetByNameAsync(indexDefinition.Name);
             if (existing != null) return false;
+
+            // add index entry for metadata
             var response = await _metaRepository.AddAsync(indexDefinition);
-            _ragRepository.SetTable(indexDefinition.Name);
-            if (response != null) return await _ragRepository.CreateIndexAsync(indexDefinition);
-            return false;
+            if (response == null) return false;
+
+            // create a new table for the index
+            var success = await _ragRepository.CreateIndexAsync(indexDefinition.Name);
+            if (!success) return false;
+
+            // create the index in Azure AI Search
+            success = await _searchClient.CreateIndex(indexDefinition);
+            if (!success) return false;
+
+            // Create a datasource for the SQL DB in Azure AI Search
+            success = await _searchClient.CreateDatasource(indexDefinition.Name);
+            if (!success) return false;
+
+            // create the indexer
+            return await _searchClient.CreateIndexer(indexDefinition);
         }
 
-        public async Task<bool> ConfigureIndex(RagIndexMetaDataDTO newDefinition)
+        public async Task<bool> ConfigureIndex(IndexMetadata newDefinition)
         {
             var existingDefinition = await _metaRepository.GetByNameAsync(newDefinition.Name);
             if (existingDefinition == null) return false;
@@ -62,184 +81,101 @@ namespace IntelligenceHub.Business
 
         public async Task<bool> DeleteIndex(string index)
         {
+            if (!IsValidIndexName(index)) return false;
             var indexMetadata = await _metaRepository.GetByNameAsync(index);
             if (indexMetadata == null) return false;
-            _ragRepository.SetTable(index);
             if (await _ragRepository.DeleteIndexAsync())
             {
-                var rowsAffected = await _metaRepository.DeleteAsync(indexMetadata);
+                var success = await _searchClient.DeleteIndexer(indexMetadata.Name, indexMetadata.EmbeddingModel ?? _defaultEmbeddingModel);
+                if (!success) return false;
+
+                success = await _searchClient.DeleteDatasource(indexMetadata.Name);
+                if (!success) return false;
+
+                success = await _searchClient.DeleteIndex(index);
+                if (!success) return false;
+
+                var rowsAffected = await _metaRepository.DeleteAsync(indexMetadata, indexMetadata.Name);
                 if (rowsAffected > 0) return true;
             }
             return false;
         }
 
-        public async Task<List<RagChunk>> QueryIndex(string index, DirectQueryRequest request)
+        public async Task<List<RagDocument>> QueryIndex(string index, string query)
         {
-            // other checks/configs?
-            var indexData = await _metaRepository.GetByNameAsync(index);
-            var embedding = await _AIClient.GetEmbeddings(request);
-            if (indexData == null || embedding == null) return null;
-
-            _ragRepository.SetTable(index);
-            var binaryEmbedding = embedding.EncodeToBinary();
-            var matches = await _ragRepository.CosineSimilarityQueryAsync(request.QueryTarget, binaryEmbedding, request.DocNum);
-            if (indexData.TrackDocumentAccessCount) foreach (var match in matches) await _ragRepository.UpdateAccessCountAsync(index, match.Id);
-            return matches;
+            throw new NotImplementedException("This API currently recommends performing this operation directly against the AI Search API if required by the client.");
         }
 
-        public async Task<IEnumerable<RagChunk>> GetAllDocuments(string index)
+        public async Task<IEnumerable<RagDocument>?> GetAllDocuments(string index)
         {
-            _ragRepository.SetTable(index);
+            if (!IsValidIndexName(index)) return null;
             return await _ragRepository.GetAllAsync();
         }
 
-        public async Task<IEnumerable<RagChunk>> GetDocument(string index, string document)
+        public async Task<RagDocument?> GetDocument(string index, string document)
         {
-            _ragRepository.SetTable(index);
-            return await _ragRepository.GetAllChunksAsync(index, document);
+            if (!IsValidIndexName(index)) return null;
+            return await _ragRepository.GetDocumentAsync(index, document);
         }
 
-        public async Task<bool> UpsertDocuments(string index, List<ChunkedRagDocument> documentList)
+        public async Task<bool> UpsertDocuments(string index, RagUpsertRequest documentUpsertRequest)
         {
+            if (!IsValidIndexName(index)) return false;
+
             var indexData = await _metaRepository.GetByNameAsync(index);
             if (indexData == null) return false;
-            string topic = null;
-            string keywords = null;
-            _ragRepository.SetTable(index);
-            foreach (var document in documentList)
+
+            foreach (var document in documentUpsertRequest.Documents)
             {
-                var chunks = await _ragRepository.GetAllChunksAsync(index, document.Title);
-                foreach (var chunk in chunks) await _ragRepository.DeleteAsync(chunk);
-                foreach (var chunk in document.Chunks)
+                if (indexData.GenerateTopic) document.Topic = await GenerateDocumentMetadata("a topic", document);
+                if (indexData.GenerateKeywords) document.Keywords = await GenerateDocumentMetadata("a comma seperated list of keywords", document);
+
+                var existingDoc = await _ragRepository.GetDocumentAsync(index, document.Title);
+                if (existingDoc != null)
                 {
-                    if (indexData.GenerateTopic) chunk.Topic = await GenerateDocumentMetadata("a topic", chunk);
-                    if (indexData.GenerateKeywords) chunk.KeyWords = await GenerateDocumentMetadata("keywords", chunk);
-                    EmbeddingRequestBase embeddingRequest = new()
-                    {
-                        Input = chunk.Content,
-                        Model = indexData.VectorModel ?? _defaultEmbeddingModel,
-                        Encoding_Format = indexData.EncodingFormat,
-                        Dimensions = indexData.Dimensions
-                    };
-                    
-                    if (indexData.GenerateTitleVector) embeddingRequest.Input = chunk.Title;
-
-                    // these topic and keyword null checks shouldn't be needed
-                    // after validation is added
-                    if (chunk.Topic != null && indexData.GenerateTopicVector) embeddingRequest.Input = chunk.Topic;
-                    if (chunk.KeyWords != null && indexData.GenerateKeywordVector) embeddingRequest.Input = chunk.KeyWords;
-
-                    var embedding = await _AIClient.GetEmbeddings(embeddingRequest);
-                    if (embedding == null) throw new IntelligenceHubException(500, "Something went wrong when generating embeddings");
-                    chunk.KeywordVectorNorm = CalculateNorm(embedding);
-                    chunk.KeywordVector = embedding.EncodeToBinary();
-                    await _ragRepository.AddAsync(chunk);
+                    var rows = await _ragRepository.UpdateAsync(existingDoc, document, indexData.Name);
+                    if (rows < 1) return false;
+                }
+                else
+                {
+                    var newDoc = await _ragRepository.AddAsync(document, indexData.Name);
+                    if (newDoc == null) return false;
                 }
             }
             return true;
         }
 
-        public async Task<List<ChunkedRagDocument>> ChunkDocuments(string index, RagUpsertRequest request)
-        {
-            var indexData = await _metaRepository.GetByNameAsync(index);
-
-            // Adjust estimated tokens based off of the percentage of overlapping text
-            var charsPerToken = 4;
-            var remainder = 1;
-            var tokenIncreasePercentage = 1 + (indexData.ChunkOverlap / 100.00);
-            List<ChunkedRagDocument> chunkedData = new();
-            foreach (var document in request.Documents)
-            {
-                ChunkedRagDocument chunkedDocument = new()
-                {
-                    Title = document.Title,
-                    SourceName = document.SourceName,
-                    SourceLink = document.SourceLink,
-                    PermissionGroup = document.PermissionGroup,
-                    CreatedDate = document.CreatedDate,
-                    ModifiedDate = document.ModifiedDate,
-                };
-                var docLength = document.Content.Length;
-                if (docLength > indexData.ChunkLength)
-                {
-                    var numTokensWithOverlapping = (docLength / charsPerToken) * tokenIncreasePercentage;
-                    var numSplits = (int)Math.Ceiling(numTokensWithOverlapping / indexData.ChunkLength + remainder);
-                    var splitLength = docLength / numSplits;
-                    var overlapLength = (int)(splitLength * indexData.ChunkOverlap / 100.00); // assuming ChunkOverlap is a percentage
-                    var chunkIndex = 0;
-                    for (var i = 0; i < docLength; i += splitLength - overlapLength)
-                    {
-                        var length = Math.Min(splitLength, docLength - i);
-                        RagChunk chunk = new()
-                        {
-                            Title = document.Title,
-                            Content = document.Content.Substring(i, length),
-                            Chunk = chunkIndex,
-                            SourceName = document.SourceName,
-                            SourceLink = document.SourceLink,
-                            PermissionGroup = document.PermissionGroup,
-                            CreatedDate = DateTime.UtcNow,
-                            ModifiedDate = DateTime.UtcNow,
-                        };
-                        chunkIndex++;
-                        chunkedDocument.Chunks.Add(chunk);
-                    }
-                }
-                else
-                {
-                    RagChunk chunk = new()
-                    {
-                        Title = document.Title,
-                        Content = document.Content,
-                        Chunk = 0,
-                        SourceName = document.SourceName,
-                        SourceLink = document.SourceLink,
-                        PermissionGroup = document.PermissionGroup,
-                        CreatedDate = DateTime.UtcNow,
-                        ModifiedDate = DateTime.UtcNow,
-                    };
-                    chunk.Content = document.Content;
-                    chunkedDocument.Chunks.Add(chunk);
-                }
-                chunkedData.Add(chunkedDocument);
-            }
-            return chunkedData;
-        }
-
-        // handle chunks here?
         public async Task<int> DeleteDocuments(string index, string[] documentList)
         {
-            var deletedChunks = 0;
-            _ragRepository.SetTable(index);
-            foreach (var document in documentList)
+            var deletedDocuments = 0;
+            if (!IsValidIndexName(index)) return -1;
+            foreach (var documentName in documentList)
             {
-                var allChunks = await _ragRepository.GetAllChunksAsync(index, document);// probably make this GetAllChunks or something
-                foreach (var chunk in allChunks) deletedChunks += await _ragRepository.DeleteAsync(chunk);
+                var document = await _ragRepository.GetDocumentAsync(index, documentName);
+                if (document == null) continue;
+
+                deletedDocuments += await _ragRepository.DeleteAsync(document, index);
             }
-            return deletedChunks;
+            return deletedDocuments;
         }
 
-        private float CalculateNorm(float[] vectors)
-        {
-            float sumOfSquares = 0;
-            foreach (var v in vectors) sumOfSquares += v * v;
-            return (float)Math.Sqrt(sumOfSquares);
-        }
+        #region Private Methods
 
-        private async Task<string> GenerateDocumentMetadata(string dataFormat, RagChunk document)
+        private async Task<string> GenerateDocumentMetadata(string dataFormat, RagDocument document)
         {
             var completion = $"Please create {dataFormat} summarizing the below data delimited by triple " +
                 $"backticks. Your response should only contain {dataFormat} and absolutely no other textual " +
                 $"data.\n\n";
 
             // triple backticks to delimit the data
-            completion += "```";
-            completion += $"title: {document.Title}\n\ncontent: {document.Content}";
-            completion += "\n```";
+            completion += $"\n```";
+            completion += $"\ntitle: {document.Title}";
+            completion += $"\ncontent: {document.Content}";
+            completion += $"\n```";
 
             var completionRequest = new CompletionRequest()
             {
-                Profile = _defaultAGIModel,
+                ProfileOptions = new Profile() { Name = _defaultAGIModel },
                 Messages = new List<Message>()
                 { 
                     new Message() { Role = GlobalVariables.Role.System, Content = GlobalVariables.RagRequestSystemMessage },
@@ -250,5 +186,43 @@ namespace IntelligenceHub.Business
             var response = await _aiClient.PostCompletion(completionRequest);
             return response?.Messages.Last(m => m.Role == GlobalVariables.Role.Assistant).Content ?? string.Empty;
         }
+
+        private static bool IsValidIndexName(string tableName)
+        {
+            // Regular expression to match valid table names (alphanumeric characters and underscores only)
+
+            // change this to mitigate possibility of DOS attacks
+            string pattern = @"^[a-zA-Z_][a-zA-Z0-9_]*$";
+
+            // Check if the table name matches the pattern and is not a SQL keyword
+            if (Regex.IsMatch(tableName, pattern))
+            {
+                return !IsSqlKeyword(tableName);
+            }
+
+            return false;
+        }
+
+        private static bool IsSqlKeyword(string tableName)
+        {
+            // List of common SQL keywords to prevent
+            string[] sqlKeywords = new string[]
+            {
+                "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TABLE",
+                "WHERE", "FROM", "JOIN", "UNION", "ORDER", "GROUP", "HAVING"
+            };
+
+            // Check if the table name matches any SQL keyword (case-insensitive)
+            foreach (string keyword in sqlKeywords)
+            {
+                if (string.Equals(tableName, keyword, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        #endregion
     }
 }

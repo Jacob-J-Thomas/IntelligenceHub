@@ -1,20 +1,4 @@
-﻿using IntelligenceHub.Client;
-using Newtonsoft.Json.Linq;
-using IntelligenceHub.Host.Config;
-//using OpenAICustomFunctionCallingAPI.DAL;
-using Azure;
-using Microsoft.Data.SqlClient;
-using IntelligenceHub.DAL;
-using System.Web.Mvc;
-using System.Net;
-using System.Net.Mail;
-using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.DAL.DTOs;
-using IntelligenceHub.API.DTOs;
-using System.Reflection.Metadata;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
-using IntelligenceHub.API.DTOs.ClientDTOs.AICompletionDTOs;
-using IntelligenceHub.API.MigratedDTOs;
+﻿using IntelligenceHub.API.MigratedDTOs;
 using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
 
 namespace IntelligenceHub.Common.Handlers

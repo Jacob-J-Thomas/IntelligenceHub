@@ -1,11 +1,6 @@
-﻿using Nest;
-using IntelligenceHub.API.DTOs;
-using IntelligenceHub.DAL.DTOs;
-using System;
-using System.Collections.Generic;
+﻿using IntelligenceHub.DAL.DTOs;
 using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
 
 namespace IntelligenceHub.DAL
 {

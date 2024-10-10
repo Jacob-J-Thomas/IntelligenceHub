@@ -1,89 +1,15 @@
-﻿using Nest;
-using IntelligenceHub.API.DTOs.ClientDTOs.ToolDTOs;
-using IntelligenceHub.API.DTOs.DataAccessDTOs;
-using IntelligenceHub.Controllers.DTOs;
-using IntelligenceHub.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using IntelligenceHub.API.DTOs.DataAccessDTOs;
+using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.RAG;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Reflection.PortableExecutable;
 
 namespace IntelligenceHub.DAL
 {
-    public class RagRepository : GenericRepository<RagChunk>
+    public class RagRepository : GenericRepository<RagDocument>
     {
         public RagRepository(string connectionString) : base(connectionString)
         {
         }
 
-        public void SetTable(string tableName)
-        {
-            _table = tableName;
-        }
-
-        // I can't tell if this is working... Seems like it might be, but the match in language has to be pretty exact at the moment
-        // Revisit once you have a DB with more documents loaded
-        public async Task<List<RagChunk>> CosineSimilarityQueryAsync(string targetColumn, byte[] queryEmbeddingBinary, int nDocs)
-        {
-            var ragDTOs = new List<RagChunk>();
-            using (var conn = new SqlConnection(_connectionString))
-            {
-                conn.Open();
-                var query = $@"
-                                SELECT TOP(@NumberDocs) *,
-                                    dbo.CalculateCosineSimilarity({targetColumn}Vector,  @queryEmbeddingBinary) 
-                                    AS SimilarityScore
-                                FROM 
-                                    [{_table}]
-                                ORDER BY 
-                                    SimilarityScore DESC;";
-
-                using (var cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@QueryEmbeddingBinary", queryEmbeddingBinary);
-                    //cmd.Parameters.AddWithValue("@TargetNorm", targetColumn + "Norm");
-                    //cmd.Parameters.AddWithValue("@QueryNorm", queryNorm);
-                    cmd.Parameters.AddWithValue("@NumberDocs", nDocs);
-
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            var ragDTO = MapFromReader<RagChunk>(reader); // Assuming you have this method
-                            ragDTOs.Add(ragDTO);
-                        }
-                    }
-                }
-            }
-            return ragDTOs;
-        }
-
-
-        // again, choose which columns to perform the search against
-        public async Task<List<RagChunk>> BM25QueryAsync(string tableName, string query)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task<bool> UpdateAccessCountAsync(string tableName, int id)
-        {
-            // Validate table name here
-
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                await connection.OpenAsync();
-                var query = $@"UPDATE {tableName} SET AccessCount = AccessCount + 1 WHERE Id = @Id";
-
-                using (var command = new SqlCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@Id", id);
-                    await command.ExecuteNonQueryAsync();
-                    return true;
-                }
-            }
-        }
 
         public async Task<int> GetRagIndexLengthAsync(string tableName)
         {
@@ -103,9 +29,9 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        public async Task<List<RagChunk>> GetAllChunksAsync(string tableName, string title)
+        public async Task<RagDocument?> GetDocumentAsync(string tableName, string title)
         {
-            var ragDTOs = new List<RagChunk>();
+            var ragDTOs = new List<RagDocument>();
             using (var conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
@@ -117,18 +43,17 @@ namespace IntelligenceHub.DAL
                     cmd.Parameters.AddWithValue("@Title", title);
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        while (await reader.ReadAsync())
+                        if (await reader.ReadAsync())
                         {
-                            var ragDTO = MapFromReader<RagChunk>(reader); // Assuming you have this method
-                            ragDTOs.Add(ragDTO);
+                            return MapFromReader<RagDocument>(reader); // Assuming you have this method
                         }
                     }
                 }
             }
-            return ragDTOs;
+            return null;
         }
 
-        public async Task<bool> CreateIndexAsync(RagIndexMetaDataDTO index)
+        public async Task<bool> CreateIndexAsync(string indexName)
         {
             // validate before sql formatting here
 
@@ -140,7 +65,7 @@ namespace IntelligenceHub.DAL
                 // Also, the below sql table could be created more dynamically, but this
                 // doesn't seem worth it at the moment. Instead fields will be left null
                 // until otherwise indicated they should be used
-                var query = $@"CREATE TABLE [{_table}] (
+                var query = $@"CREATE TABLE [{indexName}] (
                                    Id INT PRIMARY KEY IDENTITY,
                                    Title NVARCHAR(255) NOT NULL,
                                    Content NVARCHAR(MAX) NOT NULL,
@@ -154,13 +79,8 @@ namespace IntelligenceHub.DAL
                                    ContentVector VARBINARY(MAX),
                                    TopicVector VARBINARY(MAX),
                                    KeywordVector VARBINARY(MAX),
-                                   TitleVectorNorm FLOAT,
-                                   ContentVectorNorm FLOAT,
-                                   TopicVectorNorm FLOAT,
-                                   KeywordVectorNorm FLOAT,
-                                   CreatedDate DATETIME,
-                                   ModifiedDate DATETIME,
-                                   AccessCount INT);";
+                                   Created DATETIME,
+                                   Modified DATETIME);";
 
                 using (var command = new SqlCommand(query, connection))
                 {

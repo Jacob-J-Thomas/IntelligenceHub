@@ -1,20 +1,11 @@
-﻿using Nest;
-using IntelligenceHub.API.DTOs;
-using IntelligenceHub.Common;
-using IntelligenceHub.Controllers.DTOs;
+﻿using IntelligenceHub.API.MigratedDTOs;
 using IntelligenceHub.DAL.DTOs;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Reflection;
 
 namespace IntelligenceHub.DAL
 {
     //make this more generic
-    public class ProfileToolsAssociativeRepository : IAssociativeRepository<Controllers.DTOs.Profile>
+    public class ProfileToolsAssociativeRepository : IAssociativeRepository<Profile>
     {
         private readonly string _connectionString;
 

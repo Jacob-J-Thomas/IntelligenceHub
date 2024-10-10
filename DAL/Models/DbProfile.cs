@@ -28,14 +28,13 @@ namespace IntelligenceHub.DAL.DTOs
         public int? TopLogprobs { get; set; }
         public int? MaxTokens { get; set; }
         public int? Seed { get; set; }
-        public string ToolChoice { get; set; }
-        public string ResponseFormat { get; set; }
-        public string User { get; set; }
-        public string SystemMessage { get; set; }
-        public string Stop { get; set; }
-        public string ReferenceProfiles { get; set; }
-        public string ReferenceDescription { get; set; }
+        public int? MaxMessageHistory { get; set; }
+        public string? ResponseFormat { get; set; }
+        public string? User { get; set; }
+        public string? SystemMessage { get; set; }
+        public string? Stop { get; set; }
+        public string? ReferenceProfiles { get; set; }
+        public string? ReferenceDescription { get; set; }
         public bool? ReturnRecursion { get; set; }
-        public int MaxMessageHistory { get; set; }
     }
 }

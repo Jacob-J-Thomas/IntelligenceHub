@@ -1,5 +1,4 @@
 ﻿using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.Controllers.DTOs;
 using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
 
 namespace IntelligenceHub.Business

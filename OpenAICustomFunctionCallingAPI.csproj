@@ -7,29 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="API\DTOs\ClientDTOs\MessageDTOs\MessageDTO.cs" />
-    <Compile Remove="API\DTOs\ControllerDTOs\APIProfileDTO.cs" />
-    <Compile Remove="API\DTOs\DataAccessDTOs\RagDocument.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <_WebToolingArtifacts Remove="Properties\launchSettings.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\BaseCompletionDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\DefaultCompletionDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\CompletionResponseDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ContentLogprobsDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\LogprobsDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ResponseChoiceDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ResponseFunctionDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ResponseMessageDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\ResponseToolDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\TokenLogprobDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\CompletionDTOs\Response\UsageDTO.cs" />
-    <Content Include="API\DTOs\ClientDTOs\MessageDTOs\MessageDTO.cs" />
-    <Content Include="API\DTOs\ControllerDTOs\APIProfileDTO.cs" />
     <Content Include="API\MigratedDTOs\Message.cs" />
     <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingData.cs" />
     <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingRequestBase.cs" />
@@ -41,17 +22,13 @@
     <Content Include="API\MigratedDTOs\ToolDTOs\ProfileReferenceTool.cs" />
     <Content Include="API\MigratedDTOs\ToolDTOs\Tool.cs" />
     <Content Include="API\MigratedDTOs\Profile.cs" />
-    <Content Include="API\DTOs\ControllerDTOs\ChatRequestDTO.cs" />
-    <Content Include="API\DTOs\ControllerDTOs\ChatResponseDTO.cs" />
-    <Content Include="API\DTOs\ControllerDTOs\DirectQueryRequest.cs" />
     <Content Include="DAL\Models\DbMessage.cs" />
     <Content Include="DAL\Models\DbProfile.cs" />
     <Content Include="DAL\Models\DbProfileTool.cs" />
     <Content Include="DAL\Models\DbProperty.cs" />
     <Content Include="DAL\Models\DbTool.cs" />
     <Content Include="API\DTOs\ClientDTOs\RagDTOs\RagDocumentBase.cs" />
-    <Content Include="API\DTOs\DataAccessDTOs\RagChunk.cs" />
-    <Content Include="API\DTOs\DataAccessDTOs\RagIndexMetaDataDTO.cs" />
+    <Content Include="API\MigratedDTOs\RAG\RagDocument.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -60,20 +37,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.AI.OpenAI" Version="2.0.0-beta.4" />
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.0.0-beta.6" />
+    <PackageReference Include="Azure.Search.Documents" Version="11.6.0" />
     <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="8.0.4" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.5" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="8.0.8" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Owin.Extensions" Version="0.8.5" />
-    <PackageReference Include="Polly" Version="8.3.0" />
+    <PackageReference Include="Polly" Version="8.4.2" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="API\DTOs\ClientDTOs\ToolDTOs\SystemTools\" />
   </ItemGroup>
 
 </Project>

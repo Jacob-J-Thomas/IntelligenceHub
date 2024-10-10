@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.API.DTOs.ClientDTOs.RagDTOs;
 using IntelligenceHub.API.DTOs.DataAccessDTOs;
 using IntelligenceHub.Business;
 using IntelligenceHub.Host.Config;
 using IntelligenceHub.Common.Extensions;
+using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.RAG;
 
 namespace IntelligenceHub.Controllers
 {
@@ -13,13 +13,13 @@ namespace IntelligenceHub.Controllers
         private readonly RagLogic _ragLogic;
         public RagController(Settings settings) 
         {
-            _ragLogic = new(
+            _ragLogic = new RagLogic(
                 settings.DbConnectionString,
                 settings.RagDbConnectionString,
                 settings.AIEndpoint, 
-                settings.AIKey, 
-                settings.DefaultEmbeddingModel,
-                settings.DefaultAGIModel);
+                settings.AIKey,
+                settings.SearchServiceEndpoint,
+                settings.SearchServiceKey);
         }
 
         [HttpGet]
@@ -64,7 +64,7 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("Index/")]
-        public async Task<IActionResult> CreateIndex([FromBody] RagIndexMetaDataDTO indexDefinition)
+        public async Task<IActionResult> CreateIndex([FromBody] IndexMetadata indexDefinition)
         {
             try
             {
@@ -84,7 +84,7 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("Index/Configure/{index}")]
-        public async Task<IActionResult> ConfigureIndex([FromRoute] string index, [FromBody] RagIndexMetaDataDTO indexDefinition)
+        public async Task<IActionResult> ConfigureIndex([FromRoute] string index, [FromBody] IndexMetadata indexDefinition)
         {
             try
             {
@@ -126,7 +126,7 @@ namespace IntelligenceHub.Controllers
         [Route("Index/Query/{index}")]
         public async Task<IActionResult> QueryIndex([FromRoute] string index, [FromBody] Object request)
         {
-            throw new NotImplementedException("Direct queries have not been implemented for AI Search indexes for this API");
+            throw new NotImplementedException("Currently this API recommends making direct queries to the AI Search API");
         }
 
         [HttpGet]
@@ -136,7 +136,7 @@ namespace IntelligenceHub.Controllers
             try
             {
                 var response = await _ragLogic.GetAllDocuments(index); // going to need to add pagination here
-                if (response is not null) return Ok(response);
+                if (response != null && response.Count() > 1) return Ok(response);
                 else return NotFound();
             }
             catch (HttpRequestException ex)
@@ -155,7 +155,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                var response = await _ragLogic.GetDocument(index, document); // going to need to add pagination here
+                var response = await _ragLogic.GetDocument(index, document);
                 if (response is not null) return Ok(response);
                 else return NotFound();
             }
@@ -171,12 +171,11 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("index/{index}/Document")]
-        public async Task<IActionResult> UpsertDocuments([FromRoute] string index, [FromBody] RagUpsertRequest documents)
+        public async Task<IActionResult> UpsertDocuments([FromRoute] string index, [FromBody] RagUpsertRequest documentUpsertRequest)
         {
             try
             {
-                var chunkedDocuments = await _ragLogic.ChunkDocuments(index, documents);
-                var response = await _ragLogic.UpsertDocuments(index, chunkedDocuments);
+                var response = await _ragLogic.UpsertDocuments(index, documentUpsertRequest);
                 if (response) return Ok(response);
                 else return BadRequest();
             }
@@ -198,7 +197,7 @@ namespace IntelligenceHub.Controllers
             {
                 var documents = commaDelimitedDocNames.ToStringArray();
                 var response = await _ragLogic.DeleteDocuments(index, documents);
-                if (response == 0) return NotFound($"The index {index} does not exist, or does not contain any of the documents in the list");
+                if (response < 1) return NotFound($"The index {index} does not exist, or does not contain any of the documents in the list");
                 else return Ok(response);
             }
             catch (HttpRequestException ex)
