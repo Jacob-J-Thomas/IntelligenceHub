@@ -3,12 +3,9 @@ using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Indexes.Models;
 using Azure.Search.Documents.Models;
-using Microsoft.Extensions.Azure;
-using Microsoft.OpenApi.Services;
-using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.RAG;
-using System.Net;
+using IntelligenceHub.API.DTOs.RAG;
 
-namespace OpenAICustomFunctionCallingAPI.Client
+namespace IntelligenceHub.Client
 {
     public class AISearchServiceClient
     {

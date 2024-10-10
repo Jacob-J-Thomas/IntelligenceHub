@@ -1,9 +1,7 @@
-﻿using Microsoft.Identity.Client;
-using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
-using IntelligenceHub.DAL;
-using IntelligenceHub.API.MigratedDTOs;
+﻿using IntelligenceHub.DAL;
+using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Exceptions;
-using IntelligenceHub.Common;
+using IntelligenceHub.DAL.Models;
 
 namespace IntelligenceHub.Business
 {

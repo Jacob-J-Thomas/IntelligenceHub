@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Serialization;
 using System.Net.Http.Headers;
 using System.Text;
-using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.ToolDTOs;
+using IntelligenceHub.API.DTOs.Tools;
 
 namespace IntelligenceHub.Client
 {

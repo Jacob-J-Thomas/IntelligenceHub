@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.API.DTOs.DataAccessDTOs;
 using IntelligenceHub.Business;
 using IntelligenceHub.Host.Config;
 using IntelligenceHub.Common.Extensions;
-using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.RAG;
+using IntelligenceHub.API.DTOs.RAG;
 
 namespace IntelligenceHub.Controllers
 {

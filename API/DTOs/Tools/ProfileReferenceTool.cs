@@ -1,6 +1,6 @@
-﻿using IntelligenceHub.DAL.DTOs;
+﻿using IntelligenceHub.DAL.Models;
 
-namespace IntelligenceHub.API.MigratedDTOs.ToolDTOs
+namespace IntelligenceHub.API.DTOs.Tools
 {
     public class ProfileReferenceTools : Tool
     {

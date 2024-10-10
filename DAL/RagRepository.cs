@@ -1,5 +1,4 @@
-﻿using IntelligenceHub.API.DTOs.DataAccessDTOs;
-using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.RAG;
+﻿using IntelligenceHub.API.DTOs.RAG;
 using System.Data.SqlClient;
 
 namespace IntelligenceHub.DAL

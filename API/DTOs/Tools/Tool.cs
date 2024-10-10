@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace IntelligenceHub.API.MigratedDTOs.ToolDTOs
+namespace IntelligenceHub.API.DTOs.Tools
 {
     public class Tool
     {

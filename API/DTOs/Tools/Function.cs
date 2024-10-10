@@ -1,5 +1,5 @@
 ﻿
-namespace IntelligenceHub.API.MigratedDTOs.ToolDTOs
+namespace IntelligenceHub.API.DTOs.Tools
 {
     public class Function
     {

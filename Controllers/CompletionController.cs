@@ -3,7 +3,7 @@ using IntelligenceHub.Host.Config;
 using IntelligenceHub.Business;
 using System.Text;
 using IntelligenceHub.Common.Handlers;
-using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Exceptions;
 using Newtonsoft.Json;
 

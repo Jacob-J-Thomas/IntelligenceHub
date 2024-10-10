@@ -11,24 +11,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="API\MigratedDTOs\Message.cs" />
-    <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingData.cs" />
-    <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingRequestBase.cs" />
-    <Content Include="API\DTOs\ClientDTOs\RagDTOs\EmbeddingResponse.cs" />
-    <Content Include="API\DTOs\ClientDTOs\RagDTOs\RAGQueryResult.cs" />
-    <Content Include="API\MigratedDTOs\ToolDTOs\Function.cs" />
-    <Content Include="API\MigratedDTOs\ToolDTOs\Parameters.cs" />
-    <Content Include="API\MigratedDTOs\ToolDTOs\Property.cs" />
-    <Content Include="API\MigratedDTOs\ToolDTOs\ProfileReferenceTool.cs" />
-    <Content Include="API\MigratedDTOs\ToolDTOs\Tool.cs" />
-    <Content Include="API\MigratedDTOs\Profile.cs" />
+    <Content Include="API\DTOs\Message.cs" />
+    <Content Include="API\DTOs\Tools\Function.cs" />
+    <Content Include="API\DTOs\Tools\Parameters.cs" />
+    <Content Include="API\DTOs\Tools\Property.cs" />
+    <Content Include="API\DTOs\Tools\ProfileReferenceTool.cs" />
+    <Content Include="API\DTOs\Tools\Tool.cs" />
+    <Content Include="API\DTOs\Profile.cs" />
     <Content Include="DAL\Models\DbMessage.cs" />
     <Content Include="DAL\Models\DbProfile.cs" />
     <Content Include="DAL\Models\DbProfileTool.cs" />
     <Content Include="DAL\Models\DbProperty.cs" />
     <Content Include="DAL\Models\DbTool.cs" />
-    <Content Include="API\DTOs\ClientDTOs\RagDTOs\RagDocumentBase.cs" />
-    <Content Include="API\MigratedDTOs\RAG\RagDocument.cs" />
+    <Content Include="API\DTOs\RAG\RagDocument.cs" />
   </ItemGroup>
 
   <ItemGroup>

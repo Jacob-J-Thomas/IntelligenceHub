@@ -1,4 +1,4 @@
-﻿namespace OpenAICustomFunctionCallingAPI.API.MigratedDTOs.ToolDTOs
+﻿namespace IntelligenceHub.API.DTOs.Tools
 {
     public class ToolExecutionCall
     {

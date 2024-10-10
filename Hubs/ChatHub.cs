@@ -1,12 +1,8 @@
 ﻿using IntelligenceHub.Business;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.Common.Handlers;
-using Azure;
-using Newtonsoft.Json;
-using System.Text;
 
 namespace IntelligenceHub.Hubs
 {

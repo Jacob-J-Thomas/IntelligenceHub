@@ -1,7 +1,7 @@
-﻿using IntelligenceHub.API.MigratedDTOs;
+﻿using IntelligenceHub.API.DTOs;
 using static IntelligenceHub.Common.GlobalVariables;
 
-namespace OpenAICustomFunctionCallingAPI.API.MigratedDTOs
+namespace IntelligenceHub.API.DTOs
 {
     public class CompletionStreamChunk
     {

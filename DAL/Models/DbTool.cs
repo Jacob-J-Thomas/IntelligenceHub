@@ -1,10 +1,9 @@
 ﻿using Newtonsoft.Json;
 using IntelligenceHub.Common.Attributes;
-using IntelligenceHub.Common.Extensions;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace IntelligenceHub.DAL.DTOs
+namespace IntelligenceHub.DAL.Models
 {
     [TableName("Tools")]
     public class DbTool

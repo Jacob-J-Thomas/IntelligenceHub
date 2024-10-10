@@ -1,4 +1,4 @@
-﻿using IntelligenceHub.DAL.DTOs;
+﻿using IntelligenceHub.DAL.Models;
 using System.Data;
 using System.Data.SqlClient;
 

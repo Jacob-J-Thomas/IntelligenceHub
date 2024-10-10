@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
-using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
+using IntelligenceHub.API.DTOs.Tools;
 
-namespace IntelligenceHub.API.MigratedDTOs
+namespace IntelligenceHub.API.DTOs
 {
     public class Profile
     {
@@ -28,8 +28,5 @@ namespace IntelligenceHub.API.MigratedDTOs
         public int? MaxMessageHistory { get; set; }
         public bool? Return_Recursion { get; set; }
         public string[]? Reference_Profiles { get; set; }
-
-        // add properties for the RAG settings
-
     }
 }

@@ -1,6 +1,6 @@
 ﻿using IntelligenceHub.Common.Attributes;
 
-namespace IntelligenceHub.API.DTOs.DataAccessDTOs
+namespace IntelligenceHub.API.DTOs.RAG
 {
     public class RagDocument
     {

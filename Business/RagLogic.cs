@@ -1,15 +1,9 @@
-﻿using IntelligenceHub.API.DTOs.DataAccessDTOs;
-using IntelligenceHub.Client;
+﻿using IntelligenceHub.Client;
 using IntelligenceHub.Common;
-using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL;
-using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.Common.Exceptions;
-using OpenAICustomFunctionCallingAPI.API.MigratedDTOs.RAG;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.RAG;
 using System.Text.RegularExpressions;
-using System;
-using OpenAICustomFunctionCallingAPI.Client;
-using Azure.Search.Documents;
 
 namespace IntelligenceHub.Business
 {

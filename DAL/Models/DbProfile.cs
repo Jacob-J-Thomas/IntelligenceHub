@@ -1,15 +1,9 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
-using IntelligenceHub.API.DTOs;
-using IntelligenceHub.Common;
+﻿using Newtonsoft.Json;
 using IntelligenceHub.Common.Attributes; 
-using IntelligenceHub.Common.Extensions;
-using IntelligenceHub.DAL;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using IntelligenceHub.API.MigratedDTOs;
 
-namespace IntelligenceHub.DAL.DTOs
+namespace IntelligenceHub.DAL.Models
 {
     // extend this from a common DTO?
     [TableName("Profiles")]

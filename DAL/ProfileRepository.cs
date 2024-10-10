@@ -1,6 +1,6 @@
-﻿using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
-using IntelligenceHub.DAL.DTOs;
+﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
+using IntelligenceHub.DAL.Models;
 using System.Data.SqlClient;
 
 namespace IntelligenceHub.DAL

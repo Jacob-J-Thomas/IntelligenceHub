@@ -1,10 +1,9 @@
 ﻿using Azure.AI.OpenAI;
 using OpenAI.Assistants;
 using OpenAI.Chat;
-using IntelligenceHub.API.MigratedDTOs;
+using IntelligenceHub.API.DTOs;
 using System.ClientModel;
 using static IntelligenceHub.Common.GlobalVariables;
-using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
 using IntelligenceHub.Common;
 using Azure.AI.OpenAI.Chat;
 

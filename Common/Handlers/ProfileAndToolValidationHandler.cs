@@ -1,5 +1,5 @@
-﻿using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
+﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
 
 namespace IntelligenceHub.Common.Handlers
 {

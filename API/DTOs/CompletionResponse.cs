@@ -1,7 +1,7 @@
 ﻿
 using static IntelligenceHub.Common.GlobalVariables;
 
-namespace IntelligenceHub.API.MigratedDTOs
+namespace IntelligenceHub.API.DTOs
 {
     public class CompletionResponse
     {

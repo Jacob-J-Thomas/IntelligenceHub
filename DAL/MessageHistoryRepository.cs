@@ -1,5 +1,5 @@
-﻿using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
-using IntelligenceHub.API.MigratedDTOs;
+﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.DAL.Models;
 using System.Data.SqlClient;
 
 namespace IntelligenceHub.DAL

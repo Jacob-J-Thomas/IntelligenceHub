@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using IntelligenceHub.Host.Config;
-using IntelligenceHub.Business.ProfileLogic;
-using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
+using IntelligenceHub.Business;
+using IntelligenceHub.API.DTOs.Tools;
 
 namespace IntelligenceHub.Controllers
 {

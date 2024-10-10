@@ -1,4 +1,4 @@
-﻿using IntelligenceHub.API.MigratedDTOs;
+﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business;
 using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.Host.Config;

@@ -1,6 +1,6 @@
 ﻿using IntelligenceHub.Common.Attributes;
 
-namespace IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs
+namespace IntelligenceHub.DAL.Models
 {
     [TableName("MessageHistory")]
     public class DbMessage

@@ -1,15 +1,11 @@
-﻿using Azure.Search.Documents;
-using Azure.Search.Documents.Models;
-using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
+﻿using Azure.Search.Documents.Models;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.DAL;
 using IntelligenceHub.Host.Config;
-using OpenAI.Chat;
-using OpenAICustomFunctionCallingAPI.API.MigratedDTOs;
-using OpenAICustomFunctionCallingAPI.Client;
 using System.Net;
 using static IntelligenceHub.Common.GlobalVariables;
 

@@ -1,10 +1,10 @@
 ﻿using IntelligenceHub.DAL;
-using IntelligenceHub.DAL.DTOs;
+using IntelligenceHub.DAL.Models;
 using IntelligenceHub.Common.Handlers;
-using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
 
-namespace IntelligenceHub.Business.ProfileLogic
+namespace IntelligenceHub.Business
 {
     // this whole class needs some refactoring
     public class ProfileLogic

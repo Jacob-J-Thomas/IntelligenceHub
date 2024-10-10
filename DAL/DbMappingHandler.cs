@@ -1,8 +1,8 @@
 ﻿using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
-using IntelligenceHub.API.MigratedDTOs;
-using IntelligenceHub.API.MigratedDTOs.ToolDTOs;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Common.Extensions;
-using IntelligenceHub.DAL.DTOs;
+using IntelligenceHub.DAL.Models;
 using static IntelligenceHub.Common.GlobalVariables;
 using System.Reflection;
 using IntelligenceHub.Common;

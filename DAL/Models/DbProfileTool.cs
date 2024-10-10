@@ -1,7 +1,6 @@
-﻿using IntelligenceHub.Common;
-using IntelligenceHub.Common.Attributes;
+﻿using IntelligenceHub.Common.Attributes;
 
-namespace IntelligenceHub.DAL.DTOs
+namespace IntelligenceHub.DAL.Models
 {
     [TableName("ProfileTools")]
     public class DbProfileTool

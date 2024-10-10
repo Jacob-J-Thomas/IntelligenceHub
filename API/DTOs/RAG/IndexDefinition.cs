@@ -1,6 +1,6 @@
 ﻿using Azure.Search.Documents.Indexes;
 
-namespace OpenAICustomFunctionCallingAPI.API.MigratedDTOs.RAG
+namespace IntelligenceHub.API.DTOs.RAG
 {
     public class IndexDefinition
     {
