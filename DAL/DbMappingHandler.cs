@@ -1,12 +1,11 @@
-﻿using IntelligenceHub.API.DTOs.ClientDTOs.MessageDTOs;
-using IntelligenceHub.API.DTOs;
+﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL.Models;
-using static IntelligenceHub.Common.GlobalVariables;
-using System.Reflection;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Exceptions;
+using IntelligenceHub.API.DTOs.RAG;
+using System.Text.Json;
 
 namespace IntelligenceHub.DAL
 {
@@ -162,6 +161,99 @@ namespace IntelligenceHub.DAL
                 TimeStamp = message.TimeStamp,
             };
         }
+        #endregion
+
+        #region RAG Indexing
+
+        public static IndexDocument MapFromDbIndexDocument(DbIndexDocument dbDocument)
+        {
+            return new IndexDocument()
+            {
+                Title = dbDocument.Title,
+                Content = dbDocument.Content,
+                Topic = dbDocument.Topic,
+                Created = dbDocument.Created,
+                Modified = dbDocument.Modified
+            };
+        }
+
+        public static DbIndexDocument MapToDbIndexDocument(IndexDocument document)
+        {
+            return new DbIndexDocument()
+            {
+                Title = document.Title,
+                Content = document.Content,
+                Topic = document.Topic,
+                Created = document.Created,
+                Modified = document.Modified
+            };
+        }
+
+        public static IndexMetadata MapFromDbIndexMetadata(DbIndexMetadata dbIndexData)
+        {
+            return new IndexMetadata()
+            {
+                Name = dbIndexData.Name,
+                QueryType = dbIndexData.QueryType,
+                ChunkOverlap = dbIndexData.ChunkOverlap,
+                IndexingInterval = dbIndexData.IndexingInterval,
+                MaxRagAttachments = dbIndexData.MaxRagAttachments,
+                EmbeddingModel = dbIndexData.EmbeddingModel,
+                GenerateTopic = dbIndexData.GenerateTopic,
+                GenerateKeywords = dbIndexData.GenerateKeywords,
+                GenerateTitleVector = dbIndexData.GenerateTitleVector,
+                GenerateContentVector = dbIndexData.GenerateContentVector,
+                GenerateTopicVector = dbIndexData.GenerateTopicVector,
+                GenerateKeywordVector = dbIndexData.GenerateKeywordVector,
+                ScoringProfile = new IndexScoringProfile()
+                {
+                    Name = dbIndexData.DefaultScoringProfile,
+                    Aggregation = dbIndexData.ScoringAggregation,
+                    Interpolation = dbIndexData.ScoringInterpolation,
+                    BoostDurationDays = dbIndexData.ScoringBoostDurationDays,
+                    FreshnessBoost = dbIndexData.ScoringFreshnessBoost,
+                    TagBoost = dbIndexData.ScoringTagBoost,
+                    Weights = DeserializeDbWeights(dbIndexData.ScoringWeights)
+                }
+            };
+        }
+
+        public static DbIndexMetadata MapToDbIndexMetadata(IndexMetadata indexData)
+        {
+            return new DbIndexMetadata()
+            {
+                Name = indexData.Name,
+                QueryType = indexData.QueryType,
+                ChunkOverlap = indexData.ChunkOverlap,
+                IndexingInterval = indexData.IndexingInterval,
+                MaxRagAttachments = indexData.MaxRagAttachments,
+                EmbeddingModel = indexData.EmbeddingModel,
+                GenerateTopic = indexData.GenerateTopic,
+                GenerateKeywords = indexData.GenerateKeywords,
+                GenerateTitleVector = indexData.GenerateTitleVector,
+                GenerateContentVector = indexData.GenerateContentVector,
+                GenerateTopicVector = indexData.GenerateTopicVector,
+                GenerateKeywordVector = indexData.GenerateKeywordVector,
+                DefaultScoringProfile = indexData.ScoringProfile?.Name,
+                ScoringAggregation = indexData.ScoringProfile?.Aggregation,
+                ScoringInterpolation = indexData.ScoringProfile?.Interpolation,
+                ScoringFreshnessBoost = indexData.ScoringProfile?.FreshnessBoost ?? 0,
+                ScoringBoostDurationDays = indexData.ScoringProfile?.BoostDurationDays ?? 0,
+                ScoringTagBoost = indexData.ScoringProfile?.TagBoost ?? 0,
+                ScoringWeights = indexData.ScoringProfile.Weights.Any() ? SerializeDbWeights(indexData.ScoringProfile.Weights) : string.Empty,
+            };
+        }
+
+        private static Dictionary<string, double>? DeserializeDbWeights(string serializedWeights)
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, double>>(serializedWeights) ?? null;
+        }
+
+        private static string SerializeDbWeights(Dictionary<string, double> weights)
+        {
+            return JsonSerializer.Serialize(weights);
+        }
+
         #endregion
     }
 }

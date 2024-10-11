@@ -2,6 +2,6 @@
 {
     public class RagUpsertRequest
     {
-        public List<RagDocument> Documents { get; set; } = new List<RagDocument>();
+        public List<IndexDocument> Documents { get; set; } = new List<IndexDocument>();
     }
 }

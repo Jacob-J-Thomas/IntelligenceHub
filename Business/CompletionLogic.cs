@@ -3,9 +3,9 @@ using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common;
+using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.DAL;
-using IntelligenceHub.Host.Config;
 using System.Net;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -21,31 +21,19 @@ namespace IntelligenceHub.Business
         private readonly FunctionClient _functionClient;
         private readonly ProfileRepository _profileDb;
         private readonly ToolRepository _toolDb;
-        private readonly ProfileToolsAssociativeRepository _profileToolAssocaitionDb;
         private readonly MessageHistoryRepository _messageHistoryRepository;
-        private readonly RagRepository _ragRepository;
-        private readonly RagMetaRepository _ragMetaRepository;
-        private readonly List<HttpStatusCode> _serverSideErrorCodes = new List<HttpStatusCode>()
-            {
-                HttpStatusCode.BadGateway,
-                HttpStatusCode.GatewayTimeout,
-                HttpStatusCode.InsufficientStorage,
-                HttpStatusCode.InternalServerError,
-                HttpStatusCode.ServiceUnavailable,
-            };
+        private readonly IndexMetaRepository _ragMetaRepository;
 
-        public CompletionLogic(IHttpClientFactory clientFactory, Settings settings) 
+        public CompletionLogic(IHttpClientFactory clientFactory, Settings settings, AIClientSettings aiClientSettings, SearchServiceClientSettings searchClientSettings) 
         {
             settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _profileToolAssocaitionDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
             _toolDb = new ToolRepository(settings.DbConnectionString);
-            _AIClient = new AGIClient(settings.AIEndpoint, settings.AIKey);
+            _AIClient = new AGIClient(aiClientSettings.Endpoint, aiClientSettings.Key);
             _functionClient = new FunctionClient(clientFactory);
             _profileDb = new ProfileRepository(settings.DbConnectionString);
             _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
-            _ragRepository = new RagRepository(settings.RagDbConnectionString);
-            _ragMetaRepository = new RagMetaRepository(settings.DbConnectionString);
-            _searchClient = new AISearchServiceClient(settings.SearchServiceEndpoint, settings.SearchServiceKey, settings.PlaceholderConnectionString, settings.AIEndpoint, settings.AIKey);
+            _ragMetaRepository = new IndexMetaRepository(settings.DbConnectionString);
+            _searchClient = new AISearchServiceClient(searchClientSettings.Endpoint, searchClientSettings.Key, settings.DbConnectionString, aiClientSettings.Endpoint, aiClientSettings.Key);
         }
 
         #region Streaming
@@ -290,7 +278,9 @@ namespace IntelligenceHub.Business
 
         private async Task<Message> RetrieveRagData(string indexName, Message completion)
         {
-            var indexData = await _ragMetaRepository.GetByNameAsync(indexName);
+            var dbIndex = await _ragMetaRepository.GetByNameAsync(indexName);
+
+            var indexData = DbMappingHandler.MapFromDbIndexMetadata(dbIndex);
             var ragData = await _searchClient.SearchIndex(indexData, completion.Content);
 
             var resultCollection = ragData.GetResultsAsync();

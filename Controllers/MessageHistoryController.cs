@@ -1,7 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business;
+using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Exceptions;
-using IntelligenceHub.Host.Config;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IntelligenceHub.Controllers

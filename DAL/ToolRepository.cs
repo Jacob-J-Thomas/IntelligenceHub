@@ -178,7 +178,10 @@ namespace IntelligenceHub.DAL
             {
                 Id = (int)reader["Id"],
                 Name = (string)reader["Name"],
-                Description = reader["Description"] as string
+                Description = (string)reader["Description"],
+                Required = (string)reader["Required"],
+                ExecutionUrl = reader["ExecutionUrl"] as string,
+                ExecutionMethod = reader["ExecutionMethod"] as string,
             };
 
             // Create a dictionary to store properties

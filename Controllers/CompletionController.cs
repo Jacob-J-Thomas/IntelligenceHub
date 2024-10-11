@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.Host.Config;
 using IntelligenceHub.Business;
 using System.Text;
 using IntelligenceHub.Common.Handlers;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Exceptions;
 using Newtonsoft.Json;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Controllers
 {
@@ -16,10 +16,10 @@ namespace IntelligenceHub.Controllers
         private readonly CompletionLogic _completionLogic;
         private readonly ProfileAndToolValidationHandler _validationLogic;
 
-        public CompletionController(IHttpClientFactory clientFactory, Settings settings)
+        public CompletionController(IHttpClientFactory clientFactory, Settings settings, AIClientSettings aiClientSettings, SearchServiceClientSettings searchClientSettings)
         {
             settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _completionLogic = new CompletionLogic(clientFactory, settings);
+            _completionLogic = new CompletionLogic(clientFactory, settings, aiClientSettings, searchClientSettings);
             _validationLogic = new ProfileAndToolValidationHandler();
         }
 

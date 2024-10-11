@@ -11,8 +11,8 @@ namespace IntelligenceHub.Business
     {
         private readonly AISearchServiceClient _searchClient;
         private readonly AGIClient _aiClient;
-        private readonly RagMetaRepository _metaRepository;
-        private readonly RagRepository _ragRepository;
+        private readonly IndexMetaRepository _metaRepository;
+        private readonly IndexRepository _ragRepository;
         private readonly string _defaultAGIModel;
 
         private readonly string _defaultEmbeddingModel = "text-embedding-3-large";
@@ -21,18 +21,22 @@ namespace IntelligenceHub.Business
         {
             _searchClient = new AISearchServiceClient(searchServiceUrl, searchServiceKey, ragSqlConnectionString, aiEndpoint, aiKey);
             _aiClient = new AGIClient(aiEndpoint, aiKey);
-            _metaRepository = new RagMetaRepository(sqlConnectionString);
-            _ragRepository = new RagRepository(ragSqlConnectionString);
+            _metaRepository = new IndexMetaRepository(sqlConnectionString);
+            _ragRepository = new IndexRepository(ragSqlConnectionString);
         }
 
         public async Task<IndexMetadata> GetRagIndex(string index)
         {
-            return await _metaRepository.GetByNameAsync(index);
+            var dbIndexData = await _metaRepository.GetByNameAsync(index);
+            return DbMappingHandler.MapFromDbIndexMetadata(dbIndexData);
         }
 
         public async Task<IEnumerable<IndexMetadata>> GetAllIndexesAsync()
         {
-            return await _metaRepository.GetAllAsync();
+            var allIndexes = new List<IndexMetadata>();
+            var allDbIndexes = await _metaRepository.GetAllAsync();
+            foreach(var dbIndex in allDbIndexes) allIndexes.Add(DbMappingHandler.MapFromDbIndexMetadata(dbIndex));
+            return allIndexes;
         }
 
         public async Task<bool> CreateIndex(IndexMetadata indexDefinition)
@@ -42,7 +46,8 @@ namespace IntelligenceHub.Business
             if (existing != null) return false;
 
             // add index entry for metadata
-            var response = await _metaRepository.AddAsync(indexDefinition);
+            var newDbIndex = DbMappingHandler.MapToDbIndexMetadata(indexDefinition);
+            var response = await _metaRepository.AddAsync(newDbIndex);
             if (response == null) return false;
 
             // create a new table for the index
@@ -63,14 +68,17 @@ namespace IntelligenceHub.Business
 
         public async Task<bool> ConfigureIndex(IndexMetadata newDefinition)
         {
-            var existingDefinition = await _metaRepository.GetByNameAsync(newDefinition.Name);
-            if (existingDefinition == null) return false;
-            var response = await _metaRepository.UpdateAsync(existingDefinition, newDefinition);
+            throw new NotImplementedException();
 
-            // execute index update on current data to add any missing properties (such as vectors etc)
+            //var existingDefinition = await _metaRepository.GetByNameAsync(newDefinition.Name);
+            //if (existingDefinition == null) return false;
 
-            if (response > 0) return true;
-            return false;
+            //var response = await _metaRepository.UpdateAsync(existingDefinition, newDefinition);
+
+            //// execute index update on current data to add any missing properties (such as vectors etc)
+
+            //if (response > 0) return true;
+            //return false;
         }
 
         public async Task<bool> DeleteIndex(string index)
@@ -78,7 +86,7 @@ namespace IntelligenceHub.Business
             if (!IsValidIndexName(index)) return false;
             var indexMetadata = await _metaRepository.GetByNameAsync(index);
             if (indexMetadata == null) return false;
-            if (await _ragRepository.DeleteIndexAsync())
+            if (await _ragRepository.DeleteIndexAsync(indexMetadata.Name))
             {
                 var success = await _searchClient.DeleteIndexer(indexMetadata.Name, indexMetadata.EmbeddingModel ?? _defaultEmbeddingModel);
                 if (!success) return false;
@@ -95,21 +103,26 @@ namespace IntelligenceHub.Business
             return false;
         }
 
-        public async Task<List<RagDocument>> QueryIndex(string index, string query)
+        public async Task<List<IndexDocument>> QueryIndex(string index, string query)
         {
             throw new NotImplementedException("This API currently recommends performing this operation directly against the AI Search API if required by the client.");
         }
 
-        public async Task<IEnumerable<RagDocument>?> GetAllDocuments(string index)
+        public async Task<IEnumerable<IndexDocument>?> GetAllDocuments(string index)
         {
             if (!IsValidIndexName(index)) return null;
-            return await _ragRepository.GetAllAsync();
+            var docList = new List<IndexDocument>();
+            var dbDocumentList = await _ragRepository.GetAllAsync();
+            foreach (var dbDocument in dbDocumentList) docList.Add(DbMappingHandler.MapFromDbIndexDocument(dbDocument));
+            return docList;
         }
 
-        public async Task<RagDocument?> GetDocument(string index, string document)
+        public async Task<IndexDocument?> GetDocument(string index, string document)
         {
             if (!IsValidIndexName(index)) return null;
-            return await _ragRepository.GetDocumentAsync(index, document);
+            var dbDocument = await _ragRepository.GetDocumentAsync(index, document);
+            if (dbDocument == null) return null;
+            return DbMappingHandler.MapFromDbIndexDocument(dbDocument);
         }
 
         public async Task<bool> UpsertDocuments(string index, RagUpsertRequest documentUpsertRequest)
@@ -121,18 +134,23 @@ namespace IntelligenceHub.Business
 
             foreach (var document in documentUpsertRequest.Documents)
             {
+                var newDbDocument = DbMappingHandler.MapToDbIndexDocument(document);
+                
                 if (indexData.GenerateTopic) document.Topic = await GenerateDocumentMetadata("a topic", document);
                 if (indexData.GenerateKeywords) document.Keywords = await GenerateDocumentMetadata("a comma seperated list of keywords", document);
 
                 var existingDoc = await _ragRepository.GetDocumentAsync(index, document.Title);
                 if (existingDoc != null)
                 {
-                    var rows = await _ragRepository.UpdateAsync(existingDoc, document, indexData.Name);
+                    newDbDocument.Modified = DateTimeOffset.UtcNow;
+                    var rows = await _ragRepository.UpdateAsync(existingDoc, newDbDocument, indexData.Name);
                     if (rows < 1) return false;
                 }
                 else
                 {
-                    var newDoc = await _ragRepository.AddAsync(document, indexData.Name);
+                    newDbDocument.Created = DateTimeOffset.UtcNow;
+                    newDbDocument.Modified = DateTimeOffset.UtcNow;
+                    var newDoc = await _ragRepository.AddAsync(newDbDocument, indexData.Name);
                     if (newDoc == null) return false;
                 }
             }
@@ -155,7 +173,7 @@ namespace IntelligenceHub.Business
 
         #region Private Methods
 
-        private async Task<string> GenerateDocumentMetadata(string dataFormat, RagDocument document)
+        private async Task<string> GenerateDocumentMetadata(string dataFormat, IndexDocument document)
         {
             var completion = $"Please create {dataFormat} summarizing the below data delimited by triple " +
                 $"backticks. Your response should only contain {dataFormat} and absolutely no other textual " +

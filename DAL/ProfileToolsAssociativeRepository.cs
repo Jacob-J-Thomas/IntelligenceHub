@@ -5,7 +5,7 @@ using System.Data.SqlClient;
 namespace IntelligenceHub.DAL
 {
     //make this more generic
-    public class ProfileToolsAssociativeRepository : IAssociativeRepository<Profile>
+    public class ProfileToolsAssociativeRepository : IAssociativeRepository<DbProfileTool>
     {
         private readonly string _connectionString;
 
@@ -241,21 +241,6 @@ namespace IntelligenceHub.DAL
                 throw;
             }
         }
-
-        //private APIProfileDTO MapProfileFromReader(SqlDataReader reader)
-        //{
-        //    var entity = new APIProfileDTO();
-        //    foreach (var property in typeof(APIProfileDTO).GetProperties())
-        //    {
-        //        var columnName = property.Name;
-        //        var value = reader[columnName];
-        //        if (value != DBNull.Value)
-        //        {
-        //            property.SetValue(entity, value);
-        //        }
-        //    }
-        //    return entity;
-        //}
 
         private DbProfileTool MapAssociationsFromReader(SqlDataReader reader)
         {

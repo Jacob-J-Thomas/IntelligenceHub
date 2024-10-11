@@ -1,15 +1,17 @@
 ﻿using IntelligenceHub.API.DTOs.RAG;
+using IntelligenceHub.DAL.Models;
 using System.Data.SqlClient;
 
 namespace IntelligenceHub.DAL
 {
-    public class RagRepository : GenericRepository<RagDocument>
+    // This repository is unique in that the table name must be provided for all methods
+    public class IndexRepository : GenericRepository<DbIndexDocument>
     {
-        public RagRepository(string connectionString) : base(connectionString)
+        public IndexRepository(string connectionString) : base(connectionString)
         {
         }
 
-
+        
         public async Task<int> GetRagIndexLengthAsync(string tableName)
         {
             // validate table name
@@ -28,9 +30,8 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        public async Task<RagDocument?> GetDocumentAsync(string tableName, string title)
+        public async Task<DbIndexDocument?> GetDocumentAsync(string tableName, string title)
         {
-            var ragDTOs = new List<RagDocument>();
             using (var conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
@@ -44,7 +45,7 @@ namespace IntelligenceHub.DAL
                     {
                         if (await reader.ReadAsync())
                         {
-                            return MapFromReader<RagDocument>(reader); // Assuming you have this method
+                            return MapFromReader<DbIndexDocument>(reader); // Assuming you have this method
                         }
                     }
                 }
@@ -60,26 +61,16 @@ namespace IntelligenceHub.DAL
             {
                 await connection.OpenAsync();
 
-                // Can chunk size be parameratized?
-                // Also, the below sql table could be created more dynamically, but this
-                // doesn't seem worth it at the moment. Instead fields will be left null
-                // until otherwise indicated they should be used
                 var query = $@"CREATE TABLE [{indexName}] (
-                                   Id INT PRIMARY KEY IDENTITY,
+                                   Id INT IDENTITY(1,1) PRIMARY KEY,
                                    Title NVARCHAR(255) NOT NULL,
                                    Content NVARCHAR(MAX) NOT NULL,
                                    Topic NVARCHAR(255),
-                                   KeyWords NVARCHAR(255),
-                                   Chunk INT NOT NULL,
-                                   SourceName NVARCHAR(255),
-                                   SourceLink NVARCHAR(255),
-                                   PermissionGroup INT,
-                                   TitleVector VARBINARY(MAX),
-                                   ContentVector VARBINARY(MAX),
-                                   TopicVector VARBINARY(MAX),
-                                   KeywordVector VARBINARY(MAX),
-                                   Created DATETIME,
-                                   Modified DATETIME);";
+                                   Keywords NVARCHAR(255),
+                                   Source NVARCHAR(510) NOT NULL,
+                                   Created DATETIMEOFFSET NOT NULL,
+                                   Modified DATETIMEOFFSET NOT NULL
+                               );";
 
                 using (var command = new SqlCommand(query, connection))
                 {
@@ -89,15 +80,13 @@ namespace IntelligenceHub.DAL
             }
         }
 
-        public async Task<bool> DeleteIndexAsync()
+        public async Task<bool> DeleteIndexAsync(string table)
         {
-            // Validate table name here
-
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
 
-                var query = $@"DROP TABLE IF EXISTS [{_table}]";
+                var query = $@"DROP TABLE IF EXISTS [{table}]";
 
                 using (var command = new SqlCommand(query, connection))
                 {

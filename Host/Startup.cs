@@ -1,6 +1,8 @@
-using IntelligenceHub.Host.Config;
 using IntelligenceHub.Hubs;
 using IntelligenceHub.Business;
+using Polly;
+using Polly.Extensions.Http;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Host
 {
@@ -17,8 +19,14 @@ namespace IntelligenceHub.Host
         {
             services.AddSwaggerGen();
 
-            services.AddSingleton(_configuration.GetSection("Configurations").Get<Settings>());
+            services.AddSingleton(_configuration.GetSection("Settings").Get<Settings>());
+            services.AddSingleton(_configuration.GetSection("AIClientSettings").Get<AIClientSettings>());
+            services.AddSingleton(_configuration.GetSection("SearchServiceSettings").Get<SearchServiceClientSettings>());
             services.AddScoped<ICompletionLogic, CompletionLogic>();
+
+            // Configure HttpClient with Polly retry policy
+            services.AddHttpClient("FunctionClient")
+                    .AddPolicyHandler(GetRetryPolicy());
 
             services.AddSignalR();
             services.AddControllers();
@@ -45,8 +53,6 @@ namespace IntelligenceHub.Host
                 // configure prod cors policy
             }
 
-            
-
             app.UseFileServer();
             app.UseRouting();
 
@@ -55,6 +61,13 @@ namespace IntelligenceHub.Host
                 endpoints.MapHub<ChatHub>("/chatstream");
                 endpoints.MapControllers();
             });
+        }
+
+        private IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+        {
+            return HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
         }
     }
 }

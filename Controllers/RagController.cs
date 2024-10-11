@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using IntelligenceHub.Business;
-using IntelligenceHub.Host.Config;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.API.DTOs.RAG;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Controllers
 {
@@ -10,15 +10,15 @@ namespace IntelligenceHub.Controllers
     public class RagController : ControllerBase
     {
         private readonly RagLogic _ragLogic;
-        public RagController(Settings settings) 
+        public RagController(Settings settings, AIClientSettings aiClientSettings, SearchServiceClientSettings searchClientSettings) 
         {
             _ragLogic = new RagLogic(
                 settings.DbConnectionString,
-                settings.RagDbConnectionString,
-                settings.AIEndpoint, 
-                settings.AIKey,
-                settings.SearchServiceEndpoint,
-                settings.SearchServiceKey);
+                settings.DbConnectionString,
+                aiClientSettings.Endpoint,
+                aiClientSettings.Key,
+                searchClientSettings.Endpoint,
+                searchClientSettings.Key);
         }
 
         [HttpGet]
@@ -85,6 +85,8 @@ namespace IntelligenceHub.Controllers
         [Route("Index/Configure/{index}")]
         public async Task<IActionResult> ConfigureIndex([FromRoute] string index, [FromBody] IndexMetadata indexDefinition)
         {
+            throw new NotImplementedException("Currently index updating is not supported. Please delete and rebuild the index to modify its definition.");
+
             try
             {
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);

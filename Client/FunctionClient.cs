@@ -11,7 +11,7 @@ namespace IntelligenceHub.Client
         private HttpClient _client { get; set; }
         public FunctionClient(IHttpClientFactory clientFactory) 
         {
-            _client = clientFactory.CreateClient();
+            _client = clientFactory.CreateClient("FunctionClient");
         }
 
         public async Task<HttpResponseMessage> CallFunction(string toolName, string toolArgs, string endpoint, string httpMethod = "Post")
