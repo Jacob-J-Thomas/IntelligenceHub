@@ -6,21 +6,27 @@ using System.ClientModel;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Common;
 using Azure.AI.OpenAI.Chat;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Client
 {
-    public class AGIClient
+    public class AGIClient : IAGIClient
     {
         private AzureOpenAIClient _azureOpenAIClient;
-        private readonly string _aiSearchServiceKey;
+        
         private readonly string _aiSearchServiceUrl;
+        private readonly string _aiSearchServiceKey;
+
         private readonly string _embeddingModel = "text-embedding-3-small";
 
-        public AGIClient(string apiEndpoint, string apiKey) 
+        public AGIClient(AGIClientSettings settings) 
         {
-            var endpointWithRouting = apiEndpoint + "chat/completions";
+            _aiSearchServiceUrl = settings.Endpoint;
+            _aiSearchServiceKey = settings.Key;
+
+            var endpointWithRouting = settings.Endpoint + "chat/completions";
             var resourceUri = new Uri(endpointWithRouting);
-            var credential = new ApiKeyCredential(apiKey);
+            var credential = new ApiKeyCredential(settings.Key);
             _azureOpenAIClient = new AzureOpenAIClient(resourceUri, credential);
         }
 
@@ -187,6 +193,8 @@ namespace IntelligenceHub.Client
             return embeddingResponse.Value.ToFloats().ToArray();
         }
 
+        // below code is currently not being used since Azure OpenAI does not support tools with RAG via AI Search.
+        // Therefore AI Search indexes are queried directly and the we manually attach the data to the final user request.
         private ChatCompletionOptions AttachDatabaseOptions(string indexName, ChatCompletionOptions options)
         {
             var fieldMappings = new DataSourceFieldMappings();

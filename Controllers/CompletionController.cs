@@ -13,13 +13,13 @@ namespace IntelligenceHub.Controllers
     [ApiController]
     public class CompletionController : ControllerBase
     {
-        private readonly CompletionLogic _completionLogic;
+        private readonly ICompletionLogic _completionLogic;
         private readonly ProfileAndToolValidationHandler _validationLogic;
 
-        public CompletionController(IHttpClientFactory clientFactory, Settings settings, AIClientSettings aiClientSettings, SearchServiceClientSettings searchClientSettings)
+        public CompletionController(ICompletionLogic completionLogic, Settings settings, AGIClientSettings aiClientSettings, SearchServiceClientSettings searchClientSettings)
         {
             settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _completionLogic = new CompletionLogic(clientFactory, settings, aiClientSettings, searchClientSettings);
+            _completionLogic = completionLogic;
             _validationLogic = new ProfileAndToolValidationHandler();
         }
 
@@ -53,7 +53,7 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpPost]
-        [Route("Stream/{name}")]
+        [Route("SSE/{name}")]
         public async Task<IActionResult> CompletionStreaming([FromRoute] string name, [FromBody] CompletionRequest completionRequest)
         {
             try

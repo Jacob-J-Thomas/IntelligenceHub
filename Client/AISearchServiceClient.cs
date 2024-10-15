@@ -4,10 +4,11 @@ using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Indexes.Models;
 using Azure.Search.Documents.Models;
 using IntelligenceHub.API.DTOs.RAG;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Client
 {
-    public class AISearchServiceClient
+    public class AISearchServiceClient : IAISearchServiceClient
     {
         private readonly SearchIndexClient _indexClient;
         private readonly SearchIndexerClient _indexerClient;
@@ -15,18 +16,18 @@ namespace IntelligenceHub.Client
         private readonly string _openaiKey;
         private readonly string _openaiUrl;
 
-        public AISearchServiceClient(string endpoint, string apiKey, string ragDbConnectionString, string openAiUrl, string openAiKey) 
+        public AISearchServiceClient(SearchServiceClientSettings searchClientSettings, AGIClientSettings agiClientSettings, Settings settings) 
         {
-            var credential = new AzureKeyCredential(apiKey);
-            _indexClient = new SearchIndexClient(new Uri(endpoint), credential);
-            _indexerClient = new SearchIndexerClient(new Uri(endpoint), credential);
-            _sqlRagDbConnectionString = ragDbConnectionString;
-            _openaiUrl = openAiUrl;
-            _openaiKey = openAiKey;
+            var credential = new AzureKeyCredential(searchClientSettings.Key);
+            _indexClient = new SearchIndexClient(new Uri(searchClientSettings.Endpoint), credential);
+            _indexerClient = new SearchIndexerClient(new Uri(searchClientSettings.Endpoint), credential);
+            _sqlRagDbConnectionString = settings.DbConnectionString;
+            _openaiUrl = agiClientSettings.Endpoint;
+            _openaiKey = agiClientSettings.Key;
         }
 
         // index operations
-        public async Task<List<string>> GetAllIndexNames(int count)
+        public async Task<List<string>> GetAllIndexNames()
         {
             var indexNames = new List<string>();
             var responseCollection = _indexClient.GetIndexNamesAsync();
@@ -153,12 +154,6 @@ namespace IntelligenceHub.Client
             return response.Status > 199 && response.Status < 300;
         }
 
-        public async Task<bool> DeleteDatasource(string indexName)
-        {
-            var response = await _indexerClient.DeleteDataSourceConnectionAsync(indexName);
-            return response.Status > 199 && response.Status < 300;
-        }
-
         public async Task<bool> CreateDatasource(string databaseName)
         {
             try
@@ -177,6 +172,12 @@ namespace IntelligenceHub.Client
             {
                 return false;
             }
+        }
+
+        public async Task<bool> DeleteDatasource(string indexName)
+        {
+            var response = await _indexerClient.DeleteDataSourceConnectionAsync(indexName);
+            return response.Status > 199 && response.Status < 300;
         }
 
         public async Task<bool> CreateIndexer(IndexMetadata index)

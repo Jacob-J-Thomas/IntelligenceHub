@@ -31,7 +31,7 @@ namespace IntelligenceHub.Business
         public async Task<Profile> GetProfile(string name)
         {
             var dbProfile = await _profileDb.GetByNameWithToolsAsync(name);
-            if (dbProfile is not null)
+            if (dbProfile != null)
             {
                 // package this into a seperate method (same one as in GetAllProfiles())
                 var profileToolDTOs = await _profileToolsDb.GetToolAssociationsAsync(dbProfile.Id);
@@ -51,7 +51,7 @@ namespace IntelligenceHub.Business
         {
             var response = await _profileDb.GetAllAsync();
             var apiResponseList = new List<Profile>();
-            if (response is not null)
+            if (response != null)
             {
                 foreach (var profile in response)
                 {
@@ -74,10 +74,10 @@ namespace IntelligenceHub.Business
         public async Task<string> CreateOrUpdateProfile(Profile profileDto)
         {
             var errorMessage = _validationLogic.ValidateAPIProfile(profileDto); // move to controller
-            if (errorMessage is not null) return errorMessage;
+            if (errorMessage != null) return errorMessage;
             var existingProfile = await _profileDb.GetByNameAsync(profileDto.Name);
             var success = true;
-            if (existingProfile is not null)
+            if (existingProfile != null)
             {
                 var updateProfileDto = DbMappingHandler.MapToDbProfile(existingProfile, profileDto);
                 var rows = await _profileDb.UpdateAsync(existingProfile, updateProfileDto);
@@ -87,16 +87,16 @@ namespace IntelligenceHub.Business
             {
                 var updateProfileDto = DbMappingHandler.MapToDbProfile(null, profileDto);
                 var newTool = await _profileDb.AddAsync(updateProfileDto);
-                if (newTool is null) success = false;
+                if (newTool == null) success = false;
             }
 
-            if (profileDto.Tools is not null && profileDto.Tools.Count > 0)
+            if (profileDto.Tools != null && profileDto.Tools.Count > 0)
             {
-                if (existingProfile is null) await AddOrUpdateProfileTools(profileDto, null);
+                if (existingProfile == null) await AddOrUpdateProfileTools(profileDto, null);
                 else await AddOrUpdateProfileTools(profileDto, DbMappingHandler.MapFromDbProfile(existingProfile));
             }
             var existingProfileWithTools = await _profileDb.GetByNameWithToolsAsync(profileDto.Name);
-            if (success && existingProfileWithTools is not null) success = await AddOrUpdateProfileTools(profileDto, existingProfileWithTools);
+            if (success && existingProfileWithTools != null) success = await AddOrUpdateProfileTools(profileDto, existingProfileWithTools);
             if (!success) return $"Something went wrong...";
             return null;
         }
@@ -106,9 +106,9 @@ namespace IntelligenceHub.Business
         {
             var profileDto = await _profileDb.GetByNameWithToolsAsync(name);
             int rows;
-            if (profileDto is not null)
+            if (profileDto != null)
             {
-                if (profileDto.Tools is not null && profileDto.Tools.Count > 0) await _profileToolsDb.DeleteAllProfileAssociationsAsync(profileDto.Id);
+                if (profileDto.Tools != null && profileDto.Tools.Count > 0) await _profileToolsDb.DeleteAllProfileAssociationsAsync(profileDto.Id);
                 var dbProfileDTO = new DbProfile()
                 {
                     Id = profileDto.Id,
@@ -119,7 +119,7 @@ namespace IntelligenceHub.Business
             else
             {
                 var toolLessProfile = await _profileDb.GetByNameAsync(name);
-                if (toolLessProfile is null) return $"No profile with the name '{name}' was found.";
+                if (toolLessProfile == null) return $"No profile with the name '{name}' was found.";
                 rows = await _profileDb.DeleteAsync(toolLessProfile);
             }
             if (rows != 1) return "something went wrong while deleting the tool. Please note that the profile associations were deleted successfully.";
@@ -131,7 +131,7 @@ namespace IntelligenceHub.Business
         {
             var toolIds = new List<int>();
             await _profileToolsDb.DeleteAllProfileAssociationsAsync(existingProfile.Id);
-            if (profileDto.Tools is not null && profileDto.Tools.Count > 0)
+            if (profileDto.Tools != null && profileDto.Tools.Count > 0)
             {
                 await CreateOrUpdateTools(profileDto.Tools);
                 foreach (var tool in profileDto.Tools)
@@ -182,7 +182,7 @@ namespace IntelligenceHub.Business
             foreach (var tool in toolList)
             {
                 var errorMessage = _validationLogic.ValidateTool(tool);
-                if (errorMessage is not null) return errorMessage;
+                if (errorMessage != null) return errorMessage;
             }
             foreach (var tool in toolList)
             {
@@ -207,7 +207,7 @@ namespace IntelligenceHub.Business
         public async Task<string> AddToolToProfiles(string name, List<string> profiles)
         {
             var tool = await _toolDb.GetByNameAsync(name);
-            if (tool is not null)
+            if (tool != null)
             {
                 var success = await _profileToolsDb.AddAssociationsByToolIdAsync(tool.Id, profiles);
                 if (success) return null;
@@ -226,7 +226,7 @@ namespace IntelligenceHub.Business
                 toolIDs.Add(tool.Id);
             }
             var profile = await _profileDb.GetByNameAsync(name);
-            if (profile is not null && toolIDs.Count > 0)
+            if (profile != null && toolIDs.Count > 0)
             {
                 var success = await _profileToolsDb.AddAssociationsByProfileIdAsync(profile.Id, toolIDs);
                 if (success) return null;
@@ -238,7 +238,7 @@ namespace IntelligenceHub.Business
         public async Task<string> DeleteToolAssociations(string name, List<string> profiles)
         {
             var tool = await _toolDb.GetByNameAsync(name);
-            if (tool is not null)
+            if (tool != null)
             {
                 foreach (var profile in profiles) await _profileToolsDb.DeleteToolAssociationAsync(tool.Id, profile);
                 return null;
@@ -249,7 +249,7 @@ namespace IntelligenceHub.Business
         public async Task<string> DeleteProfileAssociations(string name, List<string> tools)
         {
             var profile = await _profileDb.GetByNameAsync(name);
-            if (profile is not null)
+            if (profile != null)
             {
                 foreach (var tool in tools) await _profileToolsDb.DeleteProfileAssociationAsync(profile.Id, tool);
                 return null;
@@ -260,7 +260,7 @@ namespace IntelligenceHub.Business
         public async Task<bool> DeleteTool(string name)
         {
             var existingTool = await _toolDb.GetToolByNameAsync(name);
-            if (existingTool is not null)
+            if (existingTool != null)
             {
                 foreach (var property in existingTool.Function.Parameters.Properties)
                 {

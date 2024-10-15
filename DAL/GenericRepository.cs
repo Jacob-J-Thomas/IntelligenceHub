@@ -1,6 +1,6 @@
 ﻿using IntelligenceHub.Common.Attributes;
-using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data;
+using Microsoft.Data.SqlClient;
 using System.Reflection;
 
 namespace IntelligenceHub.DAL
@@ -51,22 +51,31 @@ namespace IntelligenceHub.DAL
                 throw;
             }
         }
-        public async Task<IEnumerable<T>> GetAllAsync()
+        public async Task<IEnumerable<T>> GetAllAsync(int? count = null, int? page = null)
         {
-            // add pagination
             try
             {
                 var result = new List<T>();
+                var offset = (page - 1) * count;
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var query = $"SELECT * FROM {_table}";
+                    if (count != null && page != null && count > 0 && page > 0) query += $" OFFSET @Offset ROWS FETCH NEXT @Count ROWS ONLY";
                     using (var command = new SqlCommand(query, connection))
-                    using (var reader = await command.ExecuteReaderAsync())
-                    while (await reader.ReadAsync())
                     {
-                        result.Add(MapFromReader<T>(reader));
+                        if (count != null && page != null && count > 0 && page > 0)
+                        {
+                            command.Parameters.AddWithValue("@Count", count);
+                            command.Parameters.AddWithValue("@Offset", offset);
+                        }
+                        using (var reader = await command.ExecuteReaderAsync())
+                            while (await reader.ReadAsync())
+                            {
+                                result.Add(MapFromReader<T>(reader));
+                            }
                     }
+                    
                 }
                 return result;
             }

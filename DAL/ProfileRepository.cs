@@ -1,7 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.DAL.Models;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 
 namespace IntelligenceHub.DAL
 {

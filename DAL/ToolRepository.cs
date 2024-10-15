@@ -1,5 +1,5 @@
 ﻿using IntelligenceHub.DAL.Models;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using IntelligenceHub.API.DTOs.Tools;
 
 namespace IntelligenceHub.DAL

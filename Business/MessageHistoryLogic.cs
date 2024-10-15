@@ -19,7 +19,7 @@ namespace IntelligenceHub.Business
             return await _messageHistoryRepository.GetConversationAsync(id, count);
         }
 
-        public async Task<List<Message>> UpsertConversation(Guid conversationId, List<Message> messages)
+        public async Task<List<Message>> UpdateOrCreateConversation(Guid conversationId, List<Message> messages)
         {
             var addedMessages = new List<Message>();
             foreach (var message in messages)

@@ -9,20 +9,20 @@ namespace IntelligenceHub.Business
 {
     public class RagLogic
     {
-        private readonly AISearchServiceClient _searchClient;
-        private readonly AGIClient _aiClient;
+        private readonly IAISearchServiceClient _searchClient;
+        private readonly IAGIClient _aiClient;
         private readonly IndexMetaRepository _metaRepository;
         private readonly IndexRepository _ragRepository;
         private readonly string _defaultAGIModel;
 
         private readonly string _defaultEmbeddingModel = "text-embedding-3-large";
 
-        public RagLogic(string sqlConnectionString, string ragSqlConnectionString, string aiEndpoint, string aiKey, string searchServiceUrl, string searchServiceKey) 
+        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, string sqlConnectionString) 
         {
-            _searchClient = new AISearchServiceClient(searchServiceUrl, searchServiceKey, ragSqlConnectionString, aiEndpoint, aiKey);
-            _aiClient = new AGIClient(aiEndpoint, aiKey);
+            _searchClient = aISearchServiceClient;
+            _aiClient = agiClient;
             _metaRepository = new IndexMetaRepository(sqlConnectionString);
-            _ragRepository = new IndexRepository(ragSqlConnectionString);
+            _ragRepository = new IndexRepository(sqlConnectionString);
         }
 
         public async Task<IndexMetadata> GetRagIndex(string index)
@@ -108,11 +108,11 @@ namespace IntelligenceHub.Business
             throw new NotImplementedException("This API currently recommends performing this operation directly against the AI Search API if required by the client.");
         }
 
-        public async Task<IEnumerable<IndexDocument>?> GetAllDocuments(string index)
+        public async Task<IEnumerable<IndexDocument>?> GetAllDocuments(string index, int count, int page)
         {
             if (!IsValidIndexName(index)) return null;
             var docList = new List<IndexDocument>();
-            var dbDocumentList = await _ragRepository.GetAllAsync();
+            var dbDocumentList = await _ragRepository.GetAllAsync(count, page);
             foreach (var dbDocument in dbDocumentList) docList.Add(DbMappingHandler.MapFromDbIndexDocument(dbDocument));
             return docList;
         }

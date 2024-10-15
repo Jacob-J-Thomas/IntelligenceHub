@@ -1,6 +1,6 @@
 ﻿using IntelligenceHub.DAL.Models;
-using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data;
+using Microsoft.Data.SqlClient;
 
 namespace IntelligenceHub.DAL
 {

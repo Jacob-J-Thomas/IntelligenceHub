@@ -3,6 +3,7 @@ using IntelligenceHub.Business;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Common.Config;
+using IntelligenceHub.Client;
 
 namespace IntelligenceHub.Controllers
 {
@@ -10,15 +11,10 @@ namespace IntelligenceHub.Controllers
     public class RagController : ControllerBase
     {
         private readonly RagLogic _ragLogic;
-        public RagController(Settings settings, AIClientSettings aiClientSettings, SearchServiceClientSettings searchClientSettings) 
+
+        public RagController(IAGIClient agiClient, IAISearchServiceClient searchClient, Settings settings) 
         {
-            _ragLogic = new RagLogic(
-                settings.DbConnectionString,
-                settings.DbConnectionString,
-                aiClientSettings.Endpoint,
-                aiClientSettings.Key,
-                searchClientSettings.Endpoint,
-                searchClientSettings.Key);
+            _ragLogic = new RagLogic(agiClient, searchClient, settings.DbConnectionString);
         }
 
         [HttpGet]
@@ -62,7 +58,7 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpPost]
-        [Route("Index/")]
+        [Route("Index")]
         public async Task<IActionResult> CreateIndex([FromBody] IndexMetadata indexDefinition)
         {
             try
@@ -131,12 +127,12 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpGet]
-        [Route("index/{index}/document/GetAll")]
-        public async Task<IActionResult> GetAllDocuments([FromRoute] string index)
+        [Route("Index/{index}/Document/{count}/Page/{page}")]
+        public async Task<IActionResult> GetAllDocuments([FromRoute] string index, [FromRoute] int count, [FromRoute] int page)
         {
             try
             {
-                var response = await _ragLogic.GetAllDocuments(index); // going to need to add pagination here
+                var response = await _ragLogic.GetAllDocuments(index, count, page); // going to need to add pagination here
                 if (response != null && response.Count() > 1) return Ok(response);
                 else return NotFound();
             }

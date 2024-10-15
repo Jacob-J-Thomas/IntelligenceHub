@@ -3,6 +3,7 @@ using IntelligenceHub.Business;
 using Polly;
 using Polly.Extensions.Http;
 using IntelligenceHub.Common.Config;
+using IntelligenceHub.Client;
 
 namespace IntelligenceHub.Host
 {
@@ -20,13 +21,14 @@ namespace IntelligenceHub.Host
             services.AddSwaggerGen();
 
             services.AddSingleton(_configuration.GetSection("Settings").Get<Settings>());
-            services.AddSingleton(_configuration.GetSection("AIClientSettings").Get<AIClientSettings>());
+            services.AddSingleton(_configuration.GetSection("AIClientSettings").Get<AGIClientSettings>());
             services.AddSingleton(_configuration.GetSection("SearchServiceSettings").Get<SearchServiceClientSettings>());
-            services.AddScoped<ICompletionLogic, CompletionLogic>();
+            services.AddSingleton<IAGIClient, AGIClient>();
+            services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
+            services.AddSingleton<ICompletionLogic, CompletionLogic>();
 
             // Configure HttpClient with Polly retry policy
-            services.AddHttpClient("FunctionClient")
-                    .AddPolicyHandler(GetRetryPolicy());
+            services.AddHttpClient("FunctionClient").AddPolicyHandler(GetRetryPolicy());
 
             services.AddSignalR();
             services.AddControllers();

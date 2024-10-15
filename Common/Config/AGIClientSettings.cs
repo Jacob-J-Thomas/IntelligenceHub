@@ -1,6 +1,6 @@
 ﻿namespace IntelligenceHub.Common.Config
 {
-    public class AIClientSettings
+    public class AGIClientSettings
     {
         public string Endpoint { get; set; }
         public string Key { get; set; }

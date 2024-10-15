@@ -1,4 +1,4 @@
-# OpenAICustomFunctionCallingAPI\
+# Intelligence Hub
 
 This is a custom API designed to simplify consumption of the OpenAI endpoint, and create a methodology for connecting a virtually limitless amount of functions to call to a single request using the OpenAI service's function calling feature.
 

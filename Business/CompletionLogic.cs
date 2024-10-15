@@ -16,24 +16,24 @@ namespace IntelligenceHub.Business
         // move to GlobalVariables class
         private const int _defaultMessageHistory = 5;
 
-        private readonly AGIClient _AIClient;
-        private readonly AISearchServiceClient _searchClient;
+        private readonly IAGIClient _AIClient;
+        private readonly IAISearchServiceClient _searchClient;
         private readonly FunctionClient _functionClient;
         private readonly ProfileRepository _profileDb;
         private readonly ToolRepository _toolDb;
         private readonly MessageHistoryRepository _messageHistoryRepository;
         private readonly IndexMetaRepository _ragMetaRepository;
 
-        public CompletionLogic(IHttpClientFactory clientFactory, Settings settings, AIClientSettings aiClientSettings, SearchServiceClientSettings searchClientSettings) 
+        public CompletionLogic(IHttpClientFactory clientFactory, IAGIClient agiClient, IAISearchServiceClient searchClient, Settings settings) 
         {
             settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _toolDb = new ToolRepository(settings.DbConnectionString);
-            _AIClient = new AGIClient(aiClientSettings.Endpoint, aiClientSettings.Key);
+            _AIClient = agiClient;
             _functionClient = new FunctionClient(clientFactory);
             _profileDb = new ProfileRepository(settings.DbConnectionString);
             _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
             _ragMetaRepository = new IndexMetaRepository(settings.DbConnectionString);
-            _searchClient = new AISearchServiceClient(searchClientSettings.Endpoint, searchClientSettings.Key, settings.DbConnectionString, aiClientSettings.Endpoint, aiClientSettings.Key);
+            _searchClient = searchClient;
         }
 
         #region Streaming

@@ -48,39 +48,13 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("conversation/{id}")]
-        public async Task<IActionResult> UpsertConversation([FromRoute] Guid id,[FromBody] List<Message> messages)
+        public async Task<IActionResult> UpsertConversationData([FromRoute] Guid id,[FromBody] List<Message> messages)
         {
             try
             {
-                var responseMessages = await _messageHistoryLogic.UpsertConversation(id, messages);
+                var responseMessages = await _messageHistoryLogic.UpdateOrCreateConversation(id, messages);
                 if (responseMessages is null || responseMessages.Count != messages.Count) throw new IntelligenceHubException(500, $"Something went wrong when adding the messages. Only {responseMessages?.Count ?? 0} of {messages.Count} messages were added.");
                 else return Ok(responseMessages);
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
-            }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
-
-        [HttpPost]
-        [Route("conversation/{id}")]
-        public async Task<IActionResult> AddMessage([FromRoute] Guid id, [FromBody] Message message)
-        {
-            try
-            {
-                var response = await _messageHistoryLogic.AddMessage(id, message);
-                if (response is not null) return Ok(response);
-                else return BadRequest($"A conversation with the ID '{id}' does not exist.");
             }
             catch (IntelligenceHubException hubEx)
             {
@@ -125,7 +99,7 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpDelete]
-        [Route("conversation/{conversationId}/{messageId}")]
+        [Route("conversation/{conversationId}/message/{messageId}")]
         public async Task<IActionResult> DeleteMessage(Guid conversationId, [FromRoute] int messageId)
         {
             try
