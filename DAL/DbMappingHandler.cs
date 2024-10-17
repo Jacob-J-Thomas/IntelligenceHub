@@ -55,7 +55,7 @@ namespace IntelligenceHub.DAL
                 // Variables with default values during first database entry
                 Model = profileUpdate?.Model
                     ?? existingProfile?.Model
-                    ?? "gpt-3.5-turbo",
+                    ?? "gpt-4o-mini",
 
                 FrequencyPenalty = profileUpdate?.Frequency_Penalty
                     ?? existingProfile?.FrequencyPenalty
@@ -100,6 +100,7 @@ namespace IntelligenceHub.DAL
                 }
             };
 
+            if (dbProperties == null) dbProperties = new List<DbProperty>(); // To prevent null reference exceptions
             foreach (var property in dbProperties) 
             {
                 var convertedProp = new Property()
@@ -114,14 +115,14 @@ namespace IntelligenceHub.DAL
             return tool;
         }
 
-        public static DbTool MapToDbTool(Tool tool, List<Property>? dbProperties = null)
+        public static DbTool MapToDbTool(Tool tool)
         {
             return new DbTool()
             {
                 Id = tool.Id,
                 Name = tool.Function.Name,
                 Description = tool.Function.Description ?? string.Empty,
-                Required = tool.Function.Parameters.Required?.ToCommaSeparatedString() ?? string.Empty,
+                Required = tool.Function.Parameters.Required?.ToCommaSeparatedString() ?? string.Empty
             };
         }
 
@@ -144,7 +145,7 @@ namespace IntelligenceHub.DAL
             return new Message()
             {
                 Content = dbMessage.Content,
-                Role = GlobalVariables.ConvertStringToRole(dbMessage.Role),
+                Role = dbMessage.Role.ConvertStringToRole(),
                 Base64Image = dbMessage.Base64Image,
                 TimeStamp = dbMessage.TimeStamp,
             };
@@ -207,7 +208,7 @@ namespace IntelligenceHub.DAL
                 GenerateKeywordVector = dbIndexData.GenerateKeywordVector,
                 ScoringProfile = new IndexScoringProfile()
                 {
-                    Name = dbIndexData.DefaultScoringProfile,
+                    Name = dbIndexData.DefaultScoringProfile ?? string.Empty,
                     Aggregation = dbIndexData.ScoringAggregation,
                     Interpolation = dbIndexData.ScoringInterpolation,
                     BoostDurationDays = dbIndexData.ScoringBoostDurationDays,

@@ -6,7 +6,6 @@ using IntelligenceHub.API.DTOs.Tools;
 
 namespace IntelligenceHub.Business
 {
-    // this whole class needs some refactoring
     public class ProfileLogic
     {
         private readonly ProfileRepository _profileDb;
@@ -14,17 +13,14 @@ namespace IntelligenceHub.Business
         private readonly ToolRepository _toolDb;
         private readonly PropertyRepository _propertyDb;
 
-        //private readonly ToolLogic _toolLogic;
-        private readonly ProfileAndToolValidationHandler _validationLogic;
+        private readonly ProfileValidationHandler _validationLogic = new ProfileValidationHandler();
+
         public ProfileLogic(string connectionString)
         {
             _profileDb = new ProfileRepository(connectionString);
             _profileToolsDb = new ProfileToolsAssociativeRepository(connectionString);
             _toolDb = new ToolRepository(connectionString);
             _propertyDb = new PropertyRepository(connectionString); 
-
-            //_toolLogic = new ToolLogic(connectionString);
-            _validationLogic = new ProfileAndToolValidationHandler(); // move this and any logic to controller
         }
 
         // else shouldn't be required here

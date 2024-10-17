@@ -40,9 +40,9 @@ namespace IntelligenceHub.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -66,9 +66,9 @@ namespace IntelligenceHub.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -92,9 +92,9 @@ namespace IntelligenceHub.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -118,10 +118,9 @@ namespace IntelligenceHub.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
     }

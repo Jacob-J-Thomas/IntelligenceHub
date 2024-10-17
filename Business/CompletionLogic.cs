@@ -5,6 +5,7 @@ using IntelligenceHub.Client;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Exceptions;
+using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL;
 using System.Net;
 using static IntelligenceHub.Common.GlobalVariables;
@@ -43,7 +44,7 @@ namespace IntelligenceHub.Business
 
             // Get and set profile details, overriding the database with any parameters that aren't null in the request
             var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
-            if (profile == null) throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
+            if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name)) ?? throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
             completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
             // Get and attach message history if a conversation id exists
@@ -80,7 +81,7 @@ namespace IntelligenceHub.Business
                 var roleString = update.Role.ToString();
                 if (!string.IsNullOrEmpty(roleString))
                 {
-                    dbMessageRole = GlobalVariables.ConvertStringToRole(roleString);
+                    dbMessageRole = roleString.ConvertStringToRole();
                     update.Role = dbMessageRole;
                 }
                 yield return update;
@@ -117,7 +118,7 @@ namespace IntelligenceHub.Business
 
             // Get and set profile details, overriding the database with any parameters that aren't null in the request
             var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
-            if (profile == null) throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
+            if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name)) ?? throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
             completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
             // Get and attach message history if a conversation id exists

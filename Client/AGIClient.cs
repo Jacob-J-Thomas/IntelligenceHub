@@ -7,6 +7,7 @@ using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Common;
 using Azure.AI.OpenAI.Chat;
 using IntelligenceHub.Common.Config;
+using IntelligenceHub.Common.Extensions;
 
 namespace IntelligenceHub.Client
 {
@@ -17,14 +18,14 @@ namespace IntelligenceHub.Client
         private readonly string _aiSearchServiceUrl;
         private readonly string _aiSearchServiceKey;
 
-        private readonly string _embeddingModel = "text-embedding-3-small";
+        private readonly string _embeddingModel = "text-embedding-3-large";
 
         public AGIClient(AGIClientSettings settings) 
         {
             _aiSearchServiceUrl = settings.Endpoint;
             _aiSearchServiceKey = settings.Key;
 
-            var endpointWithRouting = settings.Endpoint + "chat/completions";
+            var endpointWithRouting = settings.Endpoint; //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
             var resourceUri = new Uri(endpointWithRouting);
             var credential = new ApiKeyCredential(settings.Key);
             _azureOpenAIClient = new AzureOpenAIClient(resourceUri, credential);
@@ -32,30 +33,46 @@ namespace IntelligenceHub.Client
 
         public async Task<CompletionResponse?> PostCompletion(CompletionRequest completionRequest)
         {
-            var options = BuildCompletionOptions(completionRequest);
-            var messages = BuildCompletionMessages(completionRequest);
-            var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
-            var completionResult = await chatClient.CompleteChatAsync(messages, options);
-
-            var toolCalls = new Dictionary<string, string>();
-            foreach (var tool in completionResult.Value.ToolCalls) toolCalls.Add(tool.FunctionName, tool.FunctionArguments);
-
-            // build the response object
-            var responseMessage = new Message()
+            try
             {
-                Content = completionResult.Value.Content.ToString() ?? string.Empty,
-                Role = GlobalVariables.ConvertStringToRole(completionResult.Value.Role.ToString()),
-                TimeStamp = DateTime.UtcNow
-            };
+                var options = BuildCompletionOptions(completionRequest);
+                var messages = BuildCompletionMessages(completionRequest);
+                var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
+                var completionResult = await chatClient.CompleteChatAsync(messages, options);
 
-            var response = new CompletionResponse()
+                var toolCalls = new Dictionary<string, string>();
+                foreach (var tool in completionResult.Value.ToolCalls) toolCalls.Add(tool.FunctionName, tool.FunctionArguments);
+
+                // build the response object
+                var responseMessage = new Message()
+                {
+                    Content = completionResult.Value.Content[0].Text ?? string.Empty,
+                    Role = completionResult.Value.Role.ToString().ConvertStringToRole(),
+                    TimeStamp = DateTime.UtcNow
+                };
+
+                foreach (var content in completionResult.Value.Content)
+                {
+                    if (responseMessage.Base64Image == null && content.Kind == ChatMessageContentPartKind.Image) responseMessage.Base64Image = Convert.ToBase64String(content.ImageBytes);
+                    else if (string.IsNullOrEmpty(responseMessage.Content) && content.Kind == ChatMessageContentPartKind.Text) responseMessage.Content = content.Text;
+                }
+                
+                var response = new CompletionResponse()
+                {
+                    FinishReason = completionResult.Value.FinishReason.ToString().ConvertStringToFinishReason(),
+                    Messages = completionRequest.Messages,
+                    ToolCalls = toolCalls
+                };
+                response.Messages.Add(responseMessage);
+                return response;
+            }
+            catch (Exception)
             {
-                FinishReason = ConvertStringToFinishReason(completionResult.Value.FinishReason.ToString()),
-                Messages = completionRequest.Messages,
-                ToolCalls = toolCalls
-            };
-            response.Messages.Add(responseMessage);
-            return response;
+                // log excepition?
+
+                return null;
+            }
+            
         }
 
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
@@ -66,16 +83,23 @@ namespace IntelligenceHub.Client
             var resultCollection = chatClient.CompleteChatStreamingAsync(messages, options);
 
             var chunkId = 0;
-            var role = string.Empty;
-            var finishReason = string.Empty;
+            string role = null;
+            string finishReason = null;
             var currentTool = string.Empty;
             var currentToolArgs = string.Empty;
             var toolCalls = new Dictionary<string, string>();
             await foreach (var result in resultCollection)
             {
-                role = result.Role.ToString() ?? role;
-                finishReason = result.FinishReason.ToString() ?? finishReason;
-                var content = result.ContentUpdate.ToString() ?? string.Empty;
+                if (!string.IsNullOrEmpty(result.Role.ToString())) role = result.Role.ToString() ?? role;
+                if (!string.IsNullOrEmpty(result.FinishReason.ToString())) finishReason = result.FinishReason.ToString() ?? finishReason;
+                var content = string.Empty;
+                var base64Image = string.Empty;
+
+                foreach (var update in result.ContentUpdate)
+                {
+                    if (string.IsNullOrEmpty(base64Image) && update.Kind == ChatMessageContentPartKind.Image) base64Image = Convert.ToBase64String(update.ImageBytes);
+                    if (string.IsNullOrEmpty(content) && update.Kind == ChatMessageContentPartKind.Text) content += update.Text;
+                }
 
                 // handle tool conversion - move to seperate method
                 foreach (var update in result.ToolCallUpdates)
@@ -96,9 +120,10 @@ namespace IntelligenceHub.Client
                 yield return new CompletionStreamChunk()
                 {
                     Id = chunkId++,
-                    Role = GlobalVariables.ConvertStringToRole(role),
+                    Role = role?.ConvertStringToRole(),
                     CompletionUpdate = content,
-                    FinishReason = ConvertStringToFinishReason(finishReason),
+                    Base64Image = base64Image,
+                    FinishReason = finishReason?.ConvertStringToFinishReason(),
                     ToolCalls = toolCalls
                 };
             }
@@ -139,14 +164,8 @@ namespace IntelligenceHub.Client
                 FrequencyPenalty = completion.ProfileOptions.Frequency_Penalty,
                 PresencePenalty = completion.ProfileOptions.Presence_Penalty,
                 IncludeLogProbabilities = completion.ProfileOptions.Logprobs,
-
-                // test if below works
-                ParallelToolCallsEnabled = true,
-
-
-
                 Seed = completion.ProfileOptions.Seed,
-                EndUserId = completion.ProfileOptions.User
+                EndUserId = completion.ProfileOptions.User,
             };
 
             // Potentially useful later for testing, validation, and fine tuning. Maps token probabilities
@@ -175,11 +194,15 @@ namespace IntelligenceHub.Client
                 };
 
             // Set tool choice
-            if (completion.ProfileOptions.Tool_Choice == null || completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Auto.ToString()) options.ToolChoice = ChatToolChoice.CreateAutoChoice();
-            else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.None.ToString()) options.ToolChoice = ChatToolChoice.CreateNoneChoice();
-            else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Required.ToString()) options.ToolChoice = ChatToolChoice.CreateRequiredChoice();
-            else options.ToolChoice = ChatToolChoice.CreateFunctionChoice(completion.ProfileOptions.Tool_Choice);
+            if (completion.ProfileOptions.Tools != null && completion.ProfileOptions.Tools.Any())
+            {
+                if (completion.ProfileOptions.Tools.Count > 1) options.ParallelToolCallsEnabled = true;
 
+                if (completion.ProfileOptions.Tool_Choice == null || completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Auto.ToString()) options.ToolChoice = ChatToolChoice.CreateAutoChoice();
+                else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.None.ToString()) options.ToolChoice = ChatToolChoice.CreateNoneChoice();
+                else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Required.ToString()) options.ToolChoice = ChatToolChoice.CreateRequiredChoice();
+                else options.ToolChoice = ChatToolChoice.CreateFunctionChoice(completion.ProfileOptions.Tool_Choice);
+            }
             // Tools and RAG DBs are not supported simultaneously, therefore RAG data is being attached at the business logic level via a direct query for now
             //if (!string.IsNullOrEmpty(completion.ProfileOptions.RagDatabase)) options = AttachDatabaseOptions(completion.ProfileOptions.RagDatabase, options);
             return options;

@@ -22,7 +22,7 @@ namespace IntelligenceHub.DAL
                 {
                     await connection.OpenAsync();
 
-                    var query = $@"SELECT * FROM [master].[dbo].[profileTools] WHERE ProfileId = @ProfileId";
+                    var query = $@"SELECT * FROM profileTools WHERE ProfileId = @ProfileId";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -40,7 +40,7 @@ namespace IntelligenceHub.DAL
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 throw;
             }
@@ -143,7 +143,7 @@ namespace IntelligenceHub.DAL
                         SET @ProfileID = (SELECT Id FROM profiles WHERE [Name] = @Name);
                         IF @ProfileID IS NOT NULL
                         BEGIN
-                            DELETE FROM [master].[dbo].[profileTools] 
+                            DELETE FROM profileTools
                             WHERE ToolID = @ToolID
                             AND ProfileID = @ProfileID;
                         END";
@@ -175,7 +175,7 @@ namespace IntelligenceHub.DAL
                         SET @ToolID = (SELECT Id FROM tools WHERE [Name] = @Name);
                         IF @ToolID IS NOT NULL
                         BEGIN
-                            DELETE FROM [master].[dbo].[profileTools] 
+                            DELETE FROM profileTools
                             WHERE ProfileID = @ProfileID
                             AND ToolID = @ToolID;
                         END";
@@ -202,7 +202,7 @@ namespace IntelligenceHub.DAL
                 {
                     await connection.OpenAsync();
 
-                    var query = $@"DELETE FROM [master].[dbo].[profileTools] WHERE ProfileId = @ProfileId";
+                    var query = $@"DELETE FROM profileTools WHERE ProfileId = @ProfileId";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -226,7 +226,7 @@ namespace IntelligenceHub.DAL
                 {
                     await connection.OpenAsync();
 
-                    var query = $@"DELETE FROM [master].[dbo].[profileTools] WHERE ToolID = @ToolID";
+                    var query = $@"DELETE FROM profileTools WHERE ToolID = @ToolID";
 
                     using (var command = new SqlCommand(query, connection))
                     {

@@ -1,6 +1,5 @@
-﻿using OpenAI.Chat;
-using IntelligenceHub.API;
-using IntelligenceHub.Common.Exceptions;
+﻿using Newtonsoft.Json.Converters;
+using Newtonsoft.Json;
 
 namespace IntelligenceHub.Common
 {
@@ -18,12 +17,6 @@ namespace IntelligenceHub.Common
                 "Please use these documents to inform your response to the dialogue below the documents. " +
                 "If you use one of the sources, please reference it in your response using markdown like so: [SourceName](SourceLink)." +
                 "If no SourceLink is present, only provide the sourcename.\n\n";
-
-        //public static readonly Dictionary<ResponseFormat, string> ResponseFormats = new Dictionary<ResponseFormat, string>
-        //{
-        //    { ResponseFormat.Json, "json" },
-        //    { ResponseFormat.String, "string" }
-        //};
 
         public enum ResponseFormat
         {
@@ -52,29 +45,6 @@ namespace IntelligenceHub.Common
             Assistant,
             System,
             Tool
-        }
-
-        // Move these to an extension method class for the above
-        public static FinishReason ConvertStringToFinishReason(string finishReason)
-        {
-            if (finishReason == ChatFinishReason.Stop.ToString()) return FinishReason.Stop;
-            if (finishReason == ChatFinishReason.Length.ToString()) return FinishReason.Length;
-            if (finishReason == ChatFinishReason.ToolCalls.ToString()) return FinishReason.ToolCalls;
-            if (finishReason == ChatFinishReason.FunctionCall.ToString()) return FinishReason.ToolCalls;
-            if (finishReason == ChatFinishReason.ContentFilter.ToString()) return FinishReason.ContentFilter;
-
-            throw new IntelligenceHubException(500, "Could not convert chat finish reason to system finish reason");
-        }
-
-        public static Role ConvertStringToRole(string role)
-        {
-            if (role == ChatMessageRole.Assistant.ToString()) return Role.Assistant;
-            if (role == ChatMessageRole.User.ToString()) return Role.User;
-            if (role == ChatMessageRole.Tool.ToString()) return Role.Tool;
-            if (role == ChatMessageRole.Function.ToString()) return Role.Tool;
-            if (role == ChatMessageRole.System.ToString()) return Role.System;
-
-            throw new IntelligenceHubException(500, "Could not convert chat role to system role");
         }
     }
 }

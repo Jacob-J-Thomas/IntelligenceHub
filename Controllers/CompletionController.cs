@@ -14,18 +14,18 @@ namespace IntelligenceHub.Controllers
     public class CompletionController : ControllerBase
     {
         private readonly ICompletionLogic _completionLogic;
-        private readonly ProfileAndToolValidationHandler _validationLogic;
+        private readonly ProfileValidationHandler _validationLogic;
 
-        public CompletionController(ICompletionLogic completionLogic, Settings settings, AGIClientSettings aiClientSettings, SearchServiceClientSettings searchClientSettings)
+        public CompletionController(ICompletionLogic completionLogic, Settings settings)
         {
             settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _completionLogic = completionLogic;
-            _validationLogic = new ProfileAndToolValidationHandler();
+            _validationLogic = new ProfileValidationHandler();
         }
 
         [HttpPost]
         [Route("Chat/{name}")]
-        public async Task<IActionResult> CompletionStandard([FromRoute] string name, [FromBody] CompletionRequest completionRequest)
+        public async Task<IActionResult> CompletionStandard([FromRoute] string? name, [FromBody] CompletionRequest completionRequest)
         {
             try
             {
@@ -46,15 +46,15 @@ namespace IntelligenceHub.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
         [HttpPost]
         [Route("SSE/{name}")]
-        public async Task<IActionResult> CompletionStreaming([FromRoute] string name, [FromBody] CompletionRequest completionRequest)
+        public async Task<IActionResult> CompletionStreaming([FromRoute] string? name, [FromBody] CompletionRequest completionRequest)
         {
             try
             {
@@ -87,9 +87,9 @@ namespace IntelligenceHub.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
     }

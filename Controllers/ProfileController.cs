@@ -2,6 +2,7 @@
 using IntelligenceHub.Business;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Config;
+using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Controllers
 {
@@ -29,13 +30,19 @@ namespace IntelligenceHub.Controllers
                 if (profileDto is not null) return Ok(profileDto);
                 return NotFound($"No profile with the name {name} was found.");
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -47,14 +54,19 @@ namespace IntelligenceHub.Controllers
             {
                 return Ok(await _profileLogic.GetAllProfiles());
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
             
         }
@@ -69,13 +81,19 @@ namespace IntelligenceHub.Controllers
                 if (errorMessage is not null) return BadRequest(errorMessage);
                 else return Ok(await _profileLogic.GetProfile(profileDto.Name));
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -91,14 +109,19 @@ namespace IntelligenceHub.Controllers
                 if (errorMessage is null) return Ok(await _profileLogic.GetProfileToolAssociations(name));
                 else return NotFound(errorMessage);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -114,14 +137,19 @@ namespace IntelligenceHub.Controllers
                 if (errorMessage is null) return NoContent();
                 else return NotFound(errorMessage);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -136,13 +164,19 @@ namespace IntelligenceHub.Controllers
                 if (errorMessage is not null) return NotFound(errorMessage);
                 else return NoContent();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
     }

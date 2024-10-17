@@ -32,10 +32,6 @@
         <ul id="discussion"></ul>
         <label type="text" for="ragDatabaseInput">Rag Database Name:</label>
         <input type="text" id="ragDatabaseInput" />
-        <label type="text" for="ragTargetInput">Target Rag Column:</label>
-        <input type="text" id="ragTargetInput" />
-        <label type="text" for="ragDocNInput">Max Rag Documents:</label>
-        <input type="text" id="ragDocNInput" />
         <label type="text" for="profileName">AI Profile Name:</label>
         <input type="text" id="profileName" />
         <label type="text" for="conversationId">Conversation ID:</label>
@@ -56,8 +52,6 @@
         document.addEventListener('DOMContentLoaded', function () {
 
             var ragDatabaseInput = document.getElementById('ragDatabaseInput');
-            var ragTargetInput = document.getElementById('ragTargetInput');
-            var ragDocNInput = document.getElementById('ragDocNInput');
 
             var messageInput = document.getElementById('message');
             var profileNameInput = document.getElementById('profileName');
@@ -82,12 +76,30 @@
             }
 
             // Create a function that the hub can call to broadcast messages.
-            connection.on('broadcastMessage', function (name, message) {
+            connection.on('broadcastMessage', function (response) {
+
+
                 // Html encode display name and message.
-                var encodedName = name;
-                var encodedMsg = message;
+                //var encodedName = name;
+                //var encodedMsg = message;
+
+                // not sure why, but the below strategy was origianlly used. (see above)
+                // If this is still here after debugging the change to streaming DTOs 
+                // please remove
+                var encodedResponse = response
+
+
+                // Handle received messages
+                var author = response.role;
+                var messageChunk = response.completionUpdate;
+
+                // can do things with this stuff
+                var finishReason = response.finishReason;
+                var tools = response.toolCalls;
+                var toolExecutionResponses = response.toolExecutionResponses;
+               
                 // Add the message to the page.
-                addMessage(encodedName, encodedMsg)
+                addMessage(author, messageChunk)
             });
 
             // Transport fallback functionality is now built into start.
@@ -99,17 +111,18 @@
                         addMessage(usernameInput.value, messageInput.value);
                         //displayMessage(usernameInput.value, messageInput.value)
 
-                        // build the request
                         var request = {
-                            "ProfileName": profileNameInput.value,
-                            "ConversationId": conversationIdInput.value,
-                            "Username": usernameInput.value,
-                            "Message": messageInput.value,
-                            "MaxMessageHistory": parseInt(maxMessageHistory.value),
-                            "Database": ragDatabaseInput.value,
-                            "RagTarget": ragTargetInput.value,
-                            "MaxRagDocs": parseInt(ragDocNInput.value)
-                        }
+                            conversationId: conversationIdInput.value || null,
+                            profileOptions: {
+                                name: profileNameInput.value
+                            },
+                            messages: [
+                                {
+                                    role: "User",  // Ensure consistent casing if needed
+                                    content: messageInput.value
+                                }
+                            ]
+                        };
 
                         // Call the Send method on the hub.
                         connection.invoke('Send', request);

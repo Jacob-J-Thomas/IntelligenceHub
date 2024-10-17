@@ -2,6 +2,7 @@
 using IntelligenceHub.Business;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Common.Config;
+using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Controllers
 {
@@ -29,16 +30,20 @@ namespace IntelligenceHub.Controllers
                 if (tool == null) return NotFound($"No tool with the name {name} exists");
                 else return Ok(tool);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
-            
         }
 
         [HttpGet]
@@ -51,14 +56,19 @@ namespace IntelligenceHub.Controllers
                 if (tools == null || tools.Count() < 1) return NotFound($"No tools exist. Make a post request to add some.");
                 else return Ok(tools);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -73,14 +83,19 @@ namespace IntelligenceHub.Controllers
                 if (tool == null) return NotFound($"The tool '{name}' is not associated with any profiles, or does not exist.");
                 else return Ok(tool);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -94,13 +109,19 @@ namespace IntelligenceHub.Controllers
                 if (errorMessage != null) return BadRequest(errorMessage);
                 else return NoContent();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -116,14 +137,19 @@ namespace IntelligenceHub.Controllers
                 if (errorMessage == null) return Ok(await _profileLogic.GetToolProfileAssociations(name));
                 else return NotFound(errorMessage);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -139,14 +165,19 @@ namespace IntelligenceHub.Controllers
                 if (errorMessage == null) return NoContent();
                 else return NotFound(errorMessage);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -161,14 +192,19 @@ namespace IntelligenceHub.Controllers
                 if (success) return NoContent();
                 else return NotFound($"No tool with the name {name} exists");
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
     }

@@ -13,6 +13,7 @@ namespace IntelligenceHub.DAL
 
         }
 
+        // This is only working when tools are present at the moment, otherwise returns an empty set
         public async Task<Profile> GetByNameWithToolsAsync(string Name)
         {
             try
@@ -26,7 +27,9 @@ namespace IntelligenceHub.DAL
                             t.Id AS ToolId, 
                             t.Name AS ToolName, 
                             t.Description AS ToolDescription, 
-                            t.Required
+                            t.Required AS ToolRequired,
+                            t.ExecutionUrl AS ToolExecutionUrl,
+                            t.ExecutionMethod AS ToolExecutionMethod
                         FROM profiles p
                         JOIN profiletools pt ON p.Id = pt.ProfileID
                         JOIN tools t ON pt.ToolID = t.Id
@@ -60,7 +63,7 @@ namespace IntelligenceHub.DAL
                     return null; // Return null if no result is found
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
 
                 throw;
@@ -69,19 +72,35 @@ namespace IntelligenceHub.DAL
 
         private List<DbTool> MapToolsFromReader(SqlDataReader reader)
         {
-            var tools = new List<DbTool>
+            try
             {
-                new DbTool
+                var id = (int)reader["ToolId"];
+                var name = (string)reader["ToolName"];
+                var description = (string)reader["ToolDescription"];
+                var required = (string)reader["ToolRequired"];
+                var url = reader["ToolExecutionUrl"] as string;
+                var method = reader["ToolExecutionMethod"] as string;
+
+                var tools = new List<DbTool>
                 {
-                    Id = (int)reader["Id"],
-                    Name = (string)reader["Name"],
-                    Description = (string)reader["Description"],
-                    Required = (string)reader["Required"],
-                    ExecutionUrl = reader["ExecutionUrl"] as string,
-                    ExecutionMethod = reader["ExecutionMethod"] as string,
-                }
-            };
-            return tools;
+                    new DbTool
+                    {
+                        Id = id,
+                        Name = name,
+                        Description = description,
+                        Required = required,
+                        ExecutionUrl = url,
+                        ExecutionMethod = method,
+                    }
+                };
+                return tools;
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+            
         }
     }
 }

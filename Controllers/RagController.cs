@@ -4,6 +4,7 @@ using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Client;
+using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Controllers
 {
@@ -27,13 +28,19 @@ namespace IntelligenceHub.Controllers
                 if (response is not null) return NotFound();
                 else return Ok(response);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -47,13 +54,19 @@ namespace IntelligenceHub.Controllers
                 if (response is not null && response.Count() > 0) return Ok(response);
                 else return NotFound();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -67,13 +80,19 @@ namespace IntelligenceHub.Controllers
                 if (response) return Ok();
                 else return BadRequest();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -89,13 +108,19 @@ namespace IntelligenceHub.Controllers
                 if (response) return Ok();
                 else return NotFound();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -109,13 +134,19 @@ namespace IntelligenceHub.Controllers
                 if (response) return Ok();
                 else return NotFound();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -136,13 +167,19 @@ namespace IntelligenceHub.Controllers
                 if (response != null && response.Count() > 1) return Ok(response);
                 else return NotFound();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -156,13 +193,19 @@ namespace IntelligenceHub.Controllers
                 if (response is not null) return Ok(response);
                 else return NotFound();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -176,13 +219,19 @@ namespace IntelligenceHub.Controllers
                 if (response) return Ok(response);
                 else return BadRequest();
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
@@ -197,13 +246,19 @@ namespace IntelligenceHub.Controllers
                 if (response < 1) return NotFound($"The index {index} does not exist, or does not contain any of the documents in the list");
                 else return Ok(response);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
     }
