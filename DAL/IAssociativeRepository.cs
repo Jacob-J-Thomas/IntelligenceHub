@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Nest;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
+﻿
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
     public interface IAssociativeRepository<T>
     {

@@ -1,21 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.Host.Config;
-using OpenAICustomFunctionCallingAPI.Business;
-using System.Runtime;
-using Azure;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Newtonsoft.Json.Linq;
-using OpenAICustomFunctionCallingAPI.DAL;
-using Nest;
-using Azure.Core;
-using Microsoft.AspNetCore.Routing;
-using System.Reflection.Metadata;
-using OpenAICustomFunctionCallingAPI.Business.ProfileLogic;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
+﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Business;
+using IntelligenceHub.Common.Config;
+using IntelligenceHub.Common.Exceptions;
+using Microsoft.AspNetCore.Mvc;
 
-namespace OpenAICustomFunctionCallingAPI.Controllers
+namespace IntelligenceHub.Controllers
 {
     [Route("[controller]")]
     [ApiController]
@@ -31,7 +20,7 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
         }
 
         [HttpGet]
-        [Route("get/conversation/{id}/{count}")]
+        [Route("conversation/{id}/count/{count}")]
         public async Task<IActionResult> GetConversation([FromRoute] Guid id, [FromRoute] int count) // get this to work with either a string or an int
         {
             try
@@ -41,38 +30,50 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                 if (conversation is null || conversation.Count < 1) return NotFound($"The conversation '{id}' does not exist or is empty...");
                 else return Ok(conversation);
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
         [HttpPost]
-        [Route("upsert/conversation")]
-        public async Task<IActionResult> UpsertConversation([FromBody] List<DbMessageDTO> conversation)
+        [Route("conversation/{id}")]
+        public async Task<IActionResult> UpsertConversationData([FromRoute] Guid id,[FromBody] List<Message> messages)
         {
             try
             {
-                var response = await _messageHistoryLogic.UpsertConversation(conversation);
-                if (response is null || response.Count < 1) return BadRequest("Something went wrong while adding some messages to the database... please check your response body");
-                else return Ok(response);
+                var responseMessages = await _messageHistoryLogic.UpdateOrCreateConversation(id, messages);
+                if (responseMessages is null || responseMessages.Count != messages.Count) throw new IntelligenceHubException(500, $"Something went wrong when adding the messages. Only {responseMessages?.Count ?? 0} of {messages.Count} messages were added.");
+                else return Ok(responseMessages);
+            }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
             }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
         [HttpDelete]
-        [Route("delete/conversation/{id}")]
+        [Route("conversation/{id}")]
         public async Task<IActionResult> DeleteConversation([FromRoute] Guid id)
         {
             try
@@ -81,39 +82,24 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                 if (response) return Ok(response);
                 else return NotFound($"No conversation with ID '{id}' was found");
             }
-            catch (HttpRequestException ex)
+            catch (IntelligenceHubException hubEx)
             {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
-
-        [HttpPost]
-        [Route("add/message")]
-        public async Task<IActionResult> AddMessage([FromBody] DbMessageDTO messageDTO)
-        {
-            try
-            {
-                if (messageDTO.ConversationId is null) return BadRequest("The ConversationId field is missing or invalid.");
-                var response = await _messageHistoryLogic.AddMessage(messageDTO);
-                if (response is not null) return Ok(response);
-                else return BadRequest($"A conversation with the ID '{messageDTO.ConversationId}' does not exist.");
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
             }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
 
         [HttpDelete]
-        [Route("delete/message/{conversationId}/{messageId}")]
+        [Route("conversation/{conversationId}/message/{messageId}")]
         public async Task<IActionResult> DeleteMessage(Guid conversationId, [FromRoute] int messageId)
         {
             try
@@ -122,14 +108,19 @@ namespace OpenAICustomFunctionCallingAPI.Controllers
                 if (response) return Ok(response);
                 else return NotFound("The conversation or message was not found");
             }
+            catch (IntelligenceHubException hubEx)
+            {
+                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
+                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
+                else throw;
+            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                throw new IntelligenceHubException(500, ex.Message);
             }
         }
     }

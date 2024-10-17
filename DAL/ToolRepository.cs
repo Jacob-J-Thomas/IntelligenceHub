@@ -1,22 +1,16 @@
-﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
+﻿using IntelligenceHub.DAL.Models;
+using Microsoft.Data.SqlClient;
+using IntelligenceHub.API.DTOs.Tools;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
-    public class ToolRepository : GenericRepository<DbToolDTO>
+    public class ToolRepository : GenericRepository<DbTool>
     {
         public ToolRepository(string connectionString) : base(connectionString)
         {
         }
 
-        public async Task<ToolDTO> GetToolByNameAsync(string name)
+        public async Task<Tool> GetToolByNameAsync(string name)
         {
             try
             {
@@ -57,7 +51,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        public async Task<ToolDTO> GetToolByIdAsync(int Id)
+        public async Task<Tool> GetToolByIdAsync(int Id)
         {
             try
             {
@@ -178,17 +172,20 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        public async Task<ToolDTO> MapToolFromReader(SqlDataReader reader)
+        public async Task<Tool> MapToolFromReader(SqlDataReader reader)
         {
-            var tool = new DbToolDTO
+            var tool = new DbTool
             {
                 Id = (int)reader["Id"],
                 Name = (string)reader["Name"],
-                Description = reader["Description"] as string
+                Description = (string)reader["Description"],
+                Required = (string)reader["Required"],
+                ExecutionUrl = reader["ExecutionUrl"] as string,
+                ExecutionMethod = reader["ExecutionMethod"] as string,
             };
 
             // Create a dictionary to store properties
-            var propertyList = new List<DbPropertyDTO>();
+            var propertyList = new List<DbProperty>();
 
             // Check if the columns from the properties table are not null
             do
@@ -202,18 +199,18 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     var propertyType = (string)reader["propertiesType"];
                     var propertyDescription = reader["propertiesDescription"] as string;
 
-                    var propDto = new PropertyDTO()
+                    var propDto = new Property()
                     {
-                        id = propertyId,
-                        type = propertyType,
-                        description = propertyDescription
+                        Id = propertyId,
+                        Type = propertyType,
+                        Description = propertyDescription
                     };
 
                     // Create a PropertyDTO and add it to the dictionary
-                    propertyList.Add(new DbPropertyDTO(propertyName, propDto));
+                    propertyList.Add(DbMappingHandler.MapToDbProperty(propertyName, propDto));
                 }
             } while (await reader.ReadAsync());
-            return new ToolDTO(tool, propertyList);
+            return DbMappingHandler.MapFromDbTool(tool, propertyList);
         }
     }
 }

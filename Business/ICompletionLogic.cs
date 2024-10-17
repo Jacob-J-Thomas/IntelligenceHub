@@ -1,14 +1,11 @@
-﻿using Azure.AI.OpenAI;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+﻿using IntelligenceHub.API.DTOs;
 
-namespace OpenAICustomFunctionCallingAPI.Business
+namespace IntelligenceHub.Business
 {
     public interface ICompletionLogic
     {
-        Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest);
-        string GetStreamAuthor(StreamingChatCompletionsUpdate chunk, string profileName, string user = "user");
-        Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest);
-        Task<List<HttpResponseMessage>> ExecuteTools(Guid? conversationId, List<ResponseToolDTO> tools, bool streaming);
+        IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest);
+        Task<CompletionResponse> ProcessCompletion(CompletionRequest completionRequest);
+        Task<List<HttpResponseMessage>> ExecuteTools(Dictionary<string, string> toolCalls, List<Message> messages, Profile? options = null, Guid? conversationId = null, bool streaming = false);
     }
 }

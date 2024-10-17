@@ -1,23 +1,16 @@
-﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
+﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.DAL.Models;
+using Microsoft.Data.SqlClient;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
-    public class MessageHistoryRepository : GenericRepository<DbMessageDTO>
+    public class MessageHistoryRepository : GenericRepository<DbMessage>
     {
         public MessageHistoryRepository(string connectionString) : base(connectionString)
         {
         }
 
-        public async Task<List<DbMessageDTO>> GetConversationAsync(Guid conversationId, int maxMessages)
+        public async Task<List<Message>> GetConversationAsync(Guid conversationId, int maxMessages)
         {
             try
             {
@@ -35,11 +28,12 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         command.Parameters.AddWithValue("@ConversationId", conversationId);
                         using (var reader = await command.ExecuteReaderAsync())
                         {
-                            var conversationHistory = new List<DbMessageDTO>();
+                            var conversationHistory = new List<Message>();
                             while (await reader.ReadAsync())
                             {
-                                var dbMessage = MapFromReader<DbMessageDTO>(reader);
-                                conversationHistory.Add(dbMessage);
+                                var dbMessage = MapFromReader<DbMessage>(reader);
+                                var mappedMessage = DbMappingHandler.MapFromDbMessage(dbMessage);
+                                conversationHistory.Add(mappedMessage);
                             }
                             return conversationHistory;
                         }

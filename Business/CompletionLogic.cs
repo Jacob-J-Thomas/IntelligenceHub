@@ -1,330 +1,322 @@
-﻿using Azure.AI.OpenAI;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.EmbeddingDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs.SystemTools;
-using OpenAICustomFunctionCallingAPI.Client;
-using OpenAICustomFunctionCallingAPI.Common.Extensions;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL;
-using OpenAICustomFunctionCallingAPI.Host.Config;
+﻿using Azure.Search.Documents.Models;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
+using IntelligenceHub.Client;
+using IntelligenceHub.Common;
+using IntelligenceHub.Common.Config;
+using IntelligenceHub.Common.Exceptions;
+using IntelligenceHub.Common.Extensions;
+using IntelligenceHub.DAL;
 using System.Net;
+using static IntelligenceHub.Common.GlobalVariables;
 
-namespace OpenAICustomFunctionCallingAPI.Business
+namespace IntelligenceHub.Business
 {
     public class CompletionLogic : ICompletionLogic
     {
-        //private readonly IConfiguration _configuration;
-        private readonly AIStreamingClient _AIStreamingClient;
-        private readonly AGIClient _AIClient;
+        // move to GlobalVariables class
+        private const int _defaultMessageHistory = 5;
+
+        private readonly IAGIClient _AIClient;
+        private readonly IAISearchServiceClient _searchClient;
         private readonly FunctionClient _functionClient;
-        private readonly EmbeddingClient _embeddingClient;
         private readonly ProfileRepository _profileDb;
         private readonly ToolRepository _toolDb;
-        private readonly ProfileToolsAssociativeRepository _profileToolAssocaitionDb;
         private readonly MessageHistoryRepository _messageHistoryRepository;
-        private readonly RagRepository _ragRepository;
-        private readonly RagMetaRepository _ragMetaRepository;
-        private readonly List<HttpStatusCode> _serverSideErrorCodes;
+        private readonly IndexMetaRepository _ragMetaRepository;
 
-        public CompletionLogic(Settings settings) 
+        public CompletionLogic(IHttpClientFactory clientFactory, IAGIClient agiClient, IAISearchServiceClient searchClient, Settings settings) 
         {
             settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _profileToolAssocaitionDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
             _toolDb = new ToolRepository(settings.DbConnectionString);
-            _AIClient = new AGIClient(settings.AIEndpoint, settings.AIKey);
-            _embeddingClient = new EmbeddingClient(settings.AIEndpoint, settings.AIKey);
-            _AIStreamingClient = new AIStreamingClient(settings.AIEndpoint, settings.AIKey);
-            _functionClient = new FunctionClient("https://Unimplemented.FunctionCallingService.NotARealWebsite.1234567890.com");
+            _AIClient = agiClient;
+            _functionClient = new FunctionClient(clientFactory);
             _profileDb = new ProfileRepository(settings.DbConnectionString);
             _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
-            _ragRepository = new RagRepository(settings.RagDbConnectionString);
-            _ragMetaRepository = new RagMetaRepository(settings.DbConnectionString);
-            _serverSideErrorCodes = new List<HttpStatusCode>() 
-            { 
-                HttpStatusCode.BadGateway,
-                HttpStatusCode.GatewayTimeout,
-                HttpStatusCode.InsufficientStorage,
-                HttpStatusCode.InternalServerError,
-                HttpStatusCode.ServiceUnavailable,
-            };
+            _ragMetaRepository = new IndexMetaRepository(settings.DbConnectionString);
+            _searchClient = searchClient;
         }
 
         #region Streaming
-        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamCompletion(ChatRequestDTO completionRequest)
+        public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
-            if (completionRequest.RagData is not null)
-            {
-                completionRequest.Completion = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Completion, completionRequest.RagData.MaxRagDocs);
-                if (completionRequest.Completion is null) return null;
-            }
-            completionRequest.ProfileModifiers = completionRequest.ProfileModifiers ?? new BaseCompletionDTO();
-            if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest)); // run this without async to improve speed
-            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, completionRequest.Completion, completionRequest.ProfileModifiers, completionRequest.ConversationId, completionRequest.MaxMessageHistory);
-            if (aiClientDTO == null) return null;// adjust this to return 404s
-            aiClientDTO.Stream = true;
-            return await _AIStreamingClient.StreamCompletion(aiClientDTO);
-        }
+            var userMessageTimestamp = DateTime.UtcNow;
 
-        public async Task<StreamingResponse<StreamingChatCompletionsUpdate>> StreamClientBasedCompletion(ClientBasedCompletion completionRequest)
-        {
-            if (completionRequest.RagData is not null)
-            {
-                var lastMessage = completionRequest.Messages.LastOrDefault();
-                lastMessage.Content = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, lastMessage.Content, completionRequest.RagData.MaxRagDocs);
-                if (lastMessage.Content is null) return null;
-            }
-            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, null, completionRequest);
-            if (aiClientDTO == null) return null;// adjust this to return 404s
-            aiClientDTO.Stream = true;
-            return await _AIStreamingClient.StreamCompletion(aiClientDTO);
-        }
+            // Get and set profile details, overriding the database with any parameters that aren't null in the request
+            var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
+            if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name)) ?? throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
+            completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
-        public string GetStreamAuthor(StreamingChatCompletionsUpdate chunk, string profileName, string user = "user")
-        {
-            var author = chunk.AuthorName;
-            if (chunk.Role == "assistant") author = profileName;
-            else if (chunk.Role == "user") author = user;
-            else if (chunk.Role == "tool") author = "tool";
-            return author;
+            // Get and attach message history if a conversation id exists
+            if (completionRequest.ConversationId is Guid conversationId)
+            {
+                completionRequest.Messages = await BuildAndUpdateMessageHistory(
+                    conversationId,
+                    completionRequest.Messages,
+                    completionRequest.ProfileOptions.MaxMessageHistory);
+            }
+
+            // Add data retrieved from RAG indexing
+            if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
+            {
+                var completionMessage = completionRequest.Messages.LastOrDefault();
+                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionMessage);
+                completionRequest.Messages.Remove(completionMessage);
+                completionRequest.Messages.Add(completionMessageWithRagData);
+            }
+
+            var completionCollection = _AIClient.StreamCompletion(completionRequest);
+            if (completionCollection == null) throw new IntelligenceHubException(500, "Something went wrong...");
+
+            Role dbMessageRole;
+            var allCompletionChunks = string.Empty;
+            var toolCallDictionary = new Dictionary<string, string>();
+            await foreach (var update in completionCollection)
+            {
+                if (update == null) continue;
+
+                toolCallDictionary = update.ToolCalls;
+                allCompletionChunks += update.CompletionUpdate;
+
+                var roleString = update.Role.ToString();
+                if (!string.IsNullOrEmpty(roleString))
+                {
+                    dbMessageRole = roleString.ConvertStringToRole();
+                    update.Role = dbMessageRole;
+                }
+                yield return update;
+            }
+
+            if (toolCallDictionary.Any())
+            {
+                if (!string.IsNullOrEmpty(allCompletionChunks)) completionRequest.Messages.Add(new Message() { Content = allCompletionChunks, Role = Role.Assistant, TimeStamp = DateTime.UtcNow });
+                var toolExecutionResponses = await ExecuteTools(toolCallDictionary, completionRequest.Messages, completionRequest.ProfileOptions, completionRequest.ConversationId, streaming: true);
+                yield return new CompletionStreamChunk()
+                {
+                    ToolCalls = toolCallDictionary,
+                    ToolExecutionResponses = toolExecutionResponses,
+                    FinishReason = FinishReason.ToolCalls,
+                };
+            }
+
+            // save new messages to database
+            if (completionRequest.ConversationId is Guid id)
+            {
+                var dbMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.Assistant, Content = allCompletionChunks, TimeStamp = DateTime.UtcNow }, id, toolCallDictionary.Keys.ToArray());
+                await _messageHistoryRepository.AddAsync(dbMessage);
+
+                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = completionRequest.Messages.Last(m => m.Role == Role.User).Content, TimeStamp = userMessageTimestamp }, id, null);
+                await _messageHistoryRepository.AddAsync(dbUserMessage);
+            }
         }
         #endregion
 
         #region Controller
-        public async Task<ChatResponseDTO> ProcessCompletion(ChatRequestDTO completionRequest)
+        public async Task<CompletionResponse?> ProcessCompletion(CompletionRequest completionRequest)
         {
-            // recursive completions contain all their chat history in the database
-            //completionRequest.ConversationId = completionRequest.ConversationId ?? Guid.NewGuid();
-            var responseDTO = new ChatResponseDTO();
+            if (!completionRequest.Messages.Any()) return null;
 
-            if (completionRequest.RagData is not null)
+            // Get and set profile details, overriding the database with any parameters that aren't null in the request
+            var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
+            if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name)) ?? throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
+            completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
+
+            // Get and attach message history if a conversation id exists
+            if (completionRequest.ConversationId is Guid conversationId)
             {
-                completionRequest.Completion = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Completion, completionRequest.RagData.MaxRagDocs);
-                if (completionRequest.Completion is null) return null;
+                completionRequest.Messages = await BuildAndUpdateMessageHistory(
+                    conversationId,
+                    completionRequest.Messages,
+                    completionRequest.ProfileOptions.MaxMessageHistory);
             }
 
-            // Build request DTO
-            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, completionRequest.Completion, completionRequest.ProfileModifiers, completionRequest.ConversationId, completionRequest.MaxMessageHistory); // chose which AIClient to build and execute with here
-            if (aiClientDTO is null) return null;// adjust this to return 404s
-            if (completionRequest.ConversationId is not null) await _messageHistoryRepository.AddAsync(new DbMessageDTO(completionRequest));
-            var completionResponse = await GetCompletion(aiClientDTO, attempts: 0);
-            var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
-            if (defaultChoice is null) return null;
-
-            // move this logic to the controller level like when streaming?
-            responseDTO.ConversationId = completionRequest.ConversationId ?? null;
-            responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.ProfileName, responseDTO.ConversationId);
-            responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
-            return responseDTO;
-        }
-
-        public async Task<ChatResponseDTO> ProcessClientBasedCompletion(ClientBasedCompletion completionRequest)
-        {
-            // recursive completions contain all their chat history in the database
-            var responseDTO = new ChatResponseDTO();
-            if (completionRequest.RagData is not null)
+            // Add data retrieved from RAG indexing
+            if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
             {
-                completionRequest.Messages[0].Content = await BuildRagMessage(completionRequest.RagData.RagDatabase, completionRequest.RagData.RagTarget, completionRequest.Messages[0].Content, completionRequest.RagData.MaxRagDocs);
-                if (completionRequest.Messages[0].Content == null) return null;
+                var completionMessage = completionRequest.Messages.LastOrDefault();
+                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionMessage);
+                completionRequest.Messages.Remove(completionMessage);
+                completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
-            // Build request DTO
-            var aiClientDTO = await BuildCompletion(completionRequest.ProfileName, null, completionRequest);
-            if (aiClientDTO is null) return null;// adjust this to return 404s
-            var completionResponse = await GetCompletion(aiClientDTO, attempts: 0);
-            var defaultChoice = completionResponse.Choices.FirstOrDefault(); // this needs to be modified if we wish to select from multiple results at once later
-            if (defaultChoice is null) return null;
 
-            // move this logic to the controller level like when streaming?
-            responseDTO.ToolResponses = await ProcessCompletionResponse(defaultChoice, completionRequest.Model, null);
-            responseDTO.Completion = defaultChoice.Message.Content ?? "Please hold on for a moment while I process your request...";
-            return responseDTO;
+            var completion = await _AIClient.PostCompletion(completionRequest);
+            if (completion == null) throw new IntelligenceHubException(500, "Something went wrong...");
+
+            if (completionRequest.ConversationId is Guid id)
+            {
+                var dbMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.Assistant || m.Role == Role.Tool), id, completion.ToolCalls.Keys.ToArray());
+                await _messageHistoryRepository.AddAsync(dbMessage);
+
+                var dbUserMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.User), id, null);
+                await _messageHistoryRepository.AddAsync(dbUserMessage);
+            }
+            
+            if (completion.FinishReason == FinishReason.ToolCalls)
+            {
+                var toolExecutionResponses = await ExecuteTools(completion.ToolCalls, completion.Messages, completionRequest.ProfileOptions, completionRequest.ConversationId, streaming: false);
+                completion.ToolExecutionResponses.AddRange(toolExecutionResponses);
+            }
+            return completion;
         }
 
-        public async Task<string> BuildRagMessage(string database, string target, string completion, int? maxRagDocs)
+        public async Task<List<Message>> BuildAndUpdateMessageHistory(Guid conversationId, List<Message> requestMessages, int? maxMessageHistory = null)
         {
-            var ragMetadata = await _ragMetaRepository.GetByNameAsync(database);
-            if (ragMetadata is null || maxRagDocs is null || string.IsNullOrWhiteSpace(database) || string.IsNullOrWhiteSpace(completion)) return null;
-            var ragInstructionData = "Below you will find a set of documents, each delimited with tripple backticks. " +
-                "Please use these documents to inform your response to the dialogue below the documents. " +
-                "If you use one of the sources, please reference it in your response using markdown like so: [SourceName](SourceLink)." +
-                "If no SourceLink is present, only provide the sourcename.\n\n";
+            var allMessages = new List<Message>();
+            var messageHistory = await _messageHistoryRepository.GetConversationAsync(conversationId, maxMessageHistory ?? _defaultMessageHistory);
+            if (messageHistory == null) throw new IntelligenceHubException(404, $"A conversation with id '{conversationId}' does not exist");
 
-            _ragRepository.SetTable(database);
-            EmbeddingRequestBase embeddingRequest = new()
+            // add messages to the database
+            foreach (var message in messageHistory)
             {
-                Input = completion,
-                Model = ragMetadata.VectorModel,
-                Encoding_Format = ragMetadata.EncodingFormat,
-                Dimensions = ragMetadata.Dimensions
+                // Move to DAL layer
+                var dbMessage = DbMappingHandler.MapToDbMessage(message, conversationId);
+                await _messageHistoryRepository.AddAsync(dbMessage);
+            }
+
+            // ensure the messages are properly arranged, with the user completion appearing very last
+            allMessages.AddRange(messageHistory);
+            allMessages.AddRange(requestMessages);
+
+            // Reduce the amount of messages to reflect the MaxMessageHistory property
+            if (maxMessageHistory is int maxMessages) allMessages.RemoveRange(maxMessages, allMessages.Count - maxMessages);
+            return allMessages;
+        }
+
+        public async Task<Profile> BuildCompletionOptions(Profile profile, Profile profileOptions)
+        {
+            // adds the profile references to the tools
+            if (profileOptions.Tools == null) profileOptions.Tools = new List<Tool>();
+            if (profileOptions.Reference_Profiles != null) profileOptions.Tools.AddRange(await BuildProfileReferenceTool(profileOptions.Reference_Profiles));
+
+            return new Profile()
+            {
+                Id = profile.Id,
+                Name = profile.Name,
+                Model = profileOptions.Model ?? profile.Model,
+                RagDatabase = profileOptions.RagDatabase ?? profile.RagDatabase,
+                MaxMessageHistory = profileOptions.MaxMessageHistory ?? profile.MaxMessageHistory,
+                Max_Tokens = profileOptions.Max_Tokens ?? profile.Max_Tokens,
+                Temperature = profileOptions.Temperature ?? profile.Temperature,
+                Top_P = profileOptions.Top_P ?? profile.Top_P,
+                Frequency_Penalty = profileOptions.Frequency_Penalty ?? profile.Frequency_Penalty,
+                Presence_Penalty = profileOptions.Presence_Penalty ?? profile.Presence_Penalty,
+                Seed = profileOptions.Seed ?? profile.Seed,
+                Stop = profileOptions.Stop ?? profile.Stop,
+                Logprobs = profileOptions.Logprobs ?? profile.Logprobs,
+                Top_Logprobs = profileOptions.Top_Logprobs ?? profile.Top_Logprobs,
+                Response_Format = profileOptions.Response_Format ?? profile.Response_Format,
+                User = profileOptions.User ?? profile.User,
+                Tools = profileOptions.Tools ?? profile.Tools,
+                System_Message = profileOptions.System_Message ?? profile.System_Message,
+                Return_Recursion = profileOptions.Return_Recursion ?? profile.Return_Recursion,
+                Reference_Profiles = profileOptions.Reference_Profiles ?? profile.Reference_Profiles,
             };
-            var embedding = await _embeddingClient.GetEmbeddings(embeddingRequest);
-            var embeddingBinary = embedding.Data[0].Embedding.EncodeToBinary();
-            var documents = await _ragRepository.CosineSimilarityQueryAsync(target, embeddingBinary, (int)maxRagDocs);
-            foreach (var doc in documents) ragInstructionData += 
-                    "\n```\n" + 
-                    $"Title: {doc.Title}\n" +
-                    $"SourceName: {doc.SourceName}\n" +
-                    $"SourceLink: {doc.SourceLink}\n" +
-                    $"SourceName: {doc.SourceName}\n" +
-                    $"Content: {doc.Content}\n" + 
-                    "```\n";
-
-            return ragInstructionData + "\n\n" + completion;
-        }
-
-        public async Task<List<HttpResponseMessage>> ProcessCompletionResponse(ResponseChoiceDTO response, string profileName, Guid? conversationId)
-        {
-            // Add response to database conversation history
-            if (response.Message.Content is not null)
-            {
-                var responseMessage = new DbMessageDTO();
-                responseMessage.ConvertToDbMessageDTO(conversationId, "assistant", profileName, response.Message.Content);
-                if (conversationId is not null) await _messageHistoryRepository.AddAsync(responseMessage);
-            }
-
-            // process and return completion data
-            if (response.Finish_Reason == "tool_calls")
-            {
-                var completionToolCalls = response.Message.Tool_Calls; 
-                return await ExecuteTools(conversationId, response.Message.Tool_Calls, streaming: false);
-            }
-            return null;
-        }
-
-        // move to an AIClient in API layer
-        public async Task<CompletionResponseDTO> GetCompletion(DefaultCompletionDTO openAIRequest, int attempts)
-        {
-            var maxAttempts = 5;
-            while (attempts < maxAttempts)
-            {
-                try
-                {
-                    var completionResponse = await _AIClient.PostCompletion(openAIRequest);
-
-                    // improve this validation
-                    if (completionResponse is null || completionResponse.Choices.FirstOrDefault() is null) return null;
-                    return completionResponse;
-                }
-                catch (HttpRequestException ex)
-                {
-                    if (ex.StatusCode != null && _serverSideErrorCodes.Contains((HttpStatusCode)ex.StatusCode))
-                    {
-                        
-                        // add logic to switch to backup services 
-
-                        await GetCompletion(openAIRequest, attempts++);
-                    }
-                    else throw;
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
-            }
-            throw new Exception("Completion request failed after 3 attempts.");
         }
         #endregion
 
         #region Shared
-        public async Task<DefaultCompletionDTO> BuildCompletion(string profileName, string? completion = null, BaseCompletionDTO? modifiers = null, Guid? conversationId = null, int? maxMessageHistory = null)
-        {
-            // probably move this to a seperate method
-            var completionProfile = await _profileDb.GetByNameWithToolsAsync(profileName);
-            if (completionProfile is null)
-            {
-                var profileWithoutTools = await _profileDb.GetByNameAsync(profileName);
-                if (profileWithoutTools is null) return null;
-                completionProfile = new APIProfileDTO(profileWithoutTools);
-            }
-            else
-            {
-                var profileToolDTOs = await _profileToolAssocaitionDb.GetToolAssociationsAsync(completionProfile.Id);
-                completionProfile.Tools = new List<ToolDTO>();
-                foreach (var association in profileToolDTOs) completionProfile.Tools.Add(await _toolDb.GetToolByIdAsync(association.ToolID));
-            }
-            
-            DefaultCompletionDTO openAIRequest;
-            if (modifiers is not null) openAIRequest = new DefaultCompletionDTO(completionProfile, modifiers);
-            else openAIRequest = new DefaultCompletionDTO(completionProfile);
-            if (completionProfile.Reference_Profiles is not null && completionProfile.Reference_Profiles.Length > 0)
-                foreach (var profile in completionProfile.Reference_Profiles) openAIRequest.Tools.Add(await BuildProfileReferenceTool(profile));
-            if (completion is not null) openAIRequest.Messages = await BuildMessages(completion, openAIRequest.System_Message, conversationId, maxMessageHistory);
-            else if (modifiers is ClientBasedCompletion clientBasedCompletion) openAIRequest.Messages = clientBasedCompletion.Messages;
-            return openAIRequest;
-        }
 
-        public async Task<ToolDTO> BuildProfileReferenceTool(string profileName)
+        public async Task<List<Tool>> BuildProfileReferenceTool(string[] profileNames)
         {
-            var profile = await _profileDb.GetByNameAsync(profileName);
-            if (profile == null) return null;
-            return new ProfileReferenceTools(profile);
-        }
-
-        public async Task<List<MessageDTO>> BuildMessages(string completion, string? systemMessage, Guid? conversationId, int? maxMessageHistory)
-        {
-            var messages = new List<MessageDTO>();
-            if (systemMessage != null) messages.Add(new MessageDTO("system", systemMessage));
-            if (conversationId != null && maxMessageHistory > 0)
+            var tools = new List<Tool>();
+            foreach (var name in profileNames)
             {
-                var completionMessageCount = 1; // this will always = 1
-                var maxDbMessagesToRetrieve = maxMessageHistory ?? 5 - completionMessageCount;
-                var dbMessages = new List<DbMessageDTO>();
-                if (conversationId is not null) dbMessages = await _messageHistoryRepository.GetConversationAsync((Guid)conversationId, maxDbMessagesToRetrieve);
-                foreach (var dbMessage in dbMessages)
-                {
-                    var message = new MessageDTO()
-                    {
-                        Role = dbMessage.Role,
-                        Content = dbMessage.Content,
-                    };
-                    messages.Add(message);
-                }
+                var profile = await _profileDb.GetByNameAsync(name);
+                if (profile == null) return null;
+                tools.Add(new ProfileReferenceTools(profile));
             }
-            if (completion != null) messages.Add(new MessageDTO("user", completion));
-            return messages;
+            return tools;
         }
 
         // seperate this into two functions probably
-        public async Task<List<HttpResponseMessage>> ExecuteTools(Guid? conversationId, List<ResponseToolDTO> tools, bool streaming)
+        public async Task<List<HttpResponseMessage>> ExecuteTools(Dictionary<string, string> toolCalls, List<Message> messages, Profile? options = null, Guid? conversationId = null, bool streaming = false)// ChatCompletion
         {
-            var recursionTools = new List<ResponseToolDTO>();
+            var modelRecursionTools = new Dictionary<string, string>();
             var functionResults = new List<HttpResponseMessage>();
 
-            // Handle recursive completions - i.e. have other models add a message before responding
-            foreach (var tool in tools)
+            // Handle standard tool calls and collect recursive calls
+            foreach (var tool in toolCalls)
             {
-                if (tool.Function.Name.Contains("_Reference_AI_Model"))
+                var toolName = tool.Key.Replace("_Reference_AI_Model", "");
+                if (tool.Key.Contains("_Reference_AI_Model"))
                 {
-                    tool.Function.Name = tool.Function.Name.Replace("_Reference_AI_Model", "");
-                    recursionTools.Add(tool);
+                    modelRecursionTools.Add(toolName, tool.Value);
                 }
                 else
                 {
-                    var result = await _functionClient.CallFunction(tool);
-                    if (result != null) functionResults.Add(result);
+                    var dbTool = await _toolDb.GetByNameAsync(toolName);
+                    var toolExecutionMethod = dbTool.ExecutionMethod ?? HttpMethod.Post.ToString();
+
+                    // how do we determine if the below is a post, get etc.?
+                    if (!string.IsNullOrEmpty(dbTool.ExecutionUrl))
+                    {
+                        functionResults.Add(await _functionClient.CallFunction(tool.Key, tool.Value, dbTool.ExecutionUrl, toolExecutionMethod));
+                    }
                 }
             }
 
-            // Handle standard tool calls
-            foreach (var tool in recursionTools)
+            // Handle recursive completions - i.e. have other models add a message before responding
+            foreach (var tool in modelRecursionTools)
             {
-                var completionRequest = new ChatRequestDTO()
+                var completionRequest = new CompletionRequest()
                 {
                     ConversationId = conversationId,
-                    ProfileName = tool.Function.Name
+                    Messages = messages,
+                    ProfileOptions = options ?? new Profile() { Name = tool.Key }
                 };
-                if (streaming) await StreamCompletion(completionRequest);
+
+                // add anything the previous model wanted to forward
+                if (!string.IsNullOrEmpty(tool.Value)) completionRequest.Messages.Add(new Message() { Role = Role.Assistant, Content = tool.Value });
+                if (streaming)
+                {
+                    await foreach (var _ in StreamCompletion(completionRequest));
+                }
                 else await ProcessCompletion(completionRequest);
             }
-            // prevent recursion call overflow somehow... Maybe add a column to profiles for max recursion?
-            // - This would work strangely for conversations with models that use varying lengths
-            // - alternatively this value could be supplied by the client, and a default value would be used otherwise
             return functionResults;
+        }
+
+        private async Task<Message> RetrieveRagData(string indexName, Message completion)
+        {
+            var dbIndex = await _ragMetaRepository.GetByNameAsync(indexName);
+
+            var indexData = DbMappingHandler.MapFromDbIndexMetadata(dbIndex);
+            var ragData = await _searchClient.SearchIndex(indexData, completion.Content);
+
+            var resultCollection = ragData.GetResultsAsync();
+            var ragDataString = string.Empty;
+            await foreach (var item in resultCollection)
+            {
+                if (indexData.QueryType == SearchQueryType.Semantic.ToString())
+                {
+                    var semanticResult = item.SemanticSearch;
+                    ragDataString += $"\n```\n" +
+                                     $"\nTitle: {item.Document.title}" +
+                                     $"\nSource: {item.Document.source}" +
+                                     $"\nCreation Date: {item.Document.created.ToString("yyyy-MM-ddTHH:mm:ss")}" +
+                                     $"\nLast Updated Date: {item.Document.modified.ToString("yyyy-MM-ddTHH:mm:ss")}";
+                    foreach (var caption in semanticResult.Captions) ragDataString += $"\nContent Chunk: {caption.Text}";
+                    ragDataString += $"\n```\n";
+                }
+                else
+                {
+                    ragDataString += $"\n```\n" +
+                                     $"\nTitle: {item.Document.title}" +
+                                     $"\nSource: {item.Document.source}" +
+                                     $"\nCreation Date: {item.Document.created.ToString("yyyy-MM-ddTHH:mm:ss")}" +
+                                     $"\nLast Updated Date: {item.Document.modified.ToString("yyyy-MM-ddTHH:mm:ss")}" +
+                                     $"\nContent: {item.Document.content}" +
+                                     $"\n```\n";
+                }
+            }
+
+            completion.Content = $"\n\nIf pertinent, use the below documents, each of which is delimited with triple backticks, " +
+                $"to respond to assist with your response to the following prompt, and provide their sources in your response if you use them: " +
+                $"{completion.Content}\n\n" 
+                + ragDataString;
+
+            return completion;
         }
         #endregion
     }

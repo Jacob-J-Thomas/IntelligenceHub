@@ -1,20 +1,11 @@
-﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.Common;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Reflection;
+﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.DAL.Models;
+using Microsoft.Data.SqlClient;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
     //make this more generic
-    public class ProfileToolsAssociativeRepository : IAssociativeRepository<APIProfileDTO>
+    public class ProfileToolsAssociativeRepository : IAssociativeRepository<DbProfileTool>
     {
         private readonly string _connectionString;
 
@@ -23,7 +14,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             _connectionString = connectionString;
         }
 
-        public async Task<List<DbProfileToolDTO>> GetToolAssociationsAsync(int profileId) 
+        public async Task<List<DbProfileTool>> GetToolAssociationsAsync(int profileId) 
         {
             try
             {
@@ -31,7 +22,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 {
                     await connection.OpenAsync();
 
-                    var query = $@"SELECT * FROM [master].[dbo].[profileTools] WHERE ProfileId = @ProfileId";
+                    var query = $@"SELECT * FROM profileTools WHERE ProfileId = @ProfileId";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -39,7 +30,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         command.Parameters.AddWithValue("@ProfileId", profileId);
                         using (var reader = await command.ExecuteReaderAsync())
                         {
-                            var associations = new List<DbProfileToolDTO>();
+                            var associations = new List<DbProfileTool>();
                             while (await reader.ReadAsync())
                             {
                                 associations.Add(MapAssociationsFromReader(reader));
@@ -49,7 +40,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 throw;
             }
@@ -152,7 +143,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         SET @ProfileID = (SELECT Id FROM profiles WHERE [Name] = @Name);
                         IF @ProfileID IS NOT NULL
                         BEGIN
-                            DELETE FROM [master].[dbo].[profileTools] 
+                            DELETE FROM profileTools
                             WHERE ToolID = @ToolID
                             AND ProfileID = @ProfileID;
                         END";
@@ -184,7 +175,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         SET @ToolID = (SELECT Id FROM tools WHERE [Name] = @Name);
                         IF @ToolID IS NOT NULL
                         BEGIN
-                            DELETE FROM [master].[dbo].[profileTools] 
+                            DELETE FROM profileTools
                             WHERE ProfileID = @ProfileID
                             AND ToolID = @ToolID;
                         END";
@@ -211,7 +202,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 {
                     await connection.OpenAsync();
 
-                    var query = $@"DELETE FROM [master].[dbo].[profileTools] WHERE ProfileId = @ProfileId";
+                    var query = $@"DELETE FROM profileTools WHERE ProfileId = @ProfileId";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -235,7 +226,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 {
                     await connection.OpenAsync();
 
-                    var query = $@"DELETE FROM [master].[dbo].[profileTools] WHERE ToolID = @ToolID";
+                    var query = $@"DELETE FROM profileTools WHERE ToolID = @ToolID";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -251,25 +242,10 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        //private APIProfileDTO MapProfileFromReader(SqlDataReader reader)
-        //{
-        //    var entity = new APIProfileDTO();
-        //    foreach (var property in typeof(APIProfileDTO).GetProperties())
-        //    {
-        //        var columnName = property.Name;
-        //        var value = reader[columnName];
-        //        if (value != DBNull.Value)
-        //        {
-        //            property.SetValue(entity, value);
-        //        }
-        //    }
-        //    return entity;
-        //}
-
-        private DbProfileToolDTO MapAssociationsFromReader(SqlDataReader reader)
+        private DbProfileTool MapAssociationsFromReader(SqlDataReader reader)
         {
-            var entity = new DbProfileToolDTO();
-            foreach (var property in typeof(DbProfileToolDTO).GetProperties())
+            var entity = new DbProfileTool();
+            foreach (var property in typeof(DbProfileTool).GetProperties())
             {
                 var columnName = property.Name;
                 var value = reader[columnName];

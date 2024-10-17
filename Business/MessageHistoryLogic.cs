@@ -1,8 +1,9 @@
-﻿using Microsoft.Identity.Client;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.MessageDTOs;
-using OpenAICustomFunctionCallingAPI.DAL;
+﻿using IntelligenceHub.DAL;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Common.Exceptions;
+using IntelligenceHub.DAL.Models;
 
-namespace OpenAICustomFunctionCallingAPI.Business
+namespace IntelligenceHub.Business
 {
     public class MessageHistoryLogic
     {
@@ -13,19 +14,20 @@ namespace OpenAICustomFunctionCallingAPI.Business
             _messageHistoryRepository = new MessageHistoryRepository(dbConnectionString);
         }
 
-        public async Task<List<DbMessageDTO>> GetConversationHistory(Guid id, int count)
+        public async Task<List<Message>> GetConversationHistory(Guid id, int count)
         {
             return await _messageHistoryRepository.GetConversationAsync(id, count);
         }
 
-        public async Task<List<DbMessageDTO>> UpsertConversation(List<DbMessageDTO> messages)
+        public async Task<List<Message>> UpdateOrCreateConversation(Guid conversationId, List<Message> messages)
         {
-            var addedMessages = new List<DbMessageDTO>();
+            var addedMessages = new List<Message>();
             foreach (var message in messages)
             {
-                var response = await _messageHistoryRepository.AddAsync(message);
-                if (response is null) return null;
-                addedMessages.Add(response);
+                var dbMessage = DbMappingHandler.MapToDbMessage(message, conversationId);
+                var addedMessage = await _messageHistoryRepository.AddAsync(dbMessage);
+                if (addedMessage is null) return addedMessages;
+                addedMessages.Add(message);
             }
             return addedMessages;
         }
@@ -35,11 +37,12 @@ namespace OpenAICustomFunctionCallingAPI.Business
             return await _messageHistoryRepository.DeleteConversationAsync(id);
         }
 
-        public async Task<DbMessageDTO> AddMessage(DbMessageDTO message)
+        public async Task<DbMessage> AddMessage(Guid conversationId, Message message)
         {
-            var conversation = await _messageHistoryRepository.GetConversationAsync((Guid)message.ConversationId, 1);
-            if (conversation is null || conversation.Count < 1) return null; 
-            return await _messageHistoryRepository.AddAsync(message);
+            var dbMessage = DbMappingHandler.MapToDbMessage(message, conversationId);
+            var conversation = await _messageHistoryRepository.GetConversationAsync(conversationId, 1);
+            if (conversation == null) throw new IntelligenceHubException(404, $"A conversations with id '{conversationId}' does not exist."); 
+            return await _messageHistoryRepository.AddAsync(dbMessage);
         }
 
         public async Task<bool> DeleteMessage(Guid conversationId, int messageId)

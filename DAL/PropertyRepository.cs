@@ -1,21 +1,16 @@
-﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
+﻿using IntelligenceHub.DAL.Models;
+using Microsoft.Data;
+using Microsoft.Data.SqlClient;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
-    public class PropertyRepository : GenericRepository<DbPropertyDTO>
+    public class PropertyRepository : GenericRepository<DbProperty>
     {
         public PropertyRepository(string connectionString) : base(connectionString)
         {
         }
 
-        public async Task<List<DbPropertyDTO>> GetToolProperties(int Id)
+        public async Task<List<DbProperty>> GetToolProperties(int Id)
         {
             try
             {
@@ -31,10 +26,10 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         command.Parameters.AddWithValue("Id", Id);
                         using (var reader = await command.ExecuteReaderAsync())
                         {
-                            var propertyList = new List<DbPropertyDTO>();
+                            var propertyList = new List<DbProperty>();
                             while (await reader.ReadAsync())
                             {
-                                propertyList.Add(MapFromReader<DbPropertyDTO>(reader));
+                                propertyList.Add(MapFromReader<DbProperty>(reader));
                             }
                             return propertyList;
                         }
@@ -48,7 +43,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        public async Task<DbPropertyDTO> UpdatePropertyAsync(DbPropertyDTO existingEntity, DbPropertyDTO entity)
+        public async Task<DbProperty> UpdatePropertyAsync(DbProperty existingEntity, DbProperty entity)
         {
             try
             {
@@ -56,7 +51,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 {
                     await connection.OpenAsync();
 
-                    var setClause = string.Join(", ", typeof(DbPropertyDTO).GetProperties()
+                    var setClause = string.Join(", ", typeof(DbProperty).GetProperties()
                         .Where(p => p.Name != "Id" && p.Name != "Name" && p.Name != "ToolId") // Exclude Id and Name properties
                         .Select(p => $"{p.Name} = @{p.Name}"));
 
@@ -67,7 +62,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
 
                     using (var command = new SqlCommand(query, connection))
                     {
-                        foreach (var property in typeof(DbPropertyDTO).GetProperties())
+                        foreach (var property in typeof(DbProperty).GetProperties())
                         {
                             // Exclude Id and Name properties from being updated
                             if (property.Name != "Id" && property.Name != "Name" && property.Name != "ToolId")
@@ -85,7 +80,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         {
                             if (await reader.ReadAsync())
                             {
-                                return MapFromReader<DbPropertyDTO>(reader);
+                                return MapFromReader<DbProperty>(reader);
                             }
                         }
                     }

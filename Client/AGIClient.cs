@@ -1,76 +1,262 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
-using Azure.Core;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.AICompletionDTOs;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using Polly;
-using Polly.Contrib.WaitAndRetry;
-using Polly.Retry;
-using Azure.AI.OpenAI;
-using Azure;
-using System.Text.Json;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.CompletionDTOs.Response;
+﻿using Azure.AI.OpenAI;
+using OpenAI.Assistants;
+using OpenAI.Chat;
+using IntelligenceHub.API.DTOs;
+using System.ClientModel;
+using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.Common;
+using Azure.AI.OpenAI.Chat;
+using IntelligenceHub.Common.Config;
+using IntelligenceHub.Common.Extensions;
 
-namespace OpenAICustomFunctionCallingAPI.Client
+namespace IntelligenceHub.Client
 {
-    public class AGIClient
+    public class AGIClient : IAGIClient
     {
-        private OpenAIClient _streamingClient;
-        private string _apiEndpoint;
-        private string _apiKey;
+        private AzureOpenAIClient _azureOpenAIClient;
+        
+        private readonly string _aiSearchServiceUrl;
+        private readonly string _aiSearchServiceKey;
 
-        public AGIClient(string ApiEndpoint, string ApiKey) 
+        private readonly string _embeddingModel = "text-embedding-3-large";
+
+        public AGIClient(AGIClientSettings settings) 
         {
-            _streamingClient = new OpenAIClient(ApiKey);
-            _apiEndpoint = ApiEndpoint + "chat/completions";
-            _apiKey = ApiKey;
+            _aiSearchServiceUrl = settings.Endpoint;
+            _aiSearchServiceKey = settings.Key;
+
+            var endpointWithRouting = settings.Endpoint; //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
+            var resourceUri = new Uri(endpointWithRouting);
+            var credential = new ApiKeyCredential(settings.Key);
+            _azureOpenAIClient = new AzureOpenAIClient(resourceUri, credential);
         }
 
-        public async Task<CompletionResponseDTO?> PostCompletion(DefaultCompletionDTO completion)
+        public async Task<CompletionResponse?> PostCompletion(CompletionRequest completionRequest)
         {
-            var retryPolicy = GetRetryPolicy();
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-
-            var settings = new JsonSerializerSettings();
-            settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-
-            var json = JsonConvert.SerializeObject(completion, settings);
-            var content =  new StringContent(json, Encoding.UTF8, "application/json");
-
-            using (client)
+            try
             {
-                return await retryPolicy.ExecuteAsync(async() => await ProcessRequest(client, content));
+                var options = BuildCompletionOptions(completionRequest);
+                var messages = BuildCompletionMessages(completionRequest);
+                var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
+                var completionResult = await chatClient.CompleteChatAsync(messages, options);
+
+                var toolCalls = new Dictionary<string, string>();
+                foreach (var tool in completionResult.Value.ToolCalls) toolCalls.Add(tool.FunctionName, tool.FunctionArguments);
+
+                // build the response object
+                var responseMessage = new Message()
+                {
+                    Content = completionResult.Value.Content[0].Text ?? string.Empty,
+                    Role = completionResult.Value.Role.ToString().ConvertStringToRole(),
+                    TimeStamp = DateTime.UtcNow
+                };
+
+                foreach (var content in completionResult.Value.Content)
+                {
+                    if (responseMessage.Base64Image == null && content.Kind == ChatMessageContentPartKind.Image) responseMessage.Base64Image = Convert.ToBase64String(content.ImageBytes);
+                    else if (string.IsNullOrEmpty(responseMessage.Content) && content.Kind == ChatMessageContentPartKind.Text) responseMessage.Content = content.Text;
+                }
+                
+                var response = new CompletionResponse()
+                {
+                    FinishReason = completionResult.Value.FinishReason.ToString().ConvertStringToFinishReason(),
+                    Messages = completionRequest.Messages,
+                    ToolCalls = toolCalls
+                };
+                response.Messages.Add(responseMessage);
+                return response;
+            }
+            catch (Exception)
+            {
+                // log excepition?
+
+                return null;
+            }
+            
+        }
+
+        public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
+        {
+            var options = BuildCompletionOptions(completionRequest);
+            var messages = BuildCompletionMessages(completionRequest);
+            var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
+            var resultCollection = chatClient.CompleteChatStreamingAsync(messages, options);
+
+            var chunkId = 0;
+            string role = null;
+            string finishReason = null;
+            var currentTool = string.Empty;
+            var currentToolArgs = string.Empty;
+            var toolCalls = new Dictionary<string, string>();
+            await foreach (var result in resultCollection)
+            {
+                if (!string.IsNullOrEmpty(result.Role.ToString())) role = result.Role.ToString() ?? role;
+                if (!string.IsNullOrEmpty(result.FinishReason.ToString())) finishReason = result.FinishReason.ToString() ?? finishReason;
+                var content = string.Empty;
+                var base64Image = string.Empty;
+
+                foreach (var update in result.ContentUpdate)
+                {
+                    if (string.IsNullOrEmpty(base64Image) && update.Kind == ChatMessageContentPartKind.Image) base64Image = Convert.ToBase64String(update.ImageBytes);
+                    if (string.IsNullOrEmpty(content) && update.Kind == ChatMessageContentPartKind.Text) content += update.Text;
+                }
+
+                // handle tool conversion - move to seperate method
+                foreach (var update in result.ToolCallUpdates)
+                {
+                    // capture current values
+                    if (string.IsNullOrEmpty(currentTool)) currentTool = update.FunctionName;
+                    if (currentTool == update.FunctionName) currentToolArgs += update.FunctionArgumentsUpdate;
+                    else
+                    {
+                        currentTool = update.FunctionName;
+                        currentToolArgs = update.FunctionArgumentsUpdate;
+                    }
+
+                    if (toolCalls.ContainsKey(currentTool)) toolCalls[currentTool] = currentToolArgs;
+                    else toolCalls.Add(currentTool, currentToolArgs);
+                }
+
+                yield return new CompletionStreamChunk()
+                {
+                    Id = chunkId++,
+                    Role = role?.ConvertStringToRole(),
+                    CompletionUpdate = content,
+                    Base64Image = base64Image,
+                    FinishReason = finishReason?.ConvertStringToFinishReason(),
+                    ToolCalls = toolCalls
+                };
             }
         }
 
-        private async Task<CompletionResponseDTO> ProcessRequest(HttpClient client, StringContent content)
+        private List<ChatMessage> BuildCompletionMessages(CompletionRequest completionRequest)
         {
-            var httpResponse = await client.PostAsync(_apiEndpoint, content);
-            httpResponse.EnsureSuccessStatusCode();
-            var responseString = await httpResponse.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<CompletionResponseDTO>(responseString);
+            var systemMessage = completionRequest.ProfileOptions.System_Message;
+            var completionMessages = new List<ChatMessage>();
+            if (!string.IsNullOrWhiteSpace(systemMessage)) completionMessages.Add(new SystemChatMessage(systemMessage));
+            foreach (var message in completionRequest.Messages)
+            {
+                if (message.Role.ToString() == MessageRole.User.ToString())
+                {
+                    completionMessages.Add(new UserChatMessage(message.Content));
+
+                    // Add an image if necessary
+                    if (!string.IsNullOrEmpty(message.Base64Image)) completionMessages.Add(new UserChatMessage(message.Base64Image));
+
+
+                    // might need to do something like this to get the above to work
+                    //
+                    // $"data:image/jpeg;base64,{encodedImage}"
+
+                }
+                else if (message.Role.ToString() == MessageRole.Assistant.ToString()) completionMessages.Add(new AssistantChatMessage(message.Content));
+            }
+            return completionMessages;
         }
 
-        private AsyncRetryPolicy GetRetryPolicy()
+        private ChatCompletionOptions BuildCompletionOptions(CompletionRequest completion)
         {
-            var delay = Backoff
-               .DecorrelatedJitterBackoffV2(
-               medianFirstRetryDelay: TimeSpan.FromSeconds(1),
-               retryCount: 5);
+            var options = new ChatCompletionOptions()
+            {
+                MaxOutputTokenCount = completion.ProfileOptions.Max_Tokens,
+                Temperature = completion.ProfileOptions.Temperature,
+                TopP = completion.ProfileOptions.Top_P,
+                FrequencyPenalty = completion.ProfileOptions.Frequency_Penalty,
+                PresencePenalty = completion.ProfileOptions.Presence_Penalty,
+                IncludeLogProbabilities = completion.ProfileOptions.Logprobs,
+                Seed = completion.ProfileOptions.Seed,
+                EndUserId = completion.ProfileOptions.User,
+            };
 
-            return Policy
-                .Handle<HttpRequestException>()
-                .Or<TaskCanceledException>()
-                .WaitAndRetryAsync(delay);
+            // Potentially useful later for testing, validation, and fine tuning. Maps token probabilities
+            //options.LogitBiases
+
+            // set response format
+            if (completion.ProfileOptions.Response_Format == ResponseFormat.Json.ToString()) options.ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat();
+            else if (completion.ProfileOptions.Response_Format == ResponseFormat.Text.ToString()) options.ResponseFormat = ChatResponseFormat.CreateTextFormat();
+
+            // set log probability
+            if (options.IncludeLogProbabilities == true) options.TopLogProbabilityCount = completion.ProfileOptions.Top_Logprobs;
+
+            // set stop messages
+            if (completion.ProfileOptions.Stop != null && completion.ProfileOptions.Stop.Length > 0)
+            {
+                foreach (var message in completion.ProfileOptions.Stop) options.StopSequences.Add(message);
+            }
+
+            // set tools
+            if (completion.ProfileOptions.Tools != null) foreach (var tool in completion.ProfileOptions.Tools) 
+                {
+                    options.Tools.Add(ChatTool.CreateFunctionTool(
+                        tool.Function.Name, 
+                        tool.Function.Description, 
+                        new BinaryData(tool.Function.Parameters)));
+                };
+
+            // Set tool choice
+            if (completion.ProfileOptions.Tools != null && completion.ProfileOptions.Tools.Any())
+            {
+                if (completion.ProfileOptions.Tools.Count > 1) options.ParallelToolCallsEnabled = true;
+
+                if (completion.ProfileOptions.Tool_Choice == null || completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Auto.ToString()) options.ToolChoice = ChatToolChoice.CreateAutoChoice();
+                else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.None.ToString()) options.ToolChoice = ChatToolChoice.CreateNoneChoice();
+                else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Required.ToString()) options.ToolChoice = ChatToolChoice.CreateRequiredChoice();
+                else options.ToolChoice = ChatToolChoice.CreateFunctionChoice(completion.ProfileOptions.Tool_Choice);
+            }
+            // Tools and RAG DBs are not supported simultaneously, therefore RAG data is being attached at the business logic level via a direct query for now
+            //if (!string.IsNullOrEmpty(completion.ProfileOptions.RagDatabase)) options = AttachDatabaseOptions(completion.ProfileOptions.RagDatabase, options);
+            return options;
+        }
+
+        public async Task<float[]?> GetEmbeddings(string completion, string? embeddingModel = null)
+        {
+            embeddingModel = embeddingModel ?? _embeddingModel;
+            var embeddingClient = _azureOpenAIClient.GetEmbeddingClient(embeddingModel);
+            var embeddingResponse = await embeddingClient.GenerateEmbeddingAsync(completion);
+            return embeddingResponse.Value.ToFloats().ToArray();
+        }
+
+        // below code is currently not being used since Azure OpenAI does not support tools with RAG via AI Search.
+        // Therefore AI Search indexes are queried directly and the we manually attach the data to the final user request.
+        private ChatCompletionOptions AttachDatabaseOptions(string indexName, ChatCompletionOptions options)
+        {
+            var fieldMappings = new DataSourceFieldMappings();
+
+            // configure below dynamically based off of RAG database definition
+            fieldMappings.VectorFieldNames.Add("contentVector");
+            fieldMappings.VectorFieldNames.Add("titleVector");
+
+            // get below values from database
+            options.AddDataSource(new AzureSearchChatDataSource()
+            {
+                Endpoint = new Uri(_aiSearchServiceUrl), // retrieve from RagDB
+                Authentication = DataSourceAuthentication.FromApiKey(_aiSearchServiceKey), // retrieve from RagDB
+                IndexName = indexName, // create an Options property for API requests to hold this and below values
+                InScope = false, // add to DatabaseOptions
+                SemanticConfiguration = "semantic", // add to DatabaseOptions ?? defaultValue
+                QueryType = "vector", // add to DatabaseOptions ?? defaultValue
+                VectorizationSource = DataSourceVectorizer.FromDeploymentName(_embeddingModel), // add string to dbOptions
+                FieldMappings = fieldMappings,
+
+                // Add these
+                TopNDocuments = 5, // get from databaseOptions ?? defaultValue
+                OutputContextFlags = DataSourceOutputContexts.Citations | // probably just hard code value as this?
+                    DataSourceOutputContexts.Intent |
+                    DataSourceOutputContexts.AllRetrievedDocuments,
+
+                Strictness = 4, // get from databaseOptions ?? null
+                
+                // not sure if we want to set this or not
+                MaxSearchQueries = 5,
+                
+
+
+                // probably don't use below for now
+                //AllowPartialResult = false,
+                //Filter = // seems very useful
+            });
+
+            return options;
         }
     }
 }

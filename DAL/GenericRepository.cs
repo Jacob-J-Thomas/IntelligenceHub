@@ -1,15 +1,9 @@
-﻿using Nest;
-using OpenAICustomFunctionCallingAPI.Common.Attributes;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
+﻿using IntelligenceHub.Common.Attributes;
+using Microsoft.Data;
+using Microsoft.Data.SqlClient;
 using System.Reflection;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class, new()
     {
@@ -57,22 +51,31 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                 throw;
             }
         }
-        public async Task<IEnumerable<T>> GetAllAsync()
+        public async Task<IEnumerable<T>> GetAllAsync(int? count = null, int? page = null)
         {
-            // add pagination
             try
             {
                 var result = new List<T>();
+                var offset = (page - 1) * count;
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var query = $"SELECT * FROM {_table}";
+                    if (count != null && page != null && count > 0 && page > 0) query += $" OFFSET @Offset ROWS FETCH NEXT @Count ROWS ONLY";
                     using (var command = new SqlCommand(query, connection))
-                    using (var reader = await command.ExecuteReaderAsync())
-                    while (await reader.ReadAsync())
                     {
-                        result.Add(MapFromReader<T>(reader));
+                        if (count != null && page != null && count > 0 && page > 0)
+                        {
+                            command.Parameters.AddWithValue("@Count", count);
+                            command.Parameters.AddWithValue("@Offset", offset);
+                        }
+                        using (var reader = await command.ExecuteReaderAsync())
+                            while (await reader.ReadAsync())
+                            {
+                                result.Add(MapFromReader<T>(reader));
+                            }
                     }
+                    
                 }
                 return result;
             }
@@ -83,10 +86,12 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        public async Task<T> AddAsync(T entity)
+        public async Task<T?> AddAsync(T entity, string? tableOverride = null)
         {
             try
             {
+                var table = tableOverride ?? _table;
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
@@ -95,7 +100,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     var columns = string.Join(", ", properties.Select(p => $"[{p.Name}]"));
                     var values = string.Join(", ", properties.Select(p => $"@{p.Name}"));
 
-                    var query = $@"     INSERT INTO {_table} ({columns})
+                    var query = $@"     INSERT INTO {table} ({columns})
                                         OUTPUT inserted.*
                                         VALUES ({values})";
 
@@ -125,10 +130,12 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        public async Task<int> UpdateAsync(T existingEntity, T entity)
+        public async Task<int> UpdateAsync(T existingEntity, T entity, string? tableOverride = null) // override exists purely for the RAG repository. A better strategy could likely be achieved during migration to EFCore
         {
             try
             {
+                var table = tableOverride ?? _table;
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
@@ -138,7 +145,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         .Select(p => $"[{p.Name}] = @{p.Name}"));
 
                     var query = $@"
-                        UPDATE {_table} SET {setClause} 
+                        UPDATE {table} SET {setClause} 
                         WHERE Name = @Name";
 
                     using (var command = new SqlCommand(query, connection))
@@ -163,14 +170,16 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             }
         }
 
-        public async Task<int> DeleteAsync(T entity)
+        public async Task<int> DeleteAsync(T entity, string? overrideTable = null)
         {
             try
             {
+                var table = overrideTable ?? _table;
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var query = $@"DELETE FROM {_table} WHERE Id = @Id";
+                    var query = $@"DELETE FROM {table} WHERE Id = @Id";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -220,78 +229,4 @@ namespace OpenAICustomFunctionCallingAPI.DAL
             return entity;
         }
     }
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //public class Repository<T> : IRepository<T> where T : class
-    //{
-    //    private readonly DbContext _context;
-    //    private readonly DbSet<T> _dbSet;
-
-    //    public Repository(DbContext context)
-    //    {
-    //        _context = context ?? throw new ArgumentNullException(nameof(context));
-    //        _dbSet = _context.Set<T>();
-    //    }
-
-    //    // Remove ORM
-    //    public async Task<T> GetById(int id)
-    //    {
-    //        return await _dbSet.FindAsync(id);
-    //    }
-
-    //    public async Task<T> GetByColumn(string columnName, string value)
-    //    {
-    //        var entity = await _dbSet
-    //            .Where(profile => EF.Property<string>(profile, columnName) == value)
-    //            .FirstOrDefaultAsync();
-    //        return entity;
-    //    }
-
-    //    public async Task<IEnumerable<T>> GetAll()
-    //    {
-    //        return await _dbSet.ToListAsync();
-    //    }
-
-    //    public async Task Add(T entity)
-    //    {
-    //        await _dbSet.AddAsync(entity);
-    //        await _context.SaveChangesAsync();
-    //    }
-
-    //    public async Task Update(T existingEntity, T entity)
-    //    {
-    //        var entityId = existingEntity.GetType().GetProperty("Id").GetValue(existingEntity);
-    //        var entityProperties = entity.GetType().GetProperties().Where(p => 
-    //            p.Name != "Id" && 
-    //            p.Name != "Name" && 
-    //            p.GetValue(entity) != null && 
-    //            p.Name != "Response_Format" // probably just add this to JsonIgnore if this is even needed
-    //            );
-
-    //        foreach (var property in entityProperties)
-    //        {
-    //            _context.Entry(existingEntity).Property(property.Name).CurrentValue = property.GetValue(entity);
-    //        }
-    //        await _context.SaveChangesAsync();
-    //    }
-
-    //    public async Task Delete(T entity)
-    //    {
-    //        _dbSet.Remove(entity);
-    //        await _context.SaveChangesAsync();
-    //    }
-    //}
 }

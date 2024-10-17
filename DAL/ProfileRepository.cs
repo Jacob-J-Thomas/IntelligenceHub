@@ -1,23 +1,20 @@
-﻿using Nest;
-using OpenAICustomFunctionCallingAPI.API.DTOs.ClientDTOs.ToolDTOs;
-using OpenAICustomFunctionCallingAPI.Controllers.DTOs;
-using OpenAICustomFunctionCallingAPI.DAL.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
+﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
+using IntelligenceHub.DAL.Models;
+using Microsoft.Data.SqlClient;
 
-namespace OpenAICustomFunctionCallingAPI.DAL
+namespace IntelligenceHub.DAL
 {
-    public class ProfileRepository : GenericRepository<DbProfileDTO>
+    public class ProfileRepository : GenericRepository<DbProfile>
     {
 
         public ProfileRepository(string connectionString) : base(connectionString)
         {
+
         }
 
-        public async Task<APIProfileDTO> GetByNameWithToolsAsync(string Name)
+        // This is only working when tools are present at the moment, otherwise returns an empty set
+        public async Task<Profile> GetByNameWithToolsAsync(string Name)
         {
             try
             {
@@ -30,7 +27,9 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                             t.Id AS ToolId, 
                             t.Name AS ToolName, 
                             t.Description AS ToolDescription, 
-                            t.Required
+                            t.Required AS ToolRequired,
+                            t.ExecutionUrl AS ToolExecutionUrl,
+                            t.ExecutionMethod AS ToolExecutionMethod
                         FROM profiles p
                         JOIN profiletools pt ON p.Id = pt.ProfileID
                         JOIN tools t ON pt.ToolID = t.Id
@@ -42,7 +41,7 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                         {
                             while (await reader.ReadAsync())
                             {
-                                var dbProfile = MapFromReader<DbProfileDTO>(reader);
+                                var dbProfile = MapFromReader<DbProfile>(reader);
                                 var toolList = MapToolsFromReader(reader);
 
                                 if (reader["Stop"] != DBNull.Value)
@@ -50,12 +49,12 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                                     dbProfile.Stop = (string)reader["Stop"];
                                 }
                                 
-                                var profile = new APIProfileDTO(dbProfile);
-                                profile.Tools = new List<ToolDTO>();
+                                var profile = DbMappingHandler.MapFromDbProfile(dbProfile);
+                                profile.Tools = new List<Tool>();
 
                                 foreach (var tool in toolList)
                                 {
-                                    profile.Tools.Add(new ToolDTO(tool, null));
+                                    profile.Tools.Add(DbMappingHandler.MapFromDbTool(tool, null));
                                 }
                                 return profile;
                             }
@@ -64,100 +63,44 @@ namespace OpenAICustomFunctionCallingAPI.DAL
                     return null; // Return null if no result is found
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
 
                 throw;
             }
         }
 
-        private List<DbToolDTO> MapToolsFromReader(SqlDataReader reader)
+        private List<DbTool> MapToolsFromReader(SqlDataReader reader)
         {
-            var tools = new List<DbToolDTO>
+            try
             {
-                new DbToolDTO
+                var id = (int)reader["ToolId"];
+                var name = (string)reader["ToolName"];
+                var description = (string)reader["ToolDescription"];
+                var required = (string)reader["ToolRequired"];
+                var url = reader["ToolExecutionUrl"] as string;
+                var method = reader["ToolExecutionMethod"] as string;
+
+                var tools = new List<DbTool>
                 {
-                    Id = (int)reader["ToolId"],
-                    Name = (string)reader["ToolName"],
-                    Description = reader["ToolDescription"] as string,
-                    Required = reader["Required"] as string,
-                }
-            };
-            return tools;
+                    new DbTool
+                    {
+                        Id = id,
+                        Name = name,
+                        Description = description,
+                        Required = required,
+                        ExecutionUrl = url,
+                        ExecutionMethod = method,
+                    }
+                };
+                return tools;
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+            
         }
     }
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //public class Repository<T> : IRepository<T> where T : class
-    //{
-    //    private readonly DbContext _context;
-    //    private readonly DbSet<T> _dbSet;
-
-    //    public Repository(DbContext context)
-    //    {
-    //        _context = context ?? throw new ArgumentNullException(nameof(context));
-    //        _dbSet = _context.Set<T>();
-    //    }
-
-    //    // Remove ORM
-    //    public async Task<T> GetById(int id)
-    //    {
-    //        return await _dbSet.FindAsync(id);
-    //    }
-
-    //    public async Task<T> GetByColumn(string columnName, string value)
-    //    {
-    //        var entity = await _dbSet
-    //            .Where(profile => EF.Property<string>(profile, columnName) == value)
-    //            .FirstOrDefaultAsync();
-    //        return entity;
-    //    }
-
-    //    public async Task<IEnumerable<T>> GetAll()
-    //    {
-    //        return await _dbSet.ToListAsync();
-    //    }
-
-    //    public async Task Add(T entity)
-    //    {
-    //        await _dbSet.AddAsync(entity);
-    //        await _context.SaveChangesAsync();
-    //    }
-
-    //    public async Task Update(T existingEntity, T entity)
-    //    {
-    //        var entityId = existingEntity.GetType().GetProperty("Id").GetValue(existingEntity);
-    //        var entityProperties = entity.GetType().GetProperties().Where(p => 
-    //            p.Name != "Id" && 
-    //            p.Name != "Name" && 
-    //            p.GetValue(entity) != null && 
-    //            p.Name != "Response_Format" // probably just add this to JsonIgnore if this is even needed
-    //            );
-
-    //        foreach (var property in entityProperties)
-    //        {
-    //            _context.Entry(existingEntity).Property(property.Name).CurrentValue = property.GetValue(entity);
-    //        }
-    //        await _context.SaveChangesAsync();
-    //    }
-
-    //    public async Task Delete(T entity)
-    //    {
-    //        _dbSet.Remove(entity);
-    //        await _context.SaveChangesAsync();
-    //    }
-    //}
 }
