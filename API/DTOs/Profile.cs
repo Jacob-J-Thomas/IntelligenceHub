@@ -16,7 +16,6 @@ namespace IntelligenceHub.API.DTOs
         public float? Temperature { get; set; }
         public float? Top_P { get; set; }
         public int? Max_Tokens { get; set; }
-        public int? Seed { get; set; }
         public int? Top_Logprobs { get; set; }
         public bool? Logprobs { get; set; }
         public string? User { get; set; }

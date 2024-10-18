@@ -201,7 +201,6 @@ namespace IntelligenceHub.Business
                 Top_P = profileOptions.Top_P ?? profile.Top_P,
                 Frequency_Penalty = profileOptions.Frequency_Penalty ?? profile.Frequency_Penalty,
                 Presence_Penalty = profileOptions.Presence_Penalty ?? profile.Presence_Penalty,
-                Seed = profileOptions.Seed ?? profile.Seed,
                 Stop = profileOptions.Stop ?? profile.Stop,
                 Logprobs = profileOptions.Logprobs ?? profile.Logprobs,
                 Top_Logprobs = profileOptions.Top_Logprobs ?? profile.Top_Logprobs,
