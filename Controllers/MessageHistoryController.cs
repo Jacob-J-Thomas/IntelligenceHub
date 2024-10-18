@@ -2,12 +2,14 @@
 using IntelligenceHub.Business;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IntelligenceHub.Controllers
 {
     [Route("[controller]")]
     [ApiController]
+    [Authorize]
     public class MessageHistoryController : ControllerBase
     {
         //private readonly IConfiguration _configuration;

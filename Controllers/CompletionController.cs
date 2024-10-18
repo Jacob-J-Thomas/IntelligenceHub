@@ -6,11 +6,13 @@ using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Exceptions;
 using Newtonsoft.Json;
 using IntelligenceHub.Common.Config;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IntelligenceHub.Controllers
 {
     [Route("[controller]")]
     [ApiController]
+    [Authorize]
     public class CompletionController : ControllerBase
     {
         private readonly ICompletionLogic _completionLogic;

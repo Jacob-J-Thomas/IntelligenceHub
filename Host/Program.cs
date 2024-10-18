@@ -8,10 +8,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using IntelligenceHub.Host.Config;
-using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
-using IntelligenceHub.Controllers.Auth;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.OpenApi.Models;
 
 namespace IntelligenceHub.Host
 {
@@ -21,8 +18,6 @@ namespace IntelligenceHub.Host
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddSwaggerGen();
-
             // Add Services
             builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(Settings)).Get<Settings>());
             builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(AGIClientSettings)).Get<AGIClientSettings>());
@@ -30,7 +25,6 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton<IAGIClient, AGIClient>();
             builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
             builder.Services.AddSingleton<ICompletionLogic, CompletionLogic>();
-            builder.Services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
 
             // Configure HttpClient with Polly retry policy
             builder.Services.AddHttpClient("FunctionClient").AddPolicyHandler(
@@ -54,20 +48,45 @@ namespace IntelligenceHub.Host
 
             // Configure Auth
             var authSettings = builder.Configuration.GetRequiredSection(nameof(AuthSettings)).Get<AuthSettings>();
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
             {
                 options.Authority = authSettings.Domain;
                 options.Audience = authSettings.Audience;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    NameClaimType = ClaimTypes.NameIdentifier
-                };
             });
 
-            builder.Services.AddAuthorization(options =>
+            // Configure swagger to generate auth tokens
+            builder.Services.AddSwaggerGen(options =>
             {
-                options.AddPolicy("read:messages", policy => policy.Requirements.Add(
-                    new HasScopeRequirement("read:messages", authSettings.Domain)));
+                // Define the security scheme
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Enter 'Bearer' followed by a space and the JWT token."
+                });
+
+                // Apply the security scheme globally to all operations
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
             });
 
             var app = builder.Build();
@@ -91,11 +110,11 @@ namespace IntelligenceHub.Host
                 // configure prod cors policy
             }
 
-            app.UseAuthentication();
-            app.UseAuthorization();
-
             app.UseFileServer();
             app.UseRouting();
+
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.MapControllers();
             app.MapHub<ChatHub>("/chatstream");

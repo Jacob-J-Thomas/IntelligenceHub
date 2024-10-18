@@ -5,10 +5,12 @@ using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IntelligenceHub.Controllers
 {
     [Route("Rag")]
+    [Authorize]
     public class RagController : ControllerBase
     {
         private readonly RagLogic _ragLogic;

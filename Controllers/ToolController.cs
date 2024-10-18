@@ -3,11 +3,13 @@ using IntelligenceHub.Business;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IntelligenceHub.Controllers
 {
     [Route("[controller]")]
     [ApiController]
+    [Authorize]
     public class ToolController : ControllerBase
     {
         //private readonly IConfiguration _configuration;
