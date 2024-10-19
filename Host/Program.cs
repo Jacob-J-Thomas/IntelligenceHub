@@ -18,6 +18,7 @@ using Polly.Wrap;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.Host.Logging;
 
 namespace IntelligenceHub.Host
 {
@@ -110,14 +111,14 @@ namespace IntelligenceHub.Host
             #region Logging
 
             // Add Logging via Application Insights
+            builder.Services.AddApplicationInsightsTelemetry(options =>
+            {
+                options.ConnectionString = insightSettings?.ConnectionString;
+            });
+
             builder.Services.AddLogging(options =>
             {
                 options.AddApplicationInsights();
-            });
-
-            builder.Services.AddApplicationInsightsTelemetry(options =>
-            {
-                new ApplicationInsightsServiceOptions() { ConnectionString = insightSettings.ConnectionString };
             });
             #endregion
 
@@ -191,10 +192,11 @@ namespace IntelligenceHub.Host
             app.UseFileServer();
             app.UseRouting();
 
+            app.UseMiddleware<LoggingMiddleware>();
+
             app.UseAuthentication();
             app.UseAuthorization();
 
-            app.UseMiddleware<LoggingMiddleware>();
             app.MapControllers();
             app.MapHub<ChatHub>("/chatstream");
 

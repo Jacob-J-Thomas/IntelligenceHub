@@ -245,12 +245,10 @@ namespace IntelligenceHub.Business
                 else
                 {
                     var dbTool = await _toolDb.GetByNameAsync(toolName);
-                    var toolExecutionMethod = dbTool.ExecutionMethod ?? HttpMethod.Post.ToString();
 
-                    // how do we determine if the below is a post, get etc.?
                     if (!string.IsNullOrEmpty(dbTool.ExecutionUrl))
                     {
-                        functionResults.Add(await _functionClient.CallFunction(tool.Key, tool.Value, dbTool.ExecutionUrl, toolExecutionMethod));
+                        functionResults.Add(await _functionClient.CallFunction(tool.Key, tool.Value, dbTool.ExecutionUrl, dbTool.ExecutionMethod, dbTool.ExecutionBase64Key));
                     }
                 }
             }

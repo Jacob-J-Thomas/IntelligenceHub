@@ -91,6 +91,9 @@ namespace IntelligenceHub.DAL
             var tool = new Tool()
             {
                 Id = dbTool.Id,
+                ExecutionUrl = dbTool.ExecutionUrl,
+                ExecutionMethod = dbTool.ExecutionMethod,
+                ExecutionBase64Key = dbTool.ExecutionBase64Key,
                 Function = new Function()
                 {
                     Name = dbTool.Name,
@@ -120,7 +123,10 @@ namespace IntelligenceHub.DAL
                 Id = tool.Id,
                 Name = tool.Function.Name,
                 Description = tool.Function.Description ?? string.Empty,
-                Required = tool.Function.Parameters.Required?.ToCommaSeparatedString() ?? string.Empty
+                Required = tool.Function.Parameters.Required?.ToCommaSeparatedString() ?? string.Empty,
+                ExecutionUrl = tool.ExecutionUrl,
+                ExecutionMethod = tool.ExecutionMethod,
+                ExecutionBase64Key = tool.ExecutionBase64Key,
             };
         }
 
