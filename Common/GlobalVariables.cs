@@ -18,6 +18,12 @@ namespace IntelligenceHub.Common
                 "If you use one of the sources, please reference it in your response using markdown like so: [SourceName](SourceLink)." +
                 "If no SourceLink is present, only provide the sourcename.\n\n";
 
+        public enum ClientPolicy
+        {
+            CompletionClient,
+            FunctionClient
+        }
+
         public enum ResponseFormat
         {
             Json,

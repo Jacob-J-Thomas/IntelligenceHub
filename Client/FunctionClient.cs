@@ -3,6 +3,7 @@ using Newtonsoft.Json.Serialization;
 using System.Net.Http.Headers;
 using System.Text;
 using IntelligenceHub.API.DTOs.Tools;
+using IntelligenceHub.Common;
 
 namespace IntelligenceHub.Client
 {
@@ -11,7 +12,7 @@ namespace IntelligenceHub.Client
         private HttpClient _client { get; set; }
         public FunctionClient(IHttpClientFactory clientFactory) 
         {
-            _client = clientFactory.CreateClient("FunctionClient");
+            _client = clientFactory.CreateClient(GlobalVariables.ClientPolicy.FunctionClient.ToString());
         }
 
         public async Task<HttpResponseMessage> CallFunction(string toolName, string toolArgs, string endpoint, string httpMethod = "Post")

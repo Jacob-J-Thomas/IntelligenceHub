@@ -8,27 +8,34 @@ using IntelligenceHub.Common;
 using Azure.AI.OpenAI.Chat;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
+using Azure.Core.Pipeline;
+using Azure.Core;
+using System.ClientModel.Primitives;
+using Polly.Retry;
+using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Client
 {
     public class AGIClient : IAGIClient
     {
         private AzureOpenAIClient _azureOpenAIClient;
-        
-        private readonly string _aiSearchServiceUrl;
-        private readonly string _aiSearchServiceKey;
 
         private readonly string _embeddingModel = "text-embedding-3-large";
 
-        public AGIClient(AGIClientSettings settings) 
+        public AGIClient(AGIClientSettings settings, IHttpClientFactory policyFactory) 
         {
-            _aiSearchServiceUrl = settings.Endpoint;
-            _aiSearchServiceKey = settings.Key;
+            var policyClient = policyFactory.CreateClient(ClientPolicy.CompletionClient.ToString());
 
-            var endpointWithRouting = settings.Endpoint; //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
-            var resourceUri = new Uri(endpointWithRouting);
-            var credential = new ApiKeyCredential(settings.Key);
-            _azureOpenAIClient = new AzureOpenAIClient(resourceUri, credential);
+            var service = settings.Services.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
+                ?? throw new IntelligenceHubException(500, "service key failed to be retrieved when attempting to generate a completion.");
+            
+            var apiKey = service.Key;
+            var credential = new ApiKeyCredential(apiKey);
+            var options = new AzureOpenAIClientOptions()
+            {
+                Transport = new HttpClientPipelineTransport(policyClient)
+            };
+            _azureOpenAIClient = new AzureOpenAIClient(policyClient.BaseAddress, credential, options);  //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
         }
 
         public async Task<CompletionResponse?> PostCompletion(CompletionRequest completionRequest)

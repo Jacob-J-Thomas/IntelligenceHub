@@ -1,4 +1,6 @@
 ﻿using Azure;
+using Azure.Core;
+using Azure.Core.Pipeline;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Indexes.Models;
@@ -19,11 +21,17 @@ namespace IntelligenceHub.Client
         public AISearchServiceClient(SearchServiceClientSettings searchClientSettings, AGIClientSettings agiClientSettings, Settings settings) 
         {
             var credential = new AzureKeyCredential(searchClientSettings.Key);
-            _indexClient = new SearchIndexClient(new Uri(searchClientSettings.Endpoint), credential);
-            _indexerClient = new SearchIndexerClient(new Uri(searchClientSettings.Endpoint), credential);
+
+            var options = new SearchClientOptions()
+            {
+                RetryPolicy = new RetryPolicy(5, DelayStrategy.CreateExponentialDelayStrategy(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(120)))
+            };
+
+            _indexClient = new SearchIndexClient(new Uri(searchClientSettings.Endpoint), credential, options);
+            _indexerClient = new SearchIndexerClient(new Uri(searchClientSettings.Endpoint), credential, options);
             _sqlRagDbConnectionString = settings.DbConnectionString;
-            _openaiUrl = agiClientSettings.Endpoint;
-            _openaiKey = agiClientSettings.Key;
+            _openaiUrl = agiClientSettings.SearchServiceCompletionServiceEndpoint;
+            _openaiKey = agiClientSettings.SearchServiceCompletionServiceKey;
         }
 
         // index operations
@@ -32,10 +40,7 @@ namespace IntelligenceHub.Client
             var indexNames = new List<string>();
             var responseCollection = _indexClient.GetIndexNamesAsync();
 
-            await foreach (var response in responseCollection)
-            {
-                indexNames.Add(response);
-            }
+            await foreach (var response in responseCollection) indexNames.Add(response);
             return indexNames;
         }
 
@@ -66,7 +71,6 @@ namespace IntelligenceHub.Client
             options.HighlightFields.Add("content");
 
             var response = await searchClient.SearchAsync<IndexDefinition>(query, options);
-
             return response.Value;
         }
 
@@ -158,7 +162,7 @@ namespace IntelligenceHub.Client
         {
             try
             {
-                var connectionString = _sqlRagDbConnectionString.Replace("placeholder-db", databaseName);
+                var connectionString = _sqlRagDbConnectionString;
 
                 var container = new SearchIndexerDataContainer(databaseName);
                 var connection = new SearchIndexerDataSourceConnection(databaseName, SearchIndexerDataSourceType.AzureSql, connectionString, container)
@@ -182,7 +186,7 @@ namespace IntelligenceHub.Client
 
         public async Task<bool> CreateIndexer(IndexMetadata index)
         {
-            var connectionString = _sqlRagDbConnectionString.Replace("placeholder-db", index.Name);
+            var connectionString = _sqlRagDbConnectionString;
             var chunkingLengthInChars = 1312; // (avg chars per token = 3.5) * (average recomended chunk size = 375) = 1312.5
 
             var indexer = new SearchIndexer($"{index.Name}-indexer", index.Name, index.Name)
