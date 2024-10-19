@@ -182,6 +182,7 @@ namespace IntelligenceHub.DAL
                 Required = (string)reader["Required"],
                 ExecutionUrl = reader["ExecutionUrl"] as string,
                 ExecutionMethod = reader["ExecutionMethod"] as string,
+                ExecutionBase64Key = reader["ExecutionBase64Key"] as string,
             };
 
             // Create a dictionary to store properties

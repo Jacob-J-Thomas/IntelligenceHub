@@ -5,10 +5,12 @@ using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IntelligenceHub.Controllers
 {
     [Route("Rag")]
+    [Authorize]
     public class RagController : ControllerBase
     {
         private readonly RagLogic _ragLogic;
@@ -66,7 +68,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
 
@@ -92,7 +94,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
 
@@ -120,7 +122,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
 
@@ -146,7 +148,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
 
@@ -179,7 +181,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
 
@@ -205,7 +207,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
 
@@ -231,7 +233,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
 
@@ -258,7 +260,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
     }

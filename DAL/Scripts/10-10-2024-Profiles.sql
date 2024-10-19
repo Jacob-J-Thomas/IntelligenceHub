@@ -8,7 +8,6 @@
     TopP FLOAT,
     TopLogprobs INT,
     MaxTokens INT,
-    Seed INT,
     MaxMessageHistory INT,
     ResponseFormat NVARCHAR(255),
     [User] NVARCHAR(255),

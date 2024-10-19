@@ -2,7 +2,8 @@
 {
     public class AGIClientSettings
     {
-        public string Endpoint { get; set; }
-        public string Key { get; set; }
+        public List<AGIServiceDetails> Services { get; set; }
+        public string SearchServiceCompletionServiceEndpoint { get; set; }
+        public string SearchServiceCompletionServiceKey { get; set; }
     }
 }

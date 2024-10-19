@@ -6,11 +6,13 @@ using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Exceptions;
 using Newtonsoft.Json;
 using IntelligenceHub.Common.Config;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IntelligenceHub.Controllers
 {
     [Route("[controller]")]
     [ApiController]
+    [Authorize]
     public class CompletionController : ControllerBase
     {
         private readonly ICompletionLogic _completionLogic;
@@ -48,7 +50,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
 
@@ -89,7 +91,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
             }
         }
     }

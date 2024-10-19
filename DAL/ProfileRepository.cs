@@ -29,7 +29,8 @@ namespace IntelligenceHub.DAL
                             t.Description AS ToolDescription, 
                             t.Required AS ToolRequired,
                             t.ExecutionUrl AS ToolExecutionUrl,
-                            t.ExecutionMethod AS ToolExecutionMethod
+                            t.ExecutionMethod AS ToolExecutionMethod,
+                            t.ExecutionBase64Key AS ToolExecutionBase64Key
                         FROM profiles p
                         JOIN profiletools pt ON p.Id = pt.ProfileID
                         JOIN tools t ON pt.ToolID = t.Id
@@ -80,6 +81,7 @@ namespace IntelligenceHub.DAL
                 var required = (string)reader["ToolRequired"];
                 var url = reader["ToolExecutionUrl"] as string;
                 var method = reader["ToolExecutionMethod"] as string;
+                var key = reader["ToolExecutionBase64Key"] as string;
 
                 var tools = new List<DbTool>
                 {
@@ -91,6 +93,7 @@ namespace IntelligenceHub.DAL
                         Required = required,
                         ExecutionUrl = url,
                         ExecutionMethod = method,
+                        ExecutionBase64Key = key
                     }
                 };
                 return tools;

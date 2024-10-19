@@ -8,27 +8,34 @@ using IntelligenceHub.Common;
 using Azure.AI.OpenAI.Chat;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
+using Azure.Core.Pipeline;
+using Azure.Core;
+using System.ClientModel.Primitives;
+using Polly.Retry;
+using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Client
 {
     public class AGIClient : IAGIClient
     {
         private AzureOpenAIClient _azureOpenAIClient;
-        
-        private readonly string _aiSearchServiceUrl;
-        private readonly string _aiSearchServiceKey;
 
         private readonly string _embeddingModel = "text-embedding-3-large";
 
-        public AGIClient(AGIClientSettings settings) 
+        public AGIClient(AGIClientSettings settings, IHttpClientFactory policyFactory) 
         {
-            _aiSearchServiceUrl = settings.Endpoint;
-            _aiSearchServiceKey = settings.Key;
+            var policyClient = policyFactory.CreateClient(ClientPolicy.CompletionClient.ToString());
 
-            var endpointWithRouting = settings.Endpoint; //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
-            var resourceUri = new Uri(endpointWithRouting);
-            var credential = new ApiKeyCredential(settings.Key);
-            _azureOpenAIClient = new AzureOpenAIClient(resourceUri, credential);
+            var service = settings.Services.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
+                ?? throw new IntelligenceHubException(500, "service key failed to be retrieved when attempting to generate a completion.");
+            
+            var apiKey = service.Key;
+            var credential = new ApiKeyCredential(apiKey);
+            var options = new AzureOpenAIClientOptions()
+            {
+                Transport = new HttpClientPipelineTransport(policyClient)
+            };
+            _azureOpenAIClient = new AzureOpenAIClient(policyClient.BaseAddress, credential, options);  //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
         }
 
         public async Task<CompletionResponse?> PostCompletion(CompletionRequest completionRequest)
@@ -41,7 +48,7 @@ namespace IntelligenceHub.Client
                 var completionResult = await chatClient.CompleteChatAsync(messages, options);
 
                 var toolCalls = new Dictionary<string, string>();
-                foreach (var tool in completionResult.Value.ToolCalls) toolCalls.Add(tool.FunctionName, tool.FunctionArguments);
+                foreach (var tool in completionResult.Value.ToolCalls) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
 
                 // build the response object
                 var responseMessage = new Message()
@@ -106,11 +113,11 @@ namespace IntelligenceHub.Client
                 {
                     // capture current values
                     if (string.IsNullOrEmpty(currentTool)) currentTool = update.FunctionName;
-                    if (currentTool == update.FunctionName) currentToolArgs += update.FunctionArgumentsUpdate;
+                    if (currentTool == update.FunctionName) currentToolArgs += update.FunctionArgumentsUpdate.ToString();
                     else
                     {
                         currentTool = update.FunctionName;
-                        currentToolArgs = update.FunctionArgumentsUpdate;
+                        currentToolArgs = update.FunctionArgumentsUpdate.ToString();
                     }
 
                     if (toolCalls.ContainsKey(currentTool)) toolCalls[currentTool] = currentToolArgs;
@@ -136,7 +143,7 @@ namespace IntelligenceHub.Client
             if (!string.IsNullOrWhiteSpace(systemMessage)) completionMessages.Add(new SystemChatMessage(systemMessage));
             foreach (var message in completionRequest.Messages)
             {
-                if (message.Role.ToString() == MessageRole.User.ToString())
+                if (message.Role.ToString() == Role.User.ToString())
                 {
                     completionMessages.Add(new UserChatMessage(message.Content));
 
@@ -149,7 +156,7 @@ namespace IntelligenceHub.Client
                     // $"data:image/jpeg;base64,{encodedImage}"
 
                 }
-                else if (message.Role.ToString() == MessageRole.Assistant.ToString()) completionMessages.Add(new AssistantChatMessage(message.Content));
+                else if (message.Role.ToString() == Role.Assistant.ToString()) completionMessages.Add(new AssistantChatMessage(message.Content));
             }
             return completionMessages;
         }
@@ -164,7 +171,6 @@ namespace IntelligenceHub.Client
                 FrequencyPenalty = completion.ProfileOptions.Frequency_Penalty,
                 PresencePenalty = completion.ProfileOptions.Presence_Penalty,
                 IncludeLogProbabilities = completion.ProfileOptions.Logprobs,
-                Seed = completion.ProfileOptions.Seed,
                 EndUserId = completion.ProfileOptions.User,
             };
 
@@ -196,7 +202,7 @@ namespace IntelligenceHub.Client
             // Set tool choice
             if (completion.ProfileOptions.Tools != null && completion.ProfileOptions.Tools.Any())
             {
-                if (completion.ProfileOptions.Tools.Count > 1) options.ParallelToolCallsEnabled = true;
+                if (completion.ProfileOptions.Tools.Count > 1) options.AllowParallelToolCalls = true;
 
                 if (completion.ProfileOptions.Tool_Choice == null || completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.Auto.ToString()) options.ToolChoice = ChatToolChoice.CreateAutoChoice();
                 else if (completion.ProfileOptions.Tool_Choice == ToolExecutionRequirement.None.ToString()) options.ToolChoice = ChatToolChoice.CreateNoneChoice();
@@ -220,41 +226,43 @@ namespace IntelligenceHub.Client
         // Therefore AI Search indexes are queried directly and the we manually attach the data to the final user request.
         private ChatCompletionOptions AttachDatabaseOptions(string indexName, ChatCompletionOptions options)
         {
-            var fieldMappings = new DataSourceFieldMappings();
+            throw new NotImplementedException("This method has been deprecated in favor of attaching RAG data via direct requests to Azure AI Search Services");
 
-            // configure below dynamically based off of RAG database definition
-            fieldMappings.VectorFieldNames.Add("contentVector");
-            fieldMappings.VectorFieldNames.Add("titleVector");
+            //var fieldMappings = new DataSourceFieldMappings();
+
+            //// configure below dynamically based off of RAG database definition
+            //fieldMappings.VectorFieldNames.Add("contentVector");
+            //fieldMappings.VectorFieldNames.Add("titleVector");
 
             // get below values from database
-            options.AddDataSource(new AzureSearchChatDataSource()
-            {
-                Endpoint = new Uri(_aiSearchServiceUrl), // retrieve from RagDB
-                Authentication = DataSourceAuthentication.FromApiKey(_aiSearchServiceKey), // retrieve from RagDB
-                IndexName = indexName, // create an Options property for API requests to hold this and below values
-                InScope = false, // add to DatabaseOptions
-                SemanticConfiguration = "semantic", // add to DatabaseOptions ?? defaultValue
-                QueryType = "vector", // add to DatabaseOptions ?? defaultValue
-                VectorizationSource = DataSourceVectorizer.FromDeploymentName(_embeddingModel), // add string to dbOptions
-                FieldMappings = fieldMappings,
+            //options.AddDataSource(new AzureSearchChatDataSource()
+            //{
+            //    Endpoint = new Uri(_aiSearchServiceUrl), // retrieve from RagDB
+            //    Authentication = DataSourceAuthentication.FromApiKey(_aiSearchServiceKey), // retrieve from RagDB
+            //    IndexName = indexName, // create an Options property for API requests to hold this and below values
+            //    InScope = false, // add to DatabaseOptions
+            //    SemanticConfiguration = "semantic", // add to DatabaseOptions ?? defaultValue
+            //    QueryType = "vector", // add to DatabaseOptions ?? defaultValue
+            //    VectorizationSource = DataSourceVectorizer.FromDeploymentName(_embeddingModel), // add string to dbOptions
+            //    FieldMappings = fieldMappings,
 
-                // Add these
-                TopNDocuments = 5, // get from databaseOptions ?? defaultValue
-                OutputContextFlags = DataSourceOutputContexts.Citations | // probably just hard code value as this?
-                    DataSourceOutputContexts.Intent |
-                    DataSourceOutputContexts.AllRetrievedDocuments,
+            //    // Add these
+            //    TopNDocuments = 5, // get from databaseOptions ?? defaultValue
+            //    OutputContextFlags = DataSourceOutputContexts.Citations | // probably just hard code value as this?
+            //        DataSourceOutputContexts.Intent |
+            //        DataSourceOutputContexts.AllRetrievedDocuments,
 
-                Strictness = 4, // get from databaseOptions ?? null
+            //    Strictness = 4, // get from databaseOptions ?? null
                 
-                // not sure if we want to set this or not
-                MaxSearchQueries = 5,
+            //    // not sure if we want to set this or not
+            //    MaxSearchQueries = 5,
                 
 
 
-                // probably don't use below for now
-                //AllowPartialResult = false,
-                //Filter = // seems very useful
-            });
+            //    // probably don't use below for now
+            //    //AllowPartialResult = false,
+            //    //Filter = // seems very useful
+            //});
 
             return options;
         }

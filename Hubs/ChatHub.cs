@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.SignalR;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.Common.Handlers;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IntelligenceHub.Hubs
 {
+    [Authorize]
     public class ChatHub : Hub
     {
         private readonly ICompletionLogic _completionLogic;

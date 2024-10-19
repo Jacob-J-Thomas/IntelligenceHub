@@ -21,7 +21,6 @@ namespace IntelligenceHub.DAL.Models
         public float? TopP { get; set; }
         public int? TopLogprobs { get; set; }
         public int? MaxTokens { get; set; }
-        public int? Seed { get; set; }
         public int? MaxMessageHistory { get; set; }
         public string? ResponseFormat { get; set; }
         public string? User { get; set; }

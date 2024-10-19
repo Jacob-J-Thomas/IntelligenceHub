@@ -201,7 +201,6 @@ namespace IntelligenceHub.Business
                 Top_P = profileOptions.Top_P ?? profile.Top_P,
                 Frequency_Penalty = profileOptions.Frequency_Penalty ?? profile.Frequency_Penalty,
                 Presence_Penalty = profileOptions.Presence_Penalty ?? profile.Presence_Penalty,
-                Seed = profileOptions.Seed ?? profile.Seed,
                 Stop = profileOptions.Stop ?? profile.Stop,
                 Logprobs = profileOptions.Logprobs ?? profile.Logprobs,
                 Top_Logprobs = profileOptions.Top_Logprobs ?? profile.Top_Logprobs,
@@ -246,12 +245,10 @@ namespace IntelligenceHub.Business
                 else
                 {
                     var dbTool = await _toolDb.GetByNameAsync(toolName);
-                    var toolExecutionMethod = dbTool.ExecutionMethod ?? HttpMethod.Post.ToString();
 
-                    // how do we determine if the below is a post, get etc.?
                     if (!string.IsNullOrEmpty(dbTool.ExecutionUrl))
                     {
-                        functionResults.Add(await _functionClient.CallFunction(tool.Key, tool.Value, dbTool.ExecutionUrl, toolExecutionMethod));
+                        functionResults.Add(await _functionClient.CallFunction(tool.Key, tool.Value, dbTool.ExecutionUrl, dbTool.ExecutionMethod, dbTool.ExecutionBase64Key));
                     }
                 }
             }

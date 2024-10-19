@@ -17,5 +17,6 @@ namespace IntelligenceHub.DAL.Models
         public string Required { get; set; } = string.Empty;
         public string? ExecutionUrl { get; set; }  
         public string? ExecutionMethod { get; set; }
+        public string? ExecutionBase64Key { get; set; }
     }
 }

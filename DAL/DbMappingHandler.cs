@@ -26,7 +26,6 @@ namespace IntelligenceHub.DAL
                 Max_Tokens = dbProfile.MaxTokens,
                 Top_Logprobs = dbProfile.TopLogprobs,
                 Response_Format = dbProfile.ResponseFormat,
-                Seed = dbProfile.Seed,
                 User = dbProfile.User,
                 System_Message = dbProfile.SystemMessage,
                 Stop = dbProfile.Stop?.ToStringArray(),
@@ -47,7 +46,6 @@ namespace IntelligenceHub.DAL
                 Id = existingProfile?.Id ?? 0,
                 Name = profileUpdate?.Name ?? existingProfile?.Name ?? throw new IntelligenceHubException(500, "Database profiles require a name"),
                 ResponseFormat = profileUpdate?.Response_Format ?? existingProfile?.ResponseFormat,
-                Seed = profileUpdate?.Seed ?? existingProfile?.Seed,
                 User = profileUpdate?.User ?? existingProfile?.User,
                 SystemMessage = profileUpdate?.System_Message ?? existingProfile?.SystemMessage,
                 TopLogprobs = profileUpdate?.Top_Logprobs ?? existingProfile?.TopLogprobs,
@@ -93,6 +91,9 @@ namespace IntelligenceHub.DAL
             var tool = new Tool()
             {
                 Id = dbTool.Id,
+                ExecutionUrl = dbTool.ExecutionUrl,
+                ExecutionMethod = dbTool.ExecutionMethod,
+                ExecutionBase64Key = dbTool.ExecutionBase64Key,
                 Function = new Function()
                 {
                     Name = dbTool.Name,
@@ -122,7 +123,10 @@ namespace IntelligenceHub.DAL
                 Id = tool.Id,
                 Name = tool.Function.Name,
                 Description = tool.Function.Description ?? string.Empty,
-                Required = tool.Function.Parameters.Required?.ToCommaSeparatedString() ?? string.Empty
+                Required = tool.Function.Parameters.Required?.ToCommaSeparatedString() ?? string.Empty,
+                ExecutionUrl = tool.ExecutionUrl,
+                ExecutionMethod = tool.ExecutionMethod,
+                ExecutionBase64Key = tool.ExecutionBase64Key,
             };
         }
 
