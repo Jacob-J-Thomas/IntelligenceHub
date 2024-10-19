@@ -15,7 +15,7 @@ namespace IntelligenceHub.Client
             _client = clientFactory.CreateClient(GlobalVariables.ClientPolicy.FunctionClient.ToString());
         }
 
-        public async Task<HttpResponseMessage> CallFunction(string toolName, string toolArgs, string endpoint, string httpMethod = "Post")
+        public async Task<HttpResponseMessage> CallFunction(string toolName, string toolArgs, string endpoint, string httpMethod = "Post", string? Key = null)
         {
             _client = new HttpClient();
             _client.DefaultRequestHeaders.Clear();
