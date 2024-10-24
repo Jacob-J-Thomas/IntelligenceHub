@@ -7,6 +7,7 @@ using IntelligenceHub.Common.Exceptions;
 using Newtonsoft.Json;
 using IntelligenceHub.Common.Config;
 using Microsoft.AspNetCore.Authorization;
+using IntelligenceHub.Common;
 
 namespace IntelligenceHub.Controllers
 {
@@ -50,7 +51,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -91,7 +92,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
     }

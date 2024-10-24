@@ -1,8 +1,10 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business;
+using IntelligenceHub.Common;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Exceptions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IntelligenceHub.Controllers
@@ -44,7 +46,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVarpublic const string DefaultErrorMessage = "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator."; iables.DefaultExceptionMessage);
             }
         }
 
@@ -70,7 +72,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -96,7 +98,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -122,7 +124,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
     }

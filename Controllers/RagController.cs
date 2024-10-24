@@ -6,6 +6,7 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common.Exceptions;
 using Microsoft.AspNetCore.Authorization;
+using IntelligenceHub.Common;
 
 namespace IntelligenceHub.Controllers
 {
@@ -42,7 +43,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -68,7 +69,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -94,7 +95,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -122,7 +123,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -148,15 +149,8 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
-        }
-
-        [HttpPost]
-        [Route("Index/Query/{index}")]
-        public async Task<IActionResult> QueryIndex([FromRoute] string index, [FromBody] Object request)
-        {
-            throw new NotImplementedException("Currently this API recommends making direct queries to the AI Search API");
         }
 
         [HttpGet]
@@ -181,7 +175,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -207,7 +201,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -233,7 +227,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
@@ -260,7 +254,7 @@ namespace IntelligenceHub.Controllers
             }
             catch (Exception ex)
             {
-                throw new IntelligenceHubException(500, "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator.");
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
     }
