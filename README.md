@@ -8,8 +8,6 @@ The ultimate goal of the project is to create a significantly simplified way of 
 ### Instillation and set up:
 The easiest way to set up the projcet is to clone the repository into Visual Studio. After cloning the repository, please be sure to add your own API token to the "openAIKey" property in appsettings.json file. Incase you aren't experienced with Visual Studio, you may also need to open the solution file if the project folder was opened.
 
-Once starting the application, a swagger page should open where you can test the API. 
-
 ### Unique Function Calling Implementation
 The default configuration for this API is able to call multiple additional functions provided the names are passed as part of the post arguments. After I have the configurations route complete, the post request will look more like a prompt and the name of the preset configuration like in this example below:
 ```
