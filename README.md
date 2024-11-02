@@ -1,6 +1,6 @@
 # Intelligence Hub
 
-## Please note, this readme is currently in need of a major overhaul
+## Please note: This readme is currently in need of a major overhaul
 
 ### Project Summary: 
 This repo consists of a custom API designed to simplify consumption of OpenAI, or a local mixtral model, assuming its been fine tuned to use function calling. Currently the most interesting portion of the project is my implementation of function calling, although I have many more additions planned for the future. You can read more about the API's function calling and future feature roadmap in their respective sections. 
