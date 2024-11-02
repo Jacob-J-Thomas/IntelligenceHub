@@ -43,6 +43,7 @@ namespace IntelligenceHub.Common
             Length,
             ToolCalls,
             ContentFilter,
+            Error
         }
 
         public enum Role

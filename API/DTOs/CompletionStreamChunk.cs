@@ -1,10 +1,12 @@
 ﻿using IntelligenceHub.API.DTOs;
+using System.Text.Json.Serialization;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.API.DTOs
 {
     public class CompletionStreamChunk
     {
+        [JsonIgnore]
         public int Id { get; set; }
         public string CompletionUpdate { get; set; } = string.Empty;
         public string? Base64Image { get; set; }

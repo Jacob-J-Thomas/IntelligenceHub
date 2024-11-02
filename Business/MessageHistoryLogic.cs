@@ -1,6 +1,5 @@
 ﻿using IntelligenceHub.DAL;
 using IntelligenceHub.API.DTOs;
-using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.DAL.Models;
 
 namespace IntelligenceHub.Business
@@ -37,11 +36,11 @@ namespace IntelligenceHub.Business
             return await _messageHistoryRepository.DeleteConversationAsync(id);
         }
 
-        public async Task<DbMessage> AddMessage(Guid conversationId, Message message)
+        public async Task<DbMessage?> AddMessage(Guid conversationId, Message message)
         {
             var dbMessage = DbMappingHandler.MapToDbMessage(message, conversationId);
             var conversation = await _messageHistoryRepository.GetConversationAsync(conversationId, 1);
-            if (conversation == null) throw new IntelligenceHubException(404, $"A conversations with id '{conversationId}' does not exist."); 
+            if (conversation == null) return null; 
             return await _messageHistoryRepository.AddAsync(dbMessage);
         }
 

@@ -3,11 +3,11 @@ using IntelligenceHub.Business;
 using System.Text;
 using IntelligenceHub.Common.Handlers;
 using IntelligenceHub.API.DTOs;
-using IntelligenceHub.Common.Exceptions;
 using Newtonsoft.Json;
 using IntelligenceHub.Common.Config;
-using Microsoft.AspNetCore.Authorization;
 using IntelligenceHub.Common;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace IntelligenceHub.Controllers
 {
@@ -28,6 +28,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("Chat/{name}")]
+        [ProducesResponseType(typeof(CompletionResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CompletionStandard([FromRoute] string? name, [FromBody] CompletionRequest completionRequest)
         {
             try
@@ -38,12 +42,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _completionLogic.ProcessCompletion(completionRequest);
                 if (response is not null) return Ok(response);
                 else return BadRequest("Invalid request. Please check your request body.");
-            }
-            catch(IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -57,6 +55,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("SSE/{name}")]
+        [ProducesResponseType(typeof(CompletionStreamChunk), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CompletionStreaming([FromRoute] string? name, [FromBody] CompletionRequest completionRequest)
         {
             try
@@ -79,12 +81,6 @@ namespace IntelligenceHub.Controllers
                     await Response.Body.FlushAsync();
                 }
                 return new EmptyResult();
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {

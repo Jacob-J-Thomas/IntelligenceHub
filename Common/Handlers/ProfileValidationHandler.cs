@@ -7,7 +7,7 @@ namespace IntelligenceHub.Common.Handlers
     {
         public ProfileValidationHandler() { }
 
-        public string ValidateChatRequest(CompletionRequest chatRequest)
+        public string? ValidateChatRequest(CompletionRequest chatRequest)
         {
             if (chatRequest.ProfileOptions.Name == null) return "A profile name must be included in the request body or route.";
             if (chatRequest == null) return "The chatRequest object must be provided";
@@ -17,18 +17,18 @@ namespace IntelligenceHub.Common.Handlers
             return null;
         }
 
-        public string ValidateAPIProfile(Profile profile)
+        public string? ValidateAPIProfile(Profile profile)
         {
             // validate reference profiles exist (same with any other values?)
             if (string.IsNullOrWhiteSpace(profile.Name) || profile.Name == null) return "The 'Name' field is required";
-            if (profile.Name.ToLower() == "all") return "Profile name 'all' conflicts with the get/all route";
+            if (profile.Name.ToLower() == "all") return "Profile name 'all' conflicts with the profile/get/all route";
 
             var errorMessage = ValidateBaseDTO(profile);
             if (errorMessage != null) return errorMessage;
             return null;
         }
 
-        public string ValidateBaseDTO(Profile profile)
+        public string? ValidateBaseDTO(Profile profile)
         {
             var validModels = new List<string>()
             {
@@ -83,7 +83,7 @@ namespace IntelligenceHub.Common.Handlers
             return null;
         }
 
-        public string ValidateTool(Tool tool)
+        public string? ValidateTool(Tool tool)
         {
             if (tool.Function.Name == null || string.IsNullOrEmpty(tool.Function.Name))
             {
@@ -111,7 +111,7 @@ namespace IntelligenceHub.Common.Handlers
             return null;
         }
 
-        public string ValidateProperties(Dictionary<string, Property> properties)
+        public string? ValidateProperties(Dictionary<string, Property> properties)
         {
             var validTypes = new List<string>()
             {

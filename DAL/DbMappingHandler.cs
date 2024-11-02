@@ -2,8 +2,6 @@
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL.Models;
-using IntelligenceHub.Common;
-using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.API.DTOs.RAG;
 using System.Text.Json;
 
@@ -38,13 +36,13 @@ namespace IntelligenceHub.DAL
             return profile;
         }
 
-        public static DbProfile MapToDbProfile(DbProfile? existingProfile = null, Profile? profileUpdate = null)
+        public static DbProfile MapToDbProfile(string profileName, DbProfile? existingProfile = null, Profile? profileUpdate = null)
         {
             return new DbProfile()
             {
                 // update or set existing value
                 Id = existingProfile?.Id ?? 0,
-                Name = profileUpdate?.Name ?? existingProfile?.Name ?? throw new IntelligenceHubException(500, "Database profiles require a name"),
+                Name = profileName, // this value should not be null when this method is called, so it is required as an argument
                 ResponseFormat = profileUpdate?.Response_Format ?? existingProfile?.ResponseFormat,
                 User = profileUpdate?.User ?? existingProfile?.User,
                 SystemMessage = profileUpdate?.System_Message ?? existingProfile?.SystemMessage,
@@ -160,7 +158,7 @@ namespace IntelligenceHub.DAL
             return new DbMessage()
             {
                 Content = message.Content,
-                Role = message.Role.ToString(),
+                Role = message.Role.ToString() ?? string.Empty,
                 ConversationId = conversationId,
                 Base64Image = message.Base64Image,
                 TimeStamp = message.TimeStamp,

@@ -9,16 +9,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using IntelligenceHub.Host.Config;
 using Microsoft.OpenApi.Models;
-using Microsoft.ApplicationInsights.AspNetCore.Logging;
-using Microsoft.ApplicationInsights.AspNetCore.Extensions;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Extensions.Azure;
 using IntelligenceHub.Host.Policies;
-using Polly.Wrap;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.DependencyInjection;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Host.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace IntelligenceHub.Host
 {
@@ -28,6 +22,7 @@ namespace IntelligenceHub.Host
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            #region Add Services and Settings
             var agiClientSettings = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings)).Get<AGIClientSettings>();
             var insightSettings = builder.Configuration.GetRequiredSection(nameof(AppInsightSettings)).Get<AppInsightSettings>();
 
@@ -39,6 +34,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
             builder.Services.AddSingleton<ICompletionLogic, CompletionLogic>();
             builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.Services.Select(service => service.Endpoint).ToArray()));
+            #endregion
 
             #region Configure Client Policies
             // Function Calling Client Policies:
@@ -55,7 +51,12 @@ namespace IntelligenceHub.Host
             var retryPolicy = HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .OrResult(r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                .WaitAndRetryAsync(5, _ => TimeSpan.FromSeconds(10));
+                .WaitAndRetryAsync(5, _ =>
+                {
+                    // Random jitter up to 5 seconds
+                    var jitter = TimeSpan.FromMilliseconds(new Random().Next(0, 5000)); 
+                    return TimeSpan.FromSeconds(10) + jitter;
+                });
 
             // Define the Completion circuit breaker policy if more than one service exists
             IAsyncPolicy<HttpResponseMessage> policyWrap = retryPolicy;
@@ -134,12 +135,32 @@ namespace IntelligenceHub.Host
             {
                 options.Authority = authSettings.Domain;
                 options.Audience = authSettings.Audience;
+
+                // Specify the Role Claim Type if necessary
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    RoleClaimType = "roles"
+                };
             });
 
-            // Configure swagger to generate auth tokens
+            // Add role-based authorization policies
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("AdminPolicy", policy => policy.RequireClaim("scope", "all:admin"));
+            });
+            #endregion
+
+            #region Swagger
             builder.Services.AddSwaggerGen(options =>
             {
-                // Define the security scheme
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Intelligence Hub API",
+                    Version = "v1",
+                    Description = "An API that simplifies utilizing and designing intelligent systems, particularly with AGI."
+                });
+
+                // Define the security scheme for bearer tokens
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
@@ -150,7 +171,7 @@ namespace IntelligenceHub.Host
                     Description = "Enter 'Bearer' followed by a space and the JWT token."
                 });
 
-                // Apply the security scheme globally to all operations
+                // Apply the security scheme globally
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {
@@ -168,6 +189,7 @@ namespace IntelligenceHub.Host
             });
             #endregion
 
+            #region Build App
             var app = builder.Build();
 
             if (app.Environment.IsDevelopment())
@@ -178,10 +200,11 @@ namespace IntelligenceHub.Host
 
                 app.UseCors(policy =>
                 {
-                    policy.AllowAnyOrigin();
-                    policy.AllowAnyMethod();
-                    policy.AllowAnyHeader();
-                    policy.SetIsOriginAllowed((host) => true);
+                    policy.WithOrigins("http://localhost:3000") // Specify allowed origin explicitly
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()
+                      .AllowCredentials()
+                      .SetIsOriginAllowed((host) => true);
                 });
             }
             else
@@ -201,6 +224,7 @@ namespace IntelligenceHub.Host
             app.MapHub<ChatHub>("/chatstream");
 
             app.Run();
+            #endregion
         }
     }
 }

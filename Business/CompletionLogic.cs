@@ -4,9 +4,9 @@ using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Client;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Config;
-using IntelligenceHub.Common.Exceptions;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL;
+using System.ClientModel;
 using System.Net;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -40,11 +40,13 @@ namespace IntelligenceHub.Business
         #region Streaming
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
-            var userMessageTimestamp = DateTime.UtcNow;
+            if (string.IsNullOrEmpty(completionRequest.ProfileOptions.Name)) yield break;
 
             // Get and set profile details, overriding the database with any parameters that aren't null in the request
+            var userMessageTimestamp = DateTime.UtcNow;
+
             var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
-            if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name)) ?? throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
+            if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name));
             completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
             // Get and attach message history if a conversation id exists
@@ -66,9 +68,8 @@ namespace IntelligenceHub.Business
             }
 
             var completionCollection = _AIClient.StreamCompletion(completionRequest);
-            if (completionCollection == null) throw new IntelligenceHubException(500, "Something went wrong...");
 
-            Role dbMessageRole;
+            Role? dbMessageRole;
             var allCompletionChunks = string.Empty;
             var toolCallDictionary = new Dictionary<string, string>();
             await foreach (var update in completionCollection)
@@ -114,11 +115,11 @@ namespace IntelligenceHub.Business
         #region Controller
         public async Task<CompletionResponse?> ProcessCompletion(CompletionRequest completionRequest)
         {
-            if (!completionRequest.Messages.Any()) return null;
+            if (!completionRequest.Messages.Any() || string.IsNullOrEmpty(completionRequest.ProfileOptions.Name)) return null;
 
             // Get and set profile details, overriding the database with any parameters that aren't null in the request
             var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
-            if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name)) ?? throw new IntelligenceHubException(404, $"The profile '{completionRequest.ProfileOptions.Name}' does not exist.");
+            if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name));
             completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
             // Get and attach message history if a conversation id exists
@@ -141,7 +142,7 @@ namespace IntelligenceHub.Business
 
 
             var completion = await _AIClient.PostCompletion(completionRequest);
-            if (completion == null) throw new IntelligenceHubException(500, "Something went wrong...");
+            if (completion.FinishReason == FinishReason.Error) return completion;
 
             if (completionRequest.ConversationId is Guid id)
             {
@@ -164,7 +165,7 @@ namespace IntelligenceHub.Business
         {
             var allMessages = new List<Message>();
             var messageHistory = await _messageHistoryRepository.GetConversationAsync(conversationId, maxMessageHistory ?? _defaultMessageHistory);
-            if (messageHistory == null) throw new IntelligenceHubException(404, $"A conversation with id '{conversationId}' does not exist");
+            if (messageHistory == null || messageHistory.Count < 1) return new List<Message>();
 
             // add messages to the database
             foreach (var message in messageHistory)

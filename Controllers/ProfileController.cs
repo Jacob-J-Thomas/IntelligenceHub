@@ -2,7 +2,6 @@
 using IntelligenceHub.Business;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Config;
-using IntelligenceHub.Common.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using IntelligenceHub.Common;
 
@@ -10,10 +9,9 @@ namespace IntelligenceHub.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "AdminPolicy")]
     public class ProfileController : ControllerBase
     {
-        //private readonly IConfiguration _configuration;
         private ProfileLogic _profileLogic;
 
         public ProfileController(Settings settings)
@@ -24,7 +22,11 @@ namespace IntelligenceHub.Controllers
 
         [HttpGet]
         [Route("get/{name}")]
-        public async Task<IActionResult> GetProfile([FromRoute] string name) // get this to work with either a string or an int
+        [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetProfile([FromRoute] string name)
         {
             try
             {
@@ -32,12 +34,6 @@ namespace IntelligenceHub.Controllers
                 var profileDto = await _profileLogic.GetProfile(name);
                 if (profileDto is not null) return Ok(profileDto);
                 return NotFound($"No profile with the name {name} was found.");
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -51,17 +47,15 @@ namespace IntelligenceHub.Controllers
 
         [HttpGet]
         [Route("get/all")]
+        [ProducesResponseType(typeof(IEnumerable<Profile>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllProfiles()
         {
             try
             {
                 return Ok(await _profileLogic.GetAllProfiles());
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -76,19 +70,17 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("upsert")]
+        [ProducesResponseType(typeof(Profile), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddOrUpdateProfile([FromBody] Profile profileDto)
         {
             try
             {
                 var errorMessage = await _profileLogic.CreateOrUpdateProfile(profileDto);
-                if (errorMessage is not null) return BadRequest(errorMessage);
+                if (!string.IsNullOrEmpty(errorMessage)) return BadRequest(errorMessage);
                 else return Ok(await _profileLogic.GetProfile(profileDto.Name));
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -102,6 +94,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("associate/{name}")]
+        [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddProfileToTools([FromRoute] string name, List<string> tools)
         {
             try
@@ -111,12 +107,6 @@ namespace IntelligenceHub.Controllers
                 var errorMessage = await _profileLogic.AddProfileToTools(name, tools);
                 if (errorMessage is null) return Ok(await _profileLogic.GetProfileToolAssociations(name));
                 else return NotFound(errorMessage);
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -130,6 +120,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("dissociate/{name}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> RemoveProfileFromTools([FromRoute] string name, List<string> tools)
         {
             try
@@ -139,12 +133,6 @@ namespace IntelligenceHub.Controllers
                 var errorMessage = await _profileLogic.DeleteProfileAssociations(name, tools);
                 if (errorMessage is null) return NoContent();
                 else return NotFound(errorMessage);
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -158,6 +146,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpDelete]
         [Route("delete/{name}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteProfile([FromRoute] string name)
         {
             try
@@ -166,12 +158,6 @@ namespace IntelligenceHub.Controllers
                 var errorMessage = await _profileLogic.DeleteProfile(name);
                 if (errorMessage is not null) return NotFound(errorMessage);
                 else return NoContent();
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {

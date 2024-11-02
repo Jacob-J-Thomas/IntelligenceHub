@@ -4,14 +4,14 @@ using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Client;
-using IntelligenceHub.Common.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using IntelligenceHub.Common;
+using IntelligenceHub.API.DTOs;
 
 namespace IntelligenceHub.Controllers
 {
     [Route("Rag")]
-    [Authorize]
+    [Authorize(Policy = "AdminPolicy")]
     public class RagController : ControllerBase
     {
         private readonly RagLogic _ragLogic;
@@ -23,6 +23,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpGet]
         [Route("Index/{name}")]
+        [ProducesResponseType(typeof(IndexMetadata), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Get([FromRoute] string name)
         {
             try
@@ -30,12 +34,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.GetRagIndex(name);
                 if (response is not null) return NotFound();
                 else return Ok(response);
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -49,6 +47,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpGet]
         [Route("Index/GetAll")]
+        [ProducesResponseType(typeof(IEnumerable<IndexMetadata>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -56,12 +58,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.GetAllIndexesAsync();
                 if (response is not null && response.Count() > 0) return Ok(response);
                 else return NotFound();
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -75,6 +71,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("Index")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CreateIndex([FromBody] IndexMetadata indexDefinition)
         {
             try
@@ -82,12 +82,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.CreateIndex(indexDefinition);
                 if (response) return Ok();
                 else return BadRequest();
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -111,12 +105,6 @@ namespace IntelligenceHub.Controllers
                 if (response) return Ok();
                 else return NotFound();
             }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
-            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
@@ -129,6 +117,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpDelete]
         [Route("Index/Delete/{index}")]
+        [ProducesResponseType(typeof(CompletionResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteIndex([FromRoute] string index)
         {
             try
@@ -136,12 +128,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.DeleteIndex(index);
                 if (response) return Ok();
                 else return NotFound();
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -155,6 +141,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpGet]
         [Route("Index/{index}/Document/{count}/Page/{page}")]
+        [ProducesResponseType(typeof(IEnumerable<IndexDocument>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllDocuments([FromRoute] string index, [FromRoute] int count, [FromRoute] int page)
         {
             try
@@ -162,12 +152,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.GetAllDocuments(index, count, page); // going to need to add pagination here
                 if (response != null && response.Count() > 1) return Ok(response);
                 else return NotFound();
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -181,6 +165,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpGet]
         [Route("index/{index}/document/{document}")]
+        [ProducesResponseType(typeof(IndexDocument), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetDocument([FromRoute] string index, [FromRoute] string document)
         {
             try
@@ -188,12 +176,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.GetDocument(index, document);
                 if (response is not null) return Ok(response);
                 else return NotFound();
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -207,6 +189,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("index/{index}/Document")]
+        [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpsertDocuments([FromRoute] string index, [FromBody] RagUpsertRequest documentUpsertRequest)
         {
             try
@@ -214,12 +200,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.UpsertDocuments(index, documentUpsertRequest);
                 if (response) return Ok(response);
                 else return BadRequest();
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -233,6 +213,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpDelete]
         [Route("index/{index}/Document/{commaDelimitedDocNames}")]
+        [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteDocuments([FromRoute] string index, [FromRoute] string commaDelimitedDocNames)
         {
             try
@@ -241,12 +225,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.DeleteDocuments(index, documents);
                 if (response < 1) return NotFound($"The index {index} does not exist, or does not contain any of the documents in the list");
                 else return Ok(response);
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {

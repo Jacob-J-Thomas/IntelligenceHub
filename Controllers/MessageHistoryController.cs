@@ -2,19 +2,16 @@
 using IntelligenceHub.Business;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Config;
-using IntelligenceHub.Common.Exceptions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IntelligenceHub.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "AdminPolicy")]
     public class MessageHistoryController : ControllerBase
     {
-        //private readonly IConfiguration _configuration;
         private readonly MessageHistoryLogic _messageHistoryLogic;
 
         public MessageHistoryController(Settings settings)
@@ -25,6 +22,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpGet]
         [Route("conversation/{id}/count/{count}")]
+        [ProducesResponseType(typeof(List<Message>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetConversation([FromRoute] Guid id, [FromRoute] int count) // get this to work with either a string or an int
         {
             try
@@ -34,37 +35,29 @@ namespace IntelligenceHub.Controllers
                 if (conversation is null || conversation.Count < 1) return NotFound($"The conversation '{id}' does not exist or is empty...");
                 else return Ok(conversation);
             }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
-            }
             catch (HttpRequestException ex)
             {
                 return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVarpublic const string DefaultErrorMessage = "Internal Server Error: Please reattempt. If this issue persists please contact the system administrator."; iables.DefaultExceptionMessage);
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
 
         [HttpPost]
         [Route("conversation/{id}")]
+        [ProducesResponseType(typeof(List<Message>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpsertConversationData([FromRoute] Guid id,[FromBody] List<Message> messages)
         {
             try
             {
                 var responseMessages = await _messageHistoryLogic.UpdateOrCreateConversation(id, messages);
-                if (responseMessages is null || responseMessages.Count != messages.Count) throw new IntelligenceHubException(500, $"Something went wrong when adding the messages. Only {responseMessages?.Count ?? 0} of {messages.Count} messages were added.");
+                if (responseMessages is null || responseMessages.Count != messages.Count) return StatusCode(StatusCodes.Status500InternalServerError, $"Something went wrong when adding the messages. Only {responseMessages?.Count ?? 0} of {messages.Count} messages were added.");
                 else return Ok(responseMessages);
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -78,6 +71,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpDelete]
         [Route("conversation/{id}")]
+        [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteConversation([FromRoute] Guid id)
         {
             try
@@ -85,12 +82,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _messageHistoryLogic.DeleteConversation(id);
                 if (response) return Ok(response);
                 else return NotFound($"No conversation with ID '{id}' was found");
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {
@@ -104,6 +95,10 @@ namespace IntelligenceHub.Controllers
 
         [HttpDelete]
         [Route("conversation/{conversationId}/message/{messageId}")]
+        [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteMessage(Guid conversationId, [FromRoute] int messageId)
         {
             try
@@ -111,12 +106,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _messageHistoryLogic.DeleteMessage(conversationId, messageId);
                 if (response) return Ok(response);
                 else return NotFound("The conversation or message was not found");
-            }
-            catch (IntelligenceHubException hubEx)
-            {
-                if (hubEx.StatusCode == 404) return NotFound(hubEx.Message);
-                else if (hubEx.StatusCode > 399 && hubEx.StatusCode < 500) return BadRequest(hubEx.Message);
-                else throw;
             }
             catch (HttpRequestException ex)
             {

@@ -1,18 +1,11 @@
 ﻿using Azure.AI.OpenAI;
-using OpenAI.Assistants;
 using OpenAI.Chat;
 using IntelligenceHub.API.DTOs;
 using System.ClientModel;
 using static IntelligenceHub.Common.GlobalVariables;
-using IntelligenceHub.Common;
-using Azure.AI.OpenAI.Chat;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
-using Azure.Core.Pipeline;
-using Azure.Core;
 using System.ClientModel.Primitives;
-using Polly.Retry;
-using IntelligenceHub.Common.Exceptions;
 
 namespace IntelligenceHub.Client
 {
@@ -27,7 +20,7 @@ namespace IntelligenceHub.Client
             var policyClient = policyFactory.CreateClient(ClientPolicy.CompletionClient.ToString());
 
             var service = settings.Services.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
-                ?? throw new IntelligenceHubException(500, "service key failed to be retrieved when attempting to generate a completion.");
+                ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
             
             var apiKey = service.Key;
             var credential = new ApiKeyCredential(apiKey);
@@ -38,7 +31,7 @@ namespace IntelligenceHub.Client
             _azureOpenAIClient = new AzureOpenAIClient(policyClient.BaseAddress, credential, options);  //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
         }
 
-        public async Task<CompletionResponse?> PostCompletion(CompletionRequest completionRequest)
+        public async Task<CompletionResponse> PostCompletion(CompletionRequest completionRequest)
         {
             try
             {
@@ -71,13 +64,11 @@ namespace IntelligenceHub.Client
                     ToolCalls = toolCalls
                 };
                 response.Messages.Add(responseMessage);
-                return response;
+                return response ?? new CompletionResponse() { FinishReason = FinishReason.Error };
             }
             catch (Exception)
             {
-                // log excepition?
-
-                return null;
+                return new CompletionResponse() { FinishReason = FinishReason.Error };
             }
             
         }

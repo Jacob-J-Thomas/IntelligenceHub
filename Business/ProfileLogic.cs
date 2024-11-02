@@ -67,7 +67,7 @@ namespace IntelligenceHub.Business
         }
 
         // refactor this
-        public async Task<string> CreateOrUpdateProfile(Profile profileDto)
+        public async Task<string?> CreateOrUpdateProfile(Profile profileDto)
         {
             var errorMessage = _validationLogic.ValidateAPIProfile(profileDto); // move to controller
             if (errorMessage != null) return errorMessage;
@@ -75,13 +75,13 @@ namespace IntelligenceHub.Business
             var success = true;
             if (existingProfile != null)
             {
-                var updateProfileDto = DbMappingHandler.MapToDbProfile(existingProfile, profileDto);
+                var updateProfileDto = DbMappingHandler.MapToDbProfile(existingProfile.Name, existingProfile, profileDto);
                 var rows = await _profileDb.UpdateAsync(existingProfile, updateProfileDto);
                 if (rows != 1) success = false;
             }
             else
             {
-                var updateProfileDto = DbMappingHandler.MapToDbProfile(null, profileDto);
+                var updateProfileDto = DbMappingHandler.MapToDbProfile(profileDto.Name, null, profileDto);
                 var newTool = await _profileDb.AddAsync(updateProfileDto);
                 if (newTool == null) success = false;
             }

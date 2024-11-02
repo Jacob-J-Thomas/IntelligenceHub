@@ -1,5 +1,4 @@
-﻿using IntelligenceHub.Common.Exceptions;
-using OpenAI.Chat;
+﻿using OpenAI.Chat;
 using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -8,26 +7,24 @@ namespace IntelligenceHub.Common.Extensions
     public static class ExtensionMethods
     {
 
-        public static FinishReason ConvertStringToFinishReason(this string finishReason)
+        public static FinishReason? ConvertStringToFinishReason(this string finishReason)
         {
             if (finishReason == ChatFinishReason.Stop.ToString()) return FinishReason.Stop;
             if (finishReason == ChatFinishReason.Length.ToString()) return FinishReason.Length;
             if (finishReason == ChatFinishReason.ToolCalls.ToString()) return FinishReason.ToolCalls;
             if (finishReason == ChatFinishReason.FunctionCall.ToString()) return FinishReason.ToolCalls;
             if (finishReason == ChatFinishReason.ContentFilter.ToString()) return FinishReason.ContentFilter;
-
-            throw new IntelligenceHubException(500, "Could not convert chat finish reason to system finish reason");
+            return null;
         }
 
-        public static Role ConvertStringToRole(this string role)
+        public static Role? ConvertStringToRole(this string role)
         {
             if (role == ChatMessageRole.Assistant.ToString()) return Role.Assistant;
             if (role == ChatMessageRole.User.ToString()) return Role.User;
             if (role == ChatMessageRole.Tool.ToString()) return Role.Tool;
             if (role == ChatMessageRole.Function.ToString()) return Role.Tool;
             if (role == ChatMessageRole.System.ToString()) return Role.System;
-
-            throw new IntelligenceHubException(500, "Could not convert chat role to system role");
+            return null;
         }
 
         public static string ToCommaSeparatedString(this IEnumerable<string> strings)
