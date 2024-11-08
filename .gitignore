@@ -364,3 +364,6 @@ MigrationBackup/
 FodyWeavers.xsd
 /appsettings.json
 /appsettings.Development.json
+/VirtualAssistantStressTester/LoadTesting/appsettings.json
+/LoadTesting/appsettings.json
+/IntelligenceHub/appsettings.json
