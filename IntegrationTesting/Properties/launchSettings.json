@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "IntelligenceHub.IntegrationTesting": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
