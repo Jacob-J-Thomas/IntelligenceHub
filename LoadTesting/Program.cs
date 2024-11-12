@@ -1,15 +1,17 @@
 ﻿using IntelligenceHub.API.DTOs;
-using LoadTester.Auth;
-using LoadTester.Config;
+using IntelligenceHub.Tests.Common.Auth;
+using IntelligenceHub.Tests.Common.Config;
+using IntelligenceHub.Tests.Stress.Config;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System.Text;
 
-namespace LoadTester
+namespace IntelligenceHub.Tests.Stress
 {
     class Program
     {
         private static readonly HttpClient _client = new HttpClient();
+        private static readonly Random _random = new Random();
         private static int _requestCount = 0;
         private static int _successCount = 0;
         private static int _failureCount = 0;
@@ -23,25 +25,38 @@ namespace LoadTester
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .Build();
 
-            var settings = configuration.GetRequiredSection(nameof(LoadTesterSettings)).Get<LoadTesterSettings>()
+            var settings = configuration.GetRequiredSection(nameof(StressTestingSettings)).Get<StressTestingSettings>()
                 ?? throw new ArgumentNullException("Appsettings failed to be configured...");
+
+            var intelligenceHubSettings = configuration.GetRequiredSection(nameof(IntelligenceHubSettings)).Get<IntelligenceHubSettings>()
+                ?? throw new ArgumentNullException(nameof(IntelligenceHubSettings));
+
+            var authSettings = configuration.GetRequiredSection(nameof(AuthTestingSettings)).Get<AuthTestingSettings>()
+                ?? throw new ArgumentNullException("Auth settings failed to be configured...");
 
             // validation checks
             if (settings.TotalRequests < settings.ConcurrencyLevel) throw new ArgumentException("The number of requests must be greater than the concurrency level.");
 
             // Set authentication headers
-            var authClient = new AuthClient(settings);
+            var authClient = new AuthClient(
+                authSettings.AuthEndpoint,
+                authSettings.AuthClientId,
+                authSettings.AuthClientSecret,
+                authSettings.ElevatedAuthClientId,
+                authSettings.AuthClientSecret,
+                authSettings.Audience);
+
             var authResponse = await authClient.RequestAuthToken();
+
             if (string.IsNullOrEmpty(authResponse?.AccessToken)) throw new InvalidOperationException("The auth token failed to be retrieved. Testing could not continue...");
             _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {authResponse.AccessToken}");
-
-            // Could modify this method to 
-            var request = BuildRequest(settings);
 
             // Calculate the number of batches needed  
             var batches = (int)Math.Ceiling((double)settings.TotalRequests / settings.ConcurrencyLevel);
 
             // Begin testing
+            var logPath = "stress_test_log.txt";
+            var currentLine = string.Empty;
             var tasks = new List<Task>();
             Console.WriteLine("Beggining stress test...\n");
             for (var batch = 0; batch < batches; batch++)
@@ -52,18 +67,36 @@ namespace LoadTester
                 // Create tasks for the current batch  
                 for (var i = 0; i < requestsInThisBatch; i++)
                 {
-                    tasks.Add(Task.Run(() => SendRequests(settings, request)));
+                    var request = BuildRequest(intelligenceHubSettings.Completions);
+                    tasks.Add(Task.Run(() => SendRequests(intelligenceHubSettings, request)));
                 }
 
                 // Wait for all tasks in the current batch to complete  
                 await Task.WhenAll(tasks);
 
-                Console.WriteLine($"Batch {batch + 1}/{batches} completed.");
-                Console.WriteLine($"Total Requests: {_requestCount}");
-                Console.WriteLine($"Successful Requests: {_successCount}");
-                Console.WriteLine($"Failed Requests: {_failureCount}");
-                Console.WriteLine($"Longest Request Time: {_longestRequestSeconds}");
-                Console.WriteLine($"Average Request Time: {_avgRequestSeconds}");
+                currentLine = $"Batch {batch + 1}/{batches} completed.";
+                Console.WriteLine(currentLine);
+                File.AppendAllText(logPath, currentLine + Environment.NewLine);
+
+                currentLine = $"Total Requests: {_requestCount}";
+                Console.WriteLine(currentLine);
+                File.AppendAllText(logPath, currentLine + Environment.NewLine);
+
+                currentLine = $"Successful Requests: {_successCount}";
+                Console.WriteLine(currentLine);
+                File.AppendAllText(logPath, currentLine + Environment.NewLine);
+
+                currentLine = $"Failed Requests: {_failureCount}";
+                Console.WriteLine(currentLine);
+                File.AppendAllText(logPath, currentLine + Environment.NewLine);
+
+                currentLine = $"Longest Request Time: {_longestRequestSeconds}";
+                Console.WriteLine(currentLine);
+                File.AppendAllText(logPath, currentLine + Environment.NewLine);
+
+                currentLine = $"Average Request Time: {_avgRequestSeconds}";
+                Console.WriteLine(currentLine);
+                File.AppendAllText(logPath, currentLine + Environment.NewLine);
 
                 // Clear the task list for the next batch  
                 tasks.Clear();
@@ -71,22 +104,30 @@ namespace LoadTester
                 // Delay before starting the next batch, if not the last batch  
                 if (batch < batches - 1)
                 {
-                    Console.WriteLine($"\nWaiting for {settings.ConcurrencyDelaySeconds} seconds before next batch...\n");
+                    currentLine = $"\nWaiting for {settings.ConcurrencyDelaySeconds} seconds before next batch...\n";
+                    Console.WriteLine(currentLine);
+                    File.AppendAllText(logPath, currentLine + Environment.NewLine);
+
                     await Task.Delay(settings.ConcurrencyDelaySeconds * 1000);// convert seconds to miliseconds
                 }
             }
-            Console.WriteLine("\nStress test completed.\n");
+            currentLine = "\nStress test completed.\n";
+            Console.WriteLine(currentLine);
+            File.AppendAllText(logPath, currentLine + Environment.NewLine);
         }
 
-        private static CompletionRequest BuildRequest(LoadTesterSettings settings)
+        private static CompletionRequest BuildRequest(List<string> completions)
         {
+            // Select a random string from the completions list
+            var randomCompletion = completions[_random.Next(completions.Count)];
+
             return new CompletionRequest()
             {
-                Messages = new List<Message>() { new Message() { Role = IntelligenceHub.Common.GlobalVariables.Role.User, Content = settings.Completion } }
+                Messages = new List<Message>() { new Message() { Role = IntelligenceHub.Common.GlobalVariables.Role.User, Content = randomCompletion } }
             };
         }
 
-        private static async Task SendRequests(LoadTesterSettings settings, CompletionRequest request)
+        private static async Task SendRequests(IntelligenceHubSettings settings, CompletionRequest request)
         {
             Interlocked.Increment(ref _requestCount);
             try
@@ -94,7 +135,7 @@ namespace LoadTester
                 var json = System.Text.Json.JsonSerializer.Serialize(request);
                 var requestContent = new StringContent(json, Encoding.UTF8, "application/json");
                 var sentTime = DateTime.UtcNow;
-                var response = await _client.PostAsync($"{settings.TargetUrl}/{settings.ProfileName}", requestContent);
+                var response = await _client.PostAsync($"{settings.TestingUrl}/{settings.ProfileName}", requestContent);
 
                 // Calculate details for longest request time
                 var processingTime = DateTime.UtcNow - sentTime;
