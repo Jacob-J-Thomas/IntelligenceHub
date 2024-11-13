@@ -3,9 +3,9 @@ using IntelligenceHub.API.DTOs.Tools;
 
 namespace IntelligenceHub.Common.Handlers
 {
-    public class ProfileValidationHandler
+    public class ValidationHandler : IValidationHandler
     {
-        public ProfileValidationHandler() { }
+        public ValidationHandler() { }
 
         public string? ValidateChatRequest(CompletionRequest chatRequest)
         {

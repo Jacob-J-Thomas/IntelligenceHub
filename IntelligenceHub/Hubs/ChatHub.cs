@@ -10,11 +10,12 @@ namespace IntelligenceHub.Hubs
     public class ChatHub : Hub
     {
         private readonly ICompletionLogic _completionLogic;
-        private readonly ProfileValidationHandler _validationLogic = new ProfileValidationHandler();
+        private readonly IValidationHandler _validationLogic;
 
-        public ChatHub(ICompletionLogic completionLogic)
+        public ChatHub(ICompletionLogic completionLogic, IValidationHandler validationHandler)
         {
             _completionLogic = completionLogic;
+            _validationLogic = validationHandler;
         }
 
         public async Task Send(CompletionRequest completionRequest)
