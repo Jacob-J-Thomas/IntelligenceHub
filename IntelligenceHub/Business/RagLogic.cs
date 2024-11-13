@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace IntelligenceHub.Business
 {
-    public class RagLogic
+    public class RagLogic : IRagLogic
     {
         private readonly IAISearchServiceClient _searchClient;
         private readonly IAGIClient _aiClient;

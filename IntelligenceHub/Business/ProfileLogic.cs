@@ -6,14 +6,14 @@ using IntelligenceHub.API.DTOs.Tools;
 
 namespace IntelligenceHub.Business
 {
-    public class ProfileLogic
+    public class ProfileLogic : IProfileLogic
     {
         private readonly ProfileRepository _profileDb;
         private readonly ProfileToolsAssociativeRepository _profileToolsDb;
         private readonly ToolRepository _toolDb;
         private readonly PropertyRepository _propertyDb;
 
-        private readonly ProfileValidationHandler _validationLogic = new ProfileValidationHandler();
+        private readonly ValidationHandler _validationLogic = new ValidationHandler();
 
         public ProfileLogic(string connectionString)
         {

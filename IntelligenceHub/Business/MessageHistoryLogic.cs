@@ -4,7 +4,7 @@ using IntelligenceHub.DAL.Models;
 
 namespace IntelligenceHub.Business
 {
-    public class MessageHistoryLogic
+    public class MessageHistoryLogic : IMessageHistoryLogic
     {
         private readonly MessageHistoryRepository _messageHistoryRepository;
 
