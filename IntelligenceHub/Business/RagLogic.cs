@@ -4,10 +4,11 @@ using IntelligenceHub.DAL;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.RAG;
 using System.Text.RegularExpressions;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Business
 {
-    public class RagLogic
+    public class RagLogic : IRagLogic
     {
         private readonly IAISearchServiceClient _searchClient;
         private readonly IAGIClient _aiClient;
@@ -17,12 +18,12 @@ namespace IntelligenceHub.Business
 
         private readonly string _defaultEmbeddingModel = "text-embedding-3-large";
 
-        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, string sqlConnectionString) 
+        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, Settings settings) 
         {
             _searchClient = aISearchServiceClient;
             _aiClient = agiClient;
-            _metaRepository = new IndexMetaRepository(sqlConnectionString);
-            _ragRepository = new IndexRepository(sqlConnectionString);
+            _metaRepository = new IndexMetaRepository(settings.DbConnectionString);
+            _ragRepository = new IndexRepository(settings.DbConnectionString);
         }
 
         public async Task<IndexMetadata> GetRagIndex(string index)

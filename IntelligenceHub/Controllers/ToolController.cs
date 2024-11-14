@@ -12,12 +12,11 @@ namespace IntelligenceHub.Controllers
     [Authorize(Policy = "AdminPolicy")]
     public class ToolController : ControllerBase
     {
-        private readonly ProfileLogic _profileLogic;
+        private readonly IProfileLogic _profileLogic;
 
-        public ToolController(Settings settings)
+        public ToolController(IProfileLogic profileLogic)
         {
-            settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _profileLogic = new ProfileLogic(settings.DbConnectionString);
+            _profileLogic = profileLogic;
         }
 
         [HttpGet]

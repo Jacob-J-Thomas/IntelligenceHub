@@ -3,24 +3,25 @@ using IntelligenceHub.DAL.Models;
 using IntelligenceHub.Common.Handlers;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Business
 {
-    public class ProfileLogic
+    public class ProfileLogic : IProfileLogic
     {
         private readonly ProfileRepository _profileDb;
         private readonly ProfileToolsAssociativeRepository _profileToolsDb;
         private readonly ToolRepository _toolDb;
         private readonly PropertyRepository _propertyDb;
 
-        private readonly ProfileValidationHandler _validationLogic = new ProfileValidationHandler();
+        private readonly ValidationHandler _validationLogic = new ValidationHandler();
 
-        public ProfileLogic(string connectionString)
+        public ProfileLogic(Settings settings)
         {
-            _profileDb = new ProfileRepository(connectionString);
-            _profileToolsDb = new ProfileToolsAssociativeRepository(connectionString);
-            _toolDb = new ToolRepository(connectionString);
-            _propertyDb = new PropertyRepository(connectionString); 
+            _profileDb = new ProfileRepository(settings.DbConnectionString);
+            _profileToolsDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
+            _toolDb = new ToolRepository(settings.DbConnectionString);
+            _propertyDb = new PropertyRepository(settings.DbConnectionString); 
         }
 
         // else shouldn't be required here

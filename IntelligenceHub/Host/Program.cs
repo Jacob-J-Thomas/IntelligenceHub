@@ -13,6 +13,7 @@ using IntelligenceHub.Host.Policies;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Host.Logging;
 using Microsoft.IdentityModel.Tokens;
+using IntelligenceHub.Common.Handlers;
 
 namespace IntelligenceHub.Host
 {
@@ -33,6 +34,10 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton<IAGIClient, AGIClient>();
             builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
             builder.Services.AddSingleton<ICompletionLogic, CompletionLogic>();
+            builder.Services.AddSingleton<IMessageHistoryLogic, MessageHistoryLogic>();
+            builder.Services.AddSingleton<IProfileLogic, ProfileLogic>();
+            builder.Services.AddSingleton<IRagLogic, RagLogic>();
+            builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
             builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.Services.Select(service => service.Endpoint).ToArray()));
             #endregion
 
