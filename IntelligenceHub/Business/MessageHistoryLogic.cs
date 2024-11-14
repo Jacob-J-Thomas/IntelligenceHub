@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.DAL;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.DAL.Models;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Business
 {
@@ -8,9 +9,9 @@ namespace IntelligenceHub.Business
     {
         private readonly MessageHistoryRepository _messageHistoryRepository;
 
-        public MessageHistoryLogic(string dbConnectionString)
+        public MessageHistoryLogic(Settings settings)
         {
-            _messageHistoryRepository = new MessageHistoryRepository(dbConnectionString);
+            _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
         }
 
         public async Task<List<Message>> GetConversationHistory(Guid id, int count)
