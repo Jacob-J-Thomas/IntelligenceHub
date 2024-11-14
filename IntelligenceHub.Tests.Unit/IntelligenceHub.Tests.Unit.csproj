@@ -30,7 +30,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IntelligenceHub\IntelligenceHub.csproj" />
-    <ProjectReference Include="..\IntelligenceHub\IntelligenceHub\IntelligenceHub.csproj" />
   </ItemGroup>
 
 </Project>

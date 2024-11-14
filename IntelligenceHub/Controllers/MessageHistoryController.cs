@@ -57,7 +57,7 @@ namespace IntelligenceHub.Controllers
                 if (messages == null || messages.Count == 0) return BadRequest("Messages must be included in the request.");
 
                 var responseMessages = await _messageHistoryLogic.UpdateOrCreateConversation(id, messages);
-                if (responseMessages is null) return StatusCode(StatusCodes.Status500InternalServerError, $"Something went wrong when adding the messages. Only {responseMessages?.Count ?? 0} of {messages.Count} messages were added.");
+                if (responseMessages is null) return StatusCode(StatusCodes.Status500InternalServerError, $"Something went wrong when adding the messages.");
                 else return Ok(responseMessages);
             }
             catch (HttpRequestException ex)
