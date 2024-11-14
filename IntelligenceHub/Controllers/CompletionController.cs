@@ -17,13 +17,12 @@ namespace IntelligenceHub.Controllers
     public class CompletionController : ControllerBase
     {
         private readonly ICompletionLogic _completionLogic;
-        private readonly ProfileValidationHandler _validationLogic;
+        private readonly IValidationHandler _validationLogic;
 
-        public CompletionController(ICompletionLogic completionLogic, Settings settings)
+        public CompletionController(ICompletionLogic completionLogic, IValidationHandler validationHandler)
         {
-            settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _completionLogic = completionLogic;
-            _validationLogic = new ProfileValidationHandler();
+            _validationLogic = validationHandler;
         }
 
         [HttpPost]
