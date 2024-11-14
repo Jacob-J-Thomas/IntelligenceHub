@@ -366,3 +366,4 @@ FodyWeavers.xsd
 /appsettings.Development.json
 /LoadTesting/appsettings.json
 /IntelligenceHub/appsettings.json
+/IntelligenceHub.Tests.Competency/appsettings.json
