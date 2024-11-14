@@ -1,7 +1,6 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business;
 using IntelligenceHub.Common;
-using IntelligenceHub.Common.Config;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,12 +11,11 @@ namespace IntelligenceHub.Controllers
     [Authorize(Policy = "AdminPolicy")]
     public class MessageHistoryController : ControllerBase
     {
-        private readonly MessageHistoryLogic _messageHistoryLogic;
+        private readonly IMessageHistoryLogic _messageHistoryLogic;
 
-        public MessageHistoryController(Settings settings)
+        public MessageHistoryController(IMessageHistoryLogic messageHistoryLogic)
         {
-            settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _messageHistoryLogic = new MessageHistoryLogic(settings.DbConnectionString);
+            _messageHistoryLogic = messageHistoryLogic;
         }
 
         [HttpGet]
@@ -55,8 +53,11 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                // Validate the messages list
+                if (messages == null || messages.Count == 0) return BadRequest("Messages must be included in the request.");
+
                 var responseMessages = await _messageHistoryLogic.UpdateOrCreateConversation(id, messages);
-                if (responseMessages is null || responseMessages.Count != messages.Count) return StatusCode(StatusCodes.Status500InternalServerError, $"Something went wrong when adding the messages. Only {responseMessages?.Count ?? 0} of {messages.Count} messages were added.");
+                if (responseMessages is null) return StatusCode(StatusCodes.Status500InternalServerError, $"Something went wrong when adding the messages.");
                 else return Ok(responseMessages);
             }
             catch (HttpRequestException ex)

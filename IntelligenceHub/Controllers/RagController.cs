@@ -14,11 +14,11 @@ namespace IntelligenceHub.Controllers
     [Authorize(Policy = "AdminPolicy")]
     public class RagController : ControllerBase
     {
-        private readonly RagLogic _ragLogic;
+        private readonly IRagLogic _ragLogic;
 
-        public RagController(IAGIClient agiClient, IAISearchServiceClient searchClient, Settings settings) 
+        public RagController(IRagLogic ragLogic) 
         {
-            _ragLogic = new RagLogic(agiClient, searchClient, settings.DbConnectionString);
+            _ragLogic = ragLogic;
         }
 
         [HttpGet]
