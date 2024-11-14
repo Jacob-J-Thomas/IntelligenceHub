@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\IntelligenceHub.Tests.Common\IntelligenceHub.Tests.Common.csproj" />
+    <ProjectReference Include="..\IntelligenceHub.Tests.Common\IntelligenceHub.Tests.Common.csproj" />
     <ProjectReference Include="..\IntelligenceHub\IntelligenceHub.csproj" />
   </ItemGroup>
 
