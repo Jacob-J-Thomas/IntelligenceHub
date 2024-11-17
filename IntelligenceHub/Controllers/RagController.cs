@@ -2,8 +2,6 @@
 using IntelligenceHub.Business;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.API.DTOs.RAG;
-using IntelligenceHub.Common.Config;
-using IntelligenceHub.Client;
 using Microsoft.AspNetCore.Authorization;
 using IntelligenceHub.Common;
 using IntelligenceHub.API.DTOs;
@@ -32,7 +30,7 @@ namespace IntelligenceHub.Controllers
             try
             {
                 var response = await _ragLogic.GetRagIndex(name);
-                if (response is not null) return NotFound();
+                if (response == null) return NotFound();
                 else return Ok(response);
             }
             catch (HttpRequestException ex)
@@ -223,7 +221,7 @@ namespace IntelligenceHub.Controllers
             {
                 var documents = commaDelimitedDocNames.ToStringArray();
                 var response = await _ragLogic.DeleteDocuments(index, documents);
-                if (response < 1) return NotFound($"The index {index} does not exist, or does not contain any of the documents in the list");
+                if (response < 1) return NotFound();
                 else return Ok(response);
             }
             catch (HttpRequestException ex)

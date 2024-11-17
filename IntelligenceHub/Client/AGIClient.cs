@@ -35,6 +35,7 @@ namespace IntelligenceHub.Client
         {
             try
             {
+                if (string.IsNullOrEmpty(completionRequest.ProfileOptions.Name) || completionRequest.Messages.Count < 1) return new CompletionResponse() { FinishReason = FinishReason.Error };
                 var options = BuildCompletionOptions(completionRequest);
                 var messages = BuildCompletionMessages(completionRequest);
                 var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);

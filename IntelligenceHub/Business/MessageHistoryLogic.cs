@@ -7,11 +7,11 @@ namespace IntelligenceHub.Business
 {
     public class MessageHistoryLogic : IMessageHistoryLogic
     {
-        private readonly MessageHistoryRepository _messageHistoryRepository;
+        private readonly IMessageHistoryRepository _messageHistoryRepository;
 
-        public MessageHistoryLogic(Settings settings)
+        public MessageHistoryLogic(IMessageHistoryRepository messageRepository)
         {
-            _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
+            _messageHistoryRepository = messageRepository;
         }
 
         public async Task<List<Message>> GetConversationHistory(Guid id, int count)

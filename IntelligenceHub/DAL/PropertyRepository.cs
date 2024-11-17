@@ -1,16 +1,17 @@
-﻿using IntelligenceHub.DAL.Models;
+﻿using IntelligenceHub.Common.Config;
+using IntelligenceHub.DAL.Models;
 using Microsoft.Data;
 using Microsoft.Data.SqlClient;
 
 namespace IntelligenceHub.DAL
 {
-    public class PropertyRepository : GenericRepository<DbProperty>
+    public class PropertyRepository : GenericRepository<DbProperty>, IPropertyRepository
     {
-        public PropertyRepository(string connectionString) : base(connectionString)
+        public PropertyRepository(Settings settings) : base(settings.DbConnectionString)
         {
         }
 
-        public async Task<List<DbProperty>> GetToolProperties(int Id)
+        public async Task<IEnumerable<DbProperty>> GetToolProperties(int Id)
         {
             try
             {
@@ -18,8 +19,8 @@ namespace IntelligenceHub.DAL
                 {
                     await connection.OpenAsync();
                     var query = $@"
-                        SELECT * FROM {_table}
-                        WHERE ToolId = @Id";
+                            SELECT * FROM {_table}
+                            WHERE ToolId = @Id";
 
                     using (var command = new SqlCommand(query, connection))
                     {
@@ -43,6 +44,16 @@ namespace IntelligenceHub.DAL
             }
         }
 
+        public async Task AddAsync(DbProperty property)
+        {
+            await base.AddAsync(property);
+        }
+
+        public async Task DeleteAsync(DbProperty property)
+        {
+            await base.DeleteAsync(property);
+        }
+
         public async Task<DbProperty> UpdatePropertyAsync(DbProperty existingEntity, DbProperty entity)
         {
             try
@@ -56,9 +67,9 @@ namespace IntelligenceHub.DAL
                         .Select(p => $"{p.Name} = @{p.Name}"));
 
                     var query = $@"
-                        UPDATE {_table} SET {setClause} 
-                        WHERE Name = @Name
-                        AND ToolID = @ToolID";
+                            UPDATE {_table} SET {setClause} 
+                            WHERE Name = @Name
+                            AND ToolID = @ToolID";
 
                     using (var command = new SqlCommand(query, connection))
                     {

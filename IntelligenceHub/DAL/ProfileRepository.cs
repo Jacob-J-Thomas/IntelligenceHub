@@ -1,14 +1,15 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
+using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
 
 namespace IntelligenceHub.DAL
 {
-    public class ProfileRepository : GenericRepository<DbProfile>
+    public class ProfileRepository : GenericRepository<DbProfile>, IProfileRepository
     {
 
-        public ProfileRepository(string connectionString) : base(connectionString)
+        public ProfileRepository(Settings settings) : base(settings.DbConnectionString)
         {
 
         }
@@ -69,6 +70,26 @@ namespace IntelligenceHub.DAL
 
                 throw;
             }
+        }
+
+        public async Task<IEnumerable<DbProfile>> GetAllAsync()
+        {
+            return await base.GetAllAsync();
+        }
+
+        public async Task<DbProfile?> AddAsync(DbProfile updateProfileDto)
+        {
+            return await base.AddAsync(updateProfileDto);
+        }
+
+        public async Task<int> UpdateAsync(DbProfile existingProfile, DbProfile updateProfileDto)
+        {
+            return await base.UpdateAsync(existingProfile, updateProfileDto);
+        }
+
+        public async Task<int> DeleteAsync(DbProfile profile)
+        {
+            return await base.DeleteAsync(profile);
         }
 
         private List<DbTool> MapToolsFromReader(SqlDataReader reader)

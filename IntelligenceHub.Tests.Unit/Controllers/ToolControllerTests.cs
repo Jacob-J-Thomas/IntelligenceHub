@@ -37,7 +37,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Equal("Invalid request.Please check the route parameter for the profile name: ", badRequestResult.Value);
+            Assert.Equal("Invalid request. Please check the route parameter for the profile name.", badRequestResult.Value);
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Equal("Invalid request.Please check the route parameter for the profile name: ", badRequestResult.Value);
+            Assert.Equal("Invalid request. Please check the route parameter for the profile name.", badRequestResult.Value);
         }
 
         [Fact]
@@ -194,7 +194,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Equal("Invalid request.'Profiles' property cannot be null or empty: [].", badRequestResult.Value);
+            Assert.Equal("Invalid request. 'Profiles' property cannot be null or empty.", badRequestResult.Value);
         }
 
         [Fact]
@@ -203,14 +203,18 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             // Arrange
             var name = "tool1";
             var profiles = new List<string> { "profile1" };
+            var profileAssociations = new List<string> { "profile1", "profile2" };
+
             _profileLogicMock.Setup(p => p.AddToolToProfiles(name, profiles)).ReturnsAsync((string)null);
+            _profileLogicMock.Setup(p => p.GetToolProfileAssociations(name)).ReturnsAsync(profileAssociations);
 
             // Act
             var result = await _controller.AddToolToProfiles(name, profiles);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
-            Assert.IsType<List<string>>(okResult.Value); // Assuming GetToolProfileAssociations returns List<string>
+            Assert.IsType<List<string>>(okResult.Value);
+            Assert.Equal(profileAssociations, okResult.Value);
         }
         #endregion
 
@@ -227,7 +231,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Equal("Invalid request.'Profiles' property cannot be null or empty: [].", badRequestResult.Value);
+            Assert.Equal("Invalid request. 'Profiles' property cannot be null or empty.", badRequestResult.Value);
         }
 
         [Fact]
@@ -258,7 +262,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-            Assert.Equal("Invalid request.Please check the route parameter for the profile name: ", badRequestResult.Value);
+            Assert.Equal("Invalid request. Please check the route parameter for the profile name.", badRequestResult.Value);
         }
 
         [Fact]

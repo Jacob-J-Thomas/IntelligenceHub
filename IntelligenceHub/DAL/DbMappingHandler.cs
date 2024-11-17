@@ -216,13 +216,14 @@ namespace IntelligenceHub.DAL
                     BoostDurationDays = dbIndexData.ScoringBoostDurationDays,
                     FreshnessBoost = dbIndexData.ScoringFreshnessBoost,
                     TagBoost = dbIndexData.ScoringTagBoost,
-                    Weights = DeserializeDbWeights(dbIndexData.ScoringWeights)
+                    Weights = DeserializeDbWeights(dbIndexData.ScoringWeights) ?? new Dictionary<string, double>()
                 }
             };
         }
 
         public static DbIndexMetadata MapToDbIndexMetadata(IndexMetadata indexData)
         {
+            if (indexData.ScoringProfile == null) indexData.ScoringProfile = new IndexScoringProfile();
             return new DbIndexMetadata()
             {
                 Name = indexData.Name,
@@ -243,12 +244,13 @@ namespace IntelligenceHub.DAL
                 ScoringFreshnessBoost = indexData.ScoringProfile?.FreshnessBoost ?? 0,
                 ScoringBoostDurationDays = indexData.ScoringProfile?.BoostDurationDays ?? 0,
                 ScoringTagBoost = indexData.ScoringProfile?.TagBoost ?? 0,
-                ScoringWeights = indexData.ScoringProfile.Weights.Any() ? SerializeDbWeights(indexData.ScoringProfile.Weights) : string.Empty,
+                ScoringWeights = indexData.ScoringProfile?.Weights.Count > 0 ? SerializeDbWeights(indexData.ScoringProfile.Weights) : string.Empty,
             };
         }
 
-        private static Dictionary<string, double>? DeserializeDbWeights(string serializedWeights)
+        private static Dictionary<string, double>? DeserializeDbWeights(string? serializedWeights)
         {
+            if (string.IsNullOrEmpty(serializedWeights)) return null;
             return JsonSerializer.Deserialize<Dictionary<string, double>>(serializedWeights) ?? null;
         }
 

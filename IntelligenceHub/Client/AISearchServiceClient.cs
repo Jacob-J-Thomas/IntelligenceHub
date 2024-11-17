@@ -104,27 +104,27 @@ namespace IntelligenceHub.Client
             {
                 var scoringProfile = new ScoringProfile(indexDefinition.ScoringProfile?.Name);
 
-                if (indexDefinition.ScoringProfile.Weights != null && indexDefinition.ScoringProfile.Weights.Any()) scoringProfile.TextWeights = new TextWeights(indexDefinition.ScoringProfile.Weights);
+                if (indexDefinition.ScoringProfile != null && indexDefinition.ScoringProfile.Weights.Any()) scoringProfile.TextWeights = new TextWeights(indexDefinition.ScoringProfile.Weights);
 
                 // assign function aggregation
-                if (indexDefinition.ScoringProfile.Aggregation == ScoringFunctionAggregation.Sum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Sum;
-                else if (indexDefinition.ScoringProfile.Aggregation == ScoringFunctionAggregation.FirstMatching.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.FirstMatching;
-                else if (indexDefinition.ScoringProfile.Aggregation == ScoringFunctionAggregation.Average.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Average;
-                else if (indexDefinition.ScoringProfile.Aggregation == ScoringFunctionAggregation.Minimum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Minimum;
-                else if (indexDefinition.ScoringProfile.Aggregation == ScoringFunctionAggregation.Maximum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Maximum;
+                if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.Sum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Sum;
+                else if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.FirstMatching.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.FirstMatching;
+                else if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.Average.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Average;
+                else if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.Minimum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Minimum;
+                else if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.Maximum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Maximum;
 
                 // assign interpolation
                 var interpolation = ScoringFunctionInterpolation.Linear;
-                if (indexDefinition.ScoringProfile.Interpolation == ScoringFunctionInterpolation.Constant.ToString()) interpolation = ScoringFunctionInterpolation.Constant;
-                else if (indexDefinition.ScoringProfile.Interpolation == ScoringFunctionInterpolation.Quadratic.ToString()) interpolation = ScoringFunctionInterpolation.Quadratic;
-                else if (indexDefinition.ScoringProfile.Interpolation == ScoringFunctionInterpolation.Logarithmic.ToString()) interpolation = ScoringFunctionInterpolation.Logarithmic;
+                if (indexDefinition.ScoringProfile?.Interpolation == ScoringFunctionInterpolation.Constant.ToString()) interpolation = ScoringFunctionInterpolation.Constant;
+                else if (indexDefinition.ScoringProfile?.Interpolation == ScoringFunctionInterpolation.Quadratic.ToString()) interpolation = ScoringFunctionInterpolation.Quadratic;
+                else if (indexDefinition.ScoringProfile?.Interpolation == ScoringFunctionInterpolation.Logarithmic.ToString()) interpolation = ScoringFunctionInterpolation.Logarithmic;
 
                 // add scoring functions to the profile
-                if (indexDefinition.ScoringProfile.FreshnessBoost > 1) scoringProfile.Functions.Add(new FreshnessScoringFunction("modified", indexDefinition.ScoringProfile.FreshnessBoost, new FreshnessScoringParameters(TimeSpan.FromDays(indexDefinition.ScoringProfile.BoostDurationDays)))
+                if (indexDefinition.ScoringProfile?.FreshnessBoost > 1) scoringProfile.Functions.Add(new FreshnessScoringFunction("modified", indexDefinition.ScoringProfile.FreshnessBoost, new FreshnessScoringParameters(TimeSpan.FromDays(indexDefinition.ScoringProfile.BoostDurationDays)))
                 {
                     Interpolation = interpolation,
                 });
-                else if (indexDefinition.ScoringProfile.TagBoost > 1)
+                else if (indexDefinition.ScoringProfile?.TagBoost > 1)
                 {
                     scoringProfile.Functions.Add(new TagScoringFunction("title", indexDefinition.ScoringProfile.TagBoost, new TagScoringParameters("keywords"))
                     {
