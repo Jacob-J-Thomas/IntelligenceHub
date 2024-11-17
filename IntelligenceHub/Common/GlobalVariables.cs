@@ -21,7 +21,7 @@ namespace IntelligenceHub.Common
         public enum ClientPolicy
         {
             CompletionClient,
-            FunctionClient
+            ToolClient
         }
 
         public enum ResponseFormat

@@ -9,19 +9,20 @@ namespace IntelligenceHub.Business
 {
     public class ProfileLogic : IProfileLogic
     {
-        private readonly ProfileRepository _profileDb;
-        private readonly ProfileToolsAssociativeRepository _profileToolsDb;
-        private readonly ToolRepository _toolDb;
-        private readonly PropertyRepository _propertyDb;
+        private readonly IProfileRepository _profileDb;
+        private readonly IProfileToolsAssociativeRepository _profileToolsDb;
+        private readonly IToolRepository _toolDb;
+        private readonly IPropertyRepository _propertyDb;
 
-        private readonly ValidationHandler _validationLogic = new ValidationHandler();
+        private readonly IValidationHandler _validationLogic;
 
-        public ProfileLogic(Settings settings)
+        public ProfileLogic(IProfileRepository profileDb, IProfileToolsAssociativeRepository profileToolsDb, IToolRepository toolDb, IPropertyRepository propertyDb, IValidationHandler validationLogic)
         {
-            _profileDb = new ProfileRepository(settings.DbConnectionString);
-            _profileToolsDb = new ProfileToolsAssociativeRepository(settings.DbConnectionString);
-            _toolDb = new ToolRepository(settings.DbConnectionString);
-            _propertyDb = new PropertyRepository(settings.DbConnectionString); 
+            _profileDb = profileDb;
+            _profileToolsDb = profileToolsDb;
+            _toolDb = toolDb;
+            _propertyDb = propertyDb;
+            _validationLogic = validationLogic;
         }
 
         // else shouldn't be required here
@@ -153,7 +154,7 @@ namespace IntelligenceHub.Business
             foreach (var dbTool in dbTools)
             {
                 var properties = await _propertyDb.GetToolProperties(dbTool.Id);
-                var tool = DbMappingHandler.MapFromDbTool(dbTool, properties);
+                var tool = DbMappingHandler.MapFromDbTool(dbTool, properties.ToList());
                 returnList.Add(tool);
             }
             return returnList;

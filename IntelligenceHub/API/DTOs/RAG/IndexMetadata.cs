@@ -14,6 +14,6 @@
         public bool GenerateContentVector { get; set; }
         public bool GenerateTopicVector { get; set; }
         public bool GenerateKeywordVector { get; set; }
-        public IndexScoringProfile? ScoringProfile { get; set; }
+        public IndexScoringProfile? ScoringProfile { get; set; } = new IndexScoringProfile();
     }
 }

@@ -12,23 +12,24 @@ namespace IntelligenceHub.Business
     {
         private readonly IAISearchServiceClient _searchClient;
         private readonly IAGIClient _aiClient;
-        private readonly IndexMetaRepository _metaRepository;
-        private readonly IndexRepository _ragRepository;
+        private readonly IIndexMetaRepository _metaRepository;
+        private readonly IIndexRepository _ragRepository;
         private readonly string _defaultAGIModel;
 
         private readonly string _defaultEmbeddingModel = "text-embedding-3-large";
 
-        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, Settings settings) 
+        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, IIndexMetaRepository metaRepository, IIndexRepository indexRepository) 
         {
             _searchClient = aISearchServiceClient;
             _aiClient = agiClient;
-            _metaRepository = new IndexMetaRepository(settings.DbConnectionString);
-            _ragRepository = new IndexRepository(settings.DbConnectionString);
+            _metaRepository = metaRepository;
+            _ragRepository = indexRepository;
         }
 
-        public async Task<IndexMetadata> GetRagIndex(string index)
+        public async Task<IndexMetadata?> GetRagIndex(string index)
         {
             var dbIndexData = await _metaRepository.GetByNameAsync(index);
+            if (dbIndexData == null) return null;
             return DbMappingHandler.MapFromDbIndexMetadata(dbIndexData);
         }
 
@@ -210,16 +211,16 @@ namespace IntelligenceHub.Business
             // Check if the table name matches the pattern and is not a SQL keyword
             if (Regex.IsMatch(tableName, pattern))
             {
-                return !IsSqlKeyword(tableName);
+                return !ContainsSqlKeyword(tableName);
             }
 
             return false;
         }
 
-        private static bool IsSqlKeyword(string tableName)
+        private static bool ContainsSqlKeyword(string tableName)
         {
             // List of common SQL keywords to prevent
-            string[] sqlKeywords = new string[]
+            var sqlKeywords = new string[]
             {
                 "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TABLE",
                 "WHERE", "FROM", "JOIN", "UNION", "ORDER", "GROUP", "HAVING"

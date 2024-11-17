@@ -1,21 +1,18 @@
 ﻿using IntelligenceHub.API.DTOs.RAG;
+using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
 
 namespace IntelligenceHub.DAL
 {
-    // This repository is unique in that the table name must be provided for all methods
-    public class IndexRepository : GenericRepository<DbIndexDocument>
+    public class IndexRepository : GenericRepository<DbIndexDocument>, IIndexRepository
     {
-        public IndexRepository(string connectionString) : base(connectionString)
+        public IndexRepository(Settings settings) : base(settings.DbConnectionString)
         {
         }
 
-        
         public async Task<int> GetRagIndexLengthAsync(string tableName)
         {
-            // validate table name
-
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
@@ -45,7 +42,7 @@ namespace IntelligenceHub.DAL
                     {
                         if (await reader.ReadAsync())
                         {
-                            return MapFromReader<DbIndexDocument>(reader); // Assuming you have this method
+                            return MapFromReader<DbIndexDocument>(reader);
                         }
                     }
                 }
@@ -55,8 +52,6 @@ namespace IntelligenceHub.DAL
 
         public async Task<bool> CreateIndexAsync(string indexName)
         {
-            // validate before sql formatting here
-
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
@@ -75,7 +70,7 @@ namespace IntelligenceHub.DAL
                 using (var command = new SqlCommand(query, connection))
                 {
                     await command.ExecuteNonQueryAsync();
-                    return true;// does this always return true?
+                    return true;
                 }
             }
         }
@@ -94,6 +89,21 @@ namespace IntelligenceHub.DAL
                     return true;
                 }
             }
+        }
+
+        public async Task<IEnumerable<DbIndexDocument>> GetAllAsync(int count, int page)
+        {
+            return await base.GetAllAsync(count, page);
+        }
+
+        public async Task<DbIndexDocument> AddAsync(DbIndexDocument document, string tableName)
+        {
+            return await base.AddAsync(document, tableName);
+        }
+
+        public async Task<int> DeleteAsync(DbIndexDocument entity, string name)
+        {
+            return await base.DeleteAsync(entity, name);
         }
     }
 }

@@ -9,7 +9,7 @@ namespace IntelligenceHub.Business
 {
     public interface IRagLogic
     {
-        Task<IndexMetadata> GetRagIndex(string index);
+        Task<IndexMetadata?> GetRagIndex(string index);
         Task<IEnumerable<IndexMetadata>> GetAllIndexesAsync();
         Task<bool> CreateIndex(IndexMetadata indexDefinition);
         Task<bool> ConfigureIndex(IndexMetadata newDefinition);
