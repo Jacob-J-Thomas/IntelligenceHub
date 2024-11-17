@@ -55,9 +55,6 @@ namespace IntelligenceHub.Business
             if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name));
             completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
 
-            // save completion for database updating later
-            var completionContent = completionRequest.Messages.Last(m => m.Role == Role.User).Content;
-
             // Get and attach message history if a conversation id exists
             if (completionRequest.ConversationId is Guid conversationId)
             {
@@ -118,7 +115,7 @@ namespace IntelligenceHub.Business
                 var dbMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.Assistant, Content = allCompletionChunks, TimeStamp = DateTime.UtcNow }, id, toolCallDictionary.Keys.ToArray());
                 await _messageHistoryRepository.AddAsync(dbMessage);
 
-                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = completionContent, TimeStamp = userMessageTimestamp }, id, null);
+                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = completionRequest.Messages.Last(m => m.Role == Role.User).Content, TimeStamp = userMessageTimestamp }, id, null);
                 await _messageHistoryRepository.AddAsync(dbUserMessage);
             }
         }
@@ -177,7 +174,7 @@ namespace IntelligenceHub.Business
         {
             var allMessages = new List<Message>();
             var messageHistory = await _messageHistoryRepository.GetConversationAsync(conversationId, maxMessageHistory ?? _defaultMessageHistory);
-            if (messageHistory == null || messageHistory.Count < 1) return new List<Message>();
+            if (messageHistory == null || messageHistory.Count < 1) return requestMessages; // no conversation found, return original data and create conversation entry later
 
             // add messages to the database
             foreach (var message in messageHistory)
