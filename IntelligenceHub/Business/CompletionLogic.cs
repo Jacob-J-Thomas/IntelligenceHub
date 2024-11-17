@@ -19,28 +19,34 @@ namespace IntelligenceHub.Business
 
         private readonly IAGIClient _AIClient;
         private readonly IAISearchServiceClient _searchClient;
-        private readonly FunctionClient _functionClient;
-        private readonly ProfileRepository _profileDb;
-        private readonly ToolRepository _toolDb;
-        private readonly MessageHistoryRepository _messageHistoryRepository;
-        private readonly IndexMetaRepository _ragMetaRepository;
+        private readonly IToolClient _ToolClient;
+        private readonly IProfileRepository _profileDb;
+        private readonly IToolRepository _toolDb;
+        private readonly IMessageHistoryRepository _messageHistoryRepository;
+        private readonly IIndexMetaRepository _ragMetaRepository;
 
-        public CompletionLogic(IHttpClientFactory clientFactory, IAGIClient agiClient, IAISearchServiceClient searchClient, Settings settings) 
+        public CompletionLogic(
+            IAGIClient agiClient, 
+            IAISearchServiceClient searchClient, 
+            IToolClient ToolClient, 
+            IToolRepository toolRepository, 
+            IProfileRepository profileRepository, 
+            IMessageHistoryRepository messageHistoryRepository, 
+            IIndexMetaRepository indexMetaRepository) 
         {
-            settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            _toolDb = new ToolRepository(settings.DbConnectionString);
+            _toolDb = toolRepository;
             _AIClient = agiClient;
-            _functionClient = new FunctionClient(clientFactory);
-            _profileDb = new ProfileRepository(settings.DbConnectionString);
-            _messageHistoryRepository = new MessageHistoryRepository(settings.DbConnectionString);
-            _ragMetaRepository = new IndexMetaRepository(settings.DbConnectionString);
+            _ToolClient = ToolClient;
+            _profileDb = profileRepository;
+            _messageHistoryRepository = messageHistoryRepository;
+            _ragMetaRepository = indexMetaRepository;
             _searchClient = searchClient;
         }
 
         #region Streaming
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
-            if (string.IsNullOrEmpty(completionRequest.ProfileOptions.Name)) yield break;
+            if (completionRequest.ProfileOptions == null || string.IsNullOrEmpty(completionRequest.ProfileOptions.Name)) yield break;
 
             // Get and set profile details, overriding the database with any parameters that aren't null in the request
             var userMessageTimestamp = DateTime.UtcNow;
@@ -48,6 +54,9 @@ namespace IntelligenceHub.Business
             var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
             if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name));
             completionRequest.ProfileOptions = await BuildCompletionOptions(profile, completionRequest.ProfileOptions);
+
+            // save completion for database updating later
+            var completionContent = completionRequest.Messages.Last(m => m.Role == Role.User).Content;
 
             // Get and attach message history if a conversation id exists
             if (completionRequest.ConversationId is Guid conversationId)
@@ -62,12 +71,15 @@ namespace IntelligenceHub.Business
             if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
             {
                 var completionMessage = completionRequest.Messages.LastOrDefault();
+                if (completionMessage == null) yield break;
+
                 var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionMessage);
                 completionRequest.Messages.Remove(completionMessage);
                 completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
             var completionCollection = _AIClient.StreamCompletion(completionRequest);
+            if (completionCollection == null) yield break;
 
             Role? dbMessageRole;
             var allCompletionChunks = string.Empty;
@@ -106,7 +118,7 @@ namespace IntelligenceHub.Business
                 var dbMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.Assistant, Content = allCompletionChunks, TimeStamp = DateTime.UtcNow }, id, toolCallDictionary.Keys.ToArray());
                 await _messageHistoryRepository.AddAsync(dbMessage);
 
-                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = completionRequest.Messages.Last(m => m.Role == Role.User).Content, TimeStamp = userMessageTimestamp }, id, null);
+                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = completionContent, TimeStamp = userMessageTimestamp }, id, null);
                 await _messageHistoryRepository.AddAsync(dbUserMessage);
             }
         }
@@ -161,7 +173,7 @@ namespace IntelligenceHub.Business
             return completion;
         }
 
-        public async Task<List<Message>> BuildAndUpdateMessageHistory(Guid conversationId, List<Message> requestMessages, int? maxMessageHistory = null)
+        private async Task<List<Message>> BuildAndUpdateMessageHistory(Guid conversationId, List<Message> requestMessages, int? maxMessageHistory = null)
         {
             var allMessages = new List<Message>();
             var messageHistory = await _messageHistoryRepository.GetConversationAsync(conversationId, maxMessageHistory ?? _defaultMessageHistory);
@@ -217,7 +229,7 @@ namespace IntelligenceHub.Business
 
         #region Shared
 
-        public async Task<List<Tool>> BuildProfileReferenceTool(string[] profileNames)
+        private async Task<List<Tool>> BuildProfileReferenceTool(string[] profileNames)
         {
             var tools = new List<Tool>();
             foreach (var name in profileNames)
@@ -249,7 +261,7 @@ namespace IntelligenceHub.Business
 
                     if (!string.IsNullOrEmpty(dbTool.ExecutionUrl))
                     {
-                        functionResults.Add(await _functionClient.CallFunction(tool.Key, tool.Value, dbTool.ExecutionUrl, dbTool.ExecutionMethod, dbTool.ExecutionBase64Key));
+                        functionResults.Add(await _ToolClient.CallFunction(tool.Key, tool.Value, dbTool.ExecutionUrl, dbTool.ExecutionMethod, dbTool.ExecutionBase64Key));
                     }
                 }
             }

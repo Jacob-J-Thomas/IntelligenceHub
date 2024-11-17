@@ -1,17 +1,18 @@
 ﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
 
 namespace IntelligenceHub.DAL
 {
     //make this more generic
-    public class ProfileToolsAssociativeRepository : IAssociativeRepository<DbProfileTool>
+    public class ProfileToolsAssociativeRepository : IAssociativeRepository<DbProfileTool>, IProfileToolsAssociativeRepository
     {
         private readonly string _connectionString;
 
-        public ProfileToolsAssociativeRepository(string connectionString)
+        public ProfileToolsAssociativeRepository(Settings settings)
         {
-            _connectionString = connectionString;
+            _connectionString = settings.DbConnectionString;
         }
 
         public async Task<List<DbProfileTool>> GetToolAssociationsAsync(int profileId) 

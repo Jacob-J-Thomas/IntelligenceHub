@@ -1,12 +1,13 @@
 ﻿using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
 
 namespace IntelligenceHub.DAL
 {
-    public class MessageHistoryRepository : GenericRepository<DbMessage>
+    public class MessageHistoryRepository : GenericRepository<DbMessage>, IMessageHistoryRepository
     {
-        public MessageHistoryRepository(string connectionString) : base(connectionString)
+        public MessageHistoryRepository(Settings settings) : base(settings.DbConnectionString)
         {
         }
 
@@ -100,6 +101,11 @@ namespace IntelligenceHub.DAL
 
                 throw;
             }
+        }
+
+        public async Task<DbMessage> AddAsync(DbMessage document, string tableName = null)
+        {
+            return await base.AddAsync(document, tableName);
         }
     }
 }
