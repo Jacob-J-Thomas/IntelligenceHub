@@ -14,6 +14,7 @@ using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Host.Logging;
 using Microsoft.IdentityModel.Tokens;
 using IntelligenceHub.Common.Handlers;
+using IntelligenceHub.DAL;
 
 namespace IntelligenceHub.Host
 {
@@ -24,28 +25,47 @@ namespace IntelligenceHub.Host
             var builder = WebApplication.CreateBuilder(args);
 
             #region Add Services and Settings
-            var agiClientSettings = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings)).Get<AGIClientSettings>();
-            var insightSettings = builder.Configuration.GetRequiredSection(nameof(AppInsightSettings)).Get<AppInsightSettings>();
 
-            // Add Services
+            // Add Settings
+            var insightSettings = builder.Configuration.GetRequiredSection(nameof(AppInsightSettings)).Get<AppInsightSettings>();
+            var agiClientSettings = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings)).Get<AGIClientSettings>();
             builder.Services.AddSingleton(agiClientSettings);
             builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(Settings)).Get<Settings>());
             builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(SearchServiceClientSettings)).Get<SearchServiceClientSettings>());
+
+            // Add Services
+
+            // Logic
+            builder.Services.AddScoped<ICompletionLogic, CompletionLogic>();
+            builder.Services.AddScoped<IMessageHistoryLogic, MessageHistoryLogic>();
+            builder.Services.AddScoped<IProfileLogic, ProfileLogic>();
+            builder.Services.AddScoped<IRagLogic, RagLogic>();
+            
+            // Clients
             builder.Services.AddSingleton<IAGIClient, AGIClient>();
+            builder.Services.AddSingleton<IToolClient, ToolClient>();
             builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
-            builder.Services.AddSingleton<ICompletionLogic, CompletionLogic>();
-            builder.Services.AddSingleton<IMessageHistoryLogic, MessageHistoryLogic>();
-            builder.Services.AddSingleton<IProfileLogic, ProfileLogic>();
-            builder.Services.AddSingleton<IRagLogic, RagLogic>();
+
+            // Repositories
+            builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
+            builder.Services.AddScoped<IToolRepository, ToolRepository>();
+            builder.Services.AddScoped<IPropertyRepository, PropertyRepository>();
+            builder.Services.AddScoped<IProfileToolsAssociativeRepository, ProfileToolsAssociativeRepository>();
+            builder.Services.AddScoped<IMessageHistoryRepository, MessageHistoryRepository>();
+            builder.Services.AddScoped<IIndexRepository, IndexRepository>();
+            builder.Services.AddScoped<IIndexMetaRepository, IndexMetaRepository>();
+
+            // Handlers
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
             builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.Services.Select(service => service.Endpoint).ToArray()));
+
             #endregion
 
             #region Configure Client Policies
             // Function Calling Client Policies:
 
-            // Define the FunctionClient policy
-            builder.Services.AddHttpClient(ClientPolicy.FunctionClient.ToString()).AddPolicyHandler(
+            // Define the ToolClient policy
+            builder.Services.AddHttpClient(ClientPolicy.ToolClient.ToString()).AddPolicyHandler(
                 HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));

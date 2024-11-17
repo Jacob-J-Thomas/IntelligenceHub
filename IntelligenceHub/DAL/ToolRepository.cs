@@ -1,12 +1,13 @@
 ﻿using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
 using IntelligenceHub.API.DTOs.Tools;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.DAL
 {
-    public class ToolRepository : GenericRepository<DbTool>
+    public class ToolRepository : GenericRepository<DbTool>, IToolRepository
     {
-        public ToolRepository(string connectionString) : base(connectionString)
+        public ToolRepository(Settings settings) : base(settings.DbConnectionString)
         {
         }
 
@@ -170,6 +171,26 @@ namespace IntelligenceHub.DAL
             {
                 throw;
             }
+        }
+
+        public async Task<IEnumerable<DbTool>> GetAllAsync()
+        {
+            return await base.GetAllAsync();
+        }
+
+        public async Task UpdateAsync(DbTool existingTool, DbTool updateToolDto)
+        {
+            await UpdateAsync(existingTool, updateToolDto);
+        }
+
+        public async Task<DbTool?> AddAsync(DbTool tool)
+        {
+            return await base.AddAsync(tool);
+        }
+
+        public async Task<int> DeleteAsync(DbTool tool)
+        {
+            return await base.DeleteAsync(tool);
         }
 
         public async Task<Tool> MapToolFromReader(SqlDataReader reader)

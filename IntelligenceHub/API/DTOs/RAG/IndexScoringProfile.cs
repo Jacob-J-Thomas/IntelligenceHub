@@ -8,6 +8,6 @@
         public double FreshnessBoost { get; set; }
         public int BoostDurationDays { get; set; }
         public double TagBoost { get; set; }
-        public Dictionary<string, double>? Weights { get; set; }
+        public Dictionary<string, double> Weights { get; set; } = new Dictionary<string, double>();
     }
 }

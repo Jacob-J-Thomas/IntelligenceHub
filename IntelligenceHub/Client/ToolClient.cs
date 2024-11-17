@@ -7,12 +7,12 @@ using IntelligenceHub.Common;
 
 namespace IntelligenceHub.Client
 {
-    public class FunctionClient
+    public class ToolClient : IToolClient
     {
         private HttpClient _client { get; set; }
-        public FunctionClient(IHttpClientFactory clientFactory) 
+        public ToolClient(IHttpClientFactory clientFactory) 
         {
-            _client = clientFactory.CreateClient(GlobalVariables.ClientPolicy.FunctionClient.ToString());
+            _client = clientFactory.CreateClient(GlobalVariables.ClientPolicy.ToolClient.ToString());
         }
 
         public async Task<HttpResponseMessage> CallFunction(string toolName, string toolArgs, string endpoint, string? httpMethod = "Post", string? key = null)
