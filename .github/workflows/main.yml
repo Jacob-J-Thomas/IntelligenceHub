@@ -32,7 +32,7 @@ jobs:
       with:
         inlineScript: |
           az deployment group create \
-            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --resource-group AppliedAI \
             --template-file infrastructure/main.bicep \
             --parameters environment=dev
 
