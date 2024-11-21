@@ -1,23 +1,48 @@
-name: Check Bicep Installation
+name: CICD Pipeline
 
 on:
-  workflow_dispatch: # Trigger manually for testing
+  push:
+    branches:
+      - main
+      - dev
 
 jobs:
-  check-bicep:
-    runs-on: ubuntu-latest # Use a GitHub-hosted runner
+  pipeline:
+    runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout the repository (optional for this test)
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      # Step 2: Install Azure CLI (includes Bicep)
-      - name: Install Azure CLI
-        uses: azure/CLI@v1
-        with:
-          azcliversion: latest
+    # Build and Test
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '7.x'
+    - name: Restore Dependencies
+      run: dotnet restore
+    - name: Build and Test
+      run: dotnet build && dotnet test
 
-      # Step 3: Check Bicep Version
-      - name: Check Bicep Installation
-        run: |
-          az bicep version || echo "Bicep is not installed"
+    # Deploy Infrastructure
+    - name: Deploy Bicep
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          az deployment group create \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
+            --template-file infrastructure/main.bicep \
+            --parameters environment=dev
+
+    # Deploy Application
+    - name: Deploy App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ secrets.WEB_APP_NAME }}
+        publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+
+    # Run SQL Scripts
+    - name: Run SQL Scripts
+      uses: azure/sql-action@v2
+      with:
+        connection-string: ${{ secrets.SQL_CONNECTION_STRING }}
+        script-file: ./scripts/setup.sql
