@@ -1,6 +1,7 @@
 name: CICD Pipeline
 
 on:
+  workflow_dispatch: # Trigger manually for testing
   push:
     branches:
       - main
