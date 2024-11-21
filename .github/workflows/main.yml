@@ -11,6 +11,8 @@ jobs:
   pipeline:
     runs-on: ubuntu-latest
     steps:
+    - name: Debug Secrets
+      run: echo "RESOURCE_GROUP=${{ secrets.RESOURCE_GROUP }}"
     - name: Checkout Code
       uses: actions/checkout@v3
 
