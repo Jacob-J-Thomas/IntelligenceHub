@@ -40,7 +40,10 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '8.0'
+<<<<<<< HEAD
 
+=======
+>>>>>>> 412f8b5 (Update main.yml)
     - name: Restore Dependencies
       run: dotnet restore
 
