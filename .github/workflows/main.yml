@@ -35,11 +35,11 @@ jobs:
         inlineScript: |
           az account show
 
-    # Setup Azure CLI and login
+    # Setup Azure CLI
     - name: Setup Azure CLI
-      uses: azure/setup-azurecli@v1
+      uses: azure/CLI@v1
       with:
-        version: '2.66.0'
+        azcliversion: '2.66.0'
 
     - name: Azure Login
       run: |
