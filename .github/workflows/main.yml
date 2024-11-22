@@ -10,9 +10,20 @@ on:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
+
+    env:
+      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      WEB_APP_NAME: ${{ secrets.WEB_APP_NAME }}
+      AZURE_PUBLISH_PROFILE: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+      SQL_CONNECTION_STRING: ${{ secrets.SQL_CONNECTION_STRING }}
+
     steps:
     - name: Debug Secrets
-      run: echo "RESOURCE_GROUP=${{ secrets.RESOURCE_GROUP }}"
+      run: echo "RESOURCE_GROUP=${{ env.RESOURCE_GROUP }}"
+
     - name: Checkout Code
       uses: actions/checkout@v3
 
@@ -24,15 +35,17 @@ jobs:
 
     - name: Azure Login
       run: |
-        az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+        az login --service-principal -u ${{ env.AZURE_CLIENT_ID }} -p ${{ env.AZURE_CLIENT_SECRET }} --tenant ${{ env.AZURE_TENANT_ID }}
 
     # Build and Test
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '8.0'
+
     - name: Restore Dependencies
       run: dotnet restore
+
     - name: Build and Test
       run: dotnet build && dotnet test
 
@@ -42,7 +55,7 @@ jobs:
       with:
         inlineScript: |
           az deployment group create \
-            --resource-group AppliedAI \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
             --template-file infrastructure/main.bicep \
             --parameters environment=dev
 
@@ -50,12 +63,12 @@ jobs:
     - name: Deploy App
       uses: azure/webapps-deploy@v2
       with:
-        app-name: ${{ secrets.WEB_APP_NAME }}
-        publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+        app-name: ${{ env.WEB_APP_NAME }}
+        publish-profile: ${{ env.AZURE_PUBLISH_PROFILE }}
 
     # Run SQL Scripts
     - name: Run SQL Scripts
       uses: azure/sql-action@v2
       with:
-        connection-string: ${{ secrets.SQL_CONNECTION_STRING }}
+        connection-string: ${{ env.SQL_CONNECTION_STRING }}
         script-file: ./scripts/setup.sql
