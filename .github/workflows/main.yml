@@ -33,16 +33,16 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Azure Login
-      run: |
-        az login --service-principal -u ${{ env.AZURE_CLIENT_ID }} -p ${{ env.AZURE_CLIENT_SECRET }} --tenant ${{ env.AZURE_TENANT_ID }}
-
     # Setup Azure CLI
     - name: Setup Azure CLI
       uses: azure/CLI@v1
       with:
         azcliversion: '2.66.0'
         inlineScript: echo "Azure CLI setup complete"
+      
+    - name: Azure Login
+      run: |
+        az login --service-principal -u ${{ env.AZURE_CLIENT_ID }} -p ${{ env.AZURE_CLIENT_SECRET }} --tenant ${{ env.AZURE_TENANT_ID }}
 
     # Build and Test
     - name: Setup .NET
