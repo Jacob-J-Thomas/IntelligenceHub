@@ -55,7 +55,7 @@ jobs:
           az deployment group create \
             --resource-group ${{ secrets.RESOURCE_GROUP }} \
             --template-file infrastructure/main.bicep \
-            --parameters environment=${{ secrets.ENVIRONMENT }}
+            --parameters environment=${{ github.event.inputs.environment }}
 
     # Deploy Application
     - name: Deploy App
