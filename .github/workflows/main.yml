@@ -1,7 +1,12 @@
 name: CICD Pipeline
 
 on:
-  workflow_dispatch: # Trigger manually for testing
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
   push:
     branches:
       - main
@@ -19,10 +24,11 @@ jobs:
       WEB_APP_NAME: ${{ secrets.WEB_APP_NAME }}
       AZURE_PUBLISH_PROFILE: ${{ secrets.AZURE_PUBLISH_PROFILE }}
       SQL_CONNECTION_STRING: ${{ secrets.SQL_CONNECTION_STRING }}
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
 
     steps:
     - name: Debug Secrets
-      run: echo "RESOURCE_GROUP=${{ env.RESOURCE_GROUP }}"
+      run: echo "RESOURCE_GROUP=${{ env.RESOURCE_GROUP }} ENVIRONMENT=${{ env.ENVIRONMENT }}"
 
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -58,7 +64,7 @@ jobs:
           az deployment group create \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --template-file infrastructure/main.bicep \
-            --parameters environment=dev
+            --parameters environment=${{ env.ENVIRONMENT }}
 
     # Deploy Application
     - name: Deploy App
