@@ -1,8 +1,8 @@
-@description('The name of the App Service plan')
-param appServicePlanName string = 'myAppServicePlan'
+@description('The name of the App Service plan (base name, will have environment appended)')
+param appServicePlanBaseName string = 'intelligencehub-appserviceplan'
 
-@description('The name of the Web App')
-param webAppName string = 'myWebApp'
+@description('The name of the Web App. Similarly, the environment is appended later.')
+param WebAppBaseName string = 'IntelligenceHub'
 
 @description('The location for all resources')
 param location string = resourceGroup().location
@@ -11,7 +11,7 @@ param location string = resourceGroup().location
 param environment string = 'dev'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
-  name: appServicePlanName
+  name: '${appServicePlanBaseName}-${environment}'
   location: location
   sku: {
     name: 'F1' // Free tier for dev/test
@@ -23,7 +23,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
 }
 
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
-  name: webAppName
+  name: '${WebAppBaseName}-${environment}'
   location: location
   properties: {
     serverFarmId: appServicePlan.id
