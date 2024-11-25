@@ -20,6 +20,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     
+    env:
+      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      WEB_APP_NAME: ${{ secrets.WEB_APP_NAME }}
+      AZURE_PUBLISH_PROFILE: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+      SQL_CONNECTION_STRING: ${{ secrets.SQL_CONNECTION_STRING }}
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
