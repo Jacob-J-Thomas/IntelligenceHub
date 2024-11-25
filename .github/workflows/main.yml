@@ -32,6 +32,7 @@ jobs:
       uses: azure/CLI@v1
       with:
         azcliversion: '2.66.0'
+        inlineScript: echo "Azure CLI setup complete"
 
     - name: Azure Login
       run: |
