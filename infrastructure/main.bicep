@@ -4,8 +4,8 @@ param appServicePlanBaseName string = 'intelligencehub-appserviceplan'
 @description('The name of the Web App. Similarly, the environment is appended later.')
 param WebAppBaseName string = 'IntelligenceHub'
 
-@description('The location for all resources')
-param location string = resourceGroup().location
+@description('The location for all resources.')
+param location string = 'Canada Central'
 
 @description('The environment (e.g., dev, prod)')
 param environment string = 'dev'
