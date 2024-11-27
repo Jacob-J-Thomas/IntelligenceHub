@@ -219,25 +219,38 @@ namespace IntelligenceHub.Host
             #region Build App
             var app = builder.Build();
 
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI();
+            //if (app.Environment.IsDevelopment())
+            //{
+            //    app.UseDeveloperExceptionPage();
+            //    app.UseSwagger();
+            //    app.UseSwaggerUI();
 
-                app.UseCors(policy =>
-                {
-                    policy.WithOrigins("http://localhost:3000", "https://intelligencehub-dev.azurewebsites.net") // Specify allowed origin explicitly
-                      .AllowAnyMethod()
-                      .AllowAnyHeader()
-                      .AllowCredentials()
-                      .SetIsOriginAllowed((host) => true);
-                });
-            }
-            else
+            //    app.UseCors(policy =>
+            //    {
+            //        policy.WithOrigins("*") // Specify allowed origin explicitly
+            //          .AllowAnyMethod()
+            //          .AllowAnyHeader()
+            //          .AllowCredentials()
+            //          .SetIsOriginAllowed((host) => true);
+            //    });
+            //}
+            //else
+            //{
+            //    // configure prod cors policy
+            //}
+
+            app.UseDeveloperExceptionPage();
+            app.UseSwagger();
+            app.UseSwaggerUI();
+
+            app.UseCors(policy =>
             {
-                // configure prod cors policy
-            }
+                policy.WithOrigins("*") // Specify allowed origin explicitly
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials()
+                  .SetIsOriginAllowed((host) => true);
+            });
 
             app.UseFileServer();
             app.UseRouting();
