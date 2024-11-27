@@ -81,7 +81,7 @@ jobs:
     - name: Deploy App
       uses: azure/webapps-deploy@v2
       with:
-        app-name: IntelligenceHub-${{ github.event.inputs.environment }}
+        app-name: ${{ secrets.WEB_APP_NAME }}
         publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
 
           azcliversion: latest
