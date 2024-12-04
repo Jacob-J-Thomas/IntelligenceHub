@@ -33,16 +33,8 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(SearchServiceClientSettings)).Get<SearchServiceClientSettings>());
 
 
-            // fix this
-            var settings = builder.Configuration.GetRequiredSection(nameof(Settings)).Get<Settings>();
-            if (string.IsNullOrEmpty(settings?.DbConnectionString))
-            {
-                settings = new Settings
-                {
-                    DbConnectionString = Environment.GetEnvironmentVariable("AZURE_SQL_CONNECTIONSTRING")!
-                };
-            }
-
+            // convert the rest of the above to environment variables
+            var settings = new Settings() { DbConnectionString = Environment.GetEnvironmentVariable("AZURE_SQL_CONNECTIONSTRING")! };
             builder.Services.AddSingleton(settings);
 
             // Add Services
