@@ -30,8 +30,20 @@ namespace IntelligenceHub.Host
             var insightSettings = builder.Configuration.GetRequiredSection(nameof(AppInsightSettings)).Get<AppInsightSettings>();
             var agiClientSettings = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings)).Get<AGIClientSettings>();
             builder.Services.AddSingleton(agiClientSettings);
-            builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(Settings)).Get<Settings>());
             builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(SearchServiceClientSettings)).Get<SearchServiceClientSettings>());
+
+
+            // fix this
+            var settings = builder.Configuration.GetRequiredSection(nameof(Settings)).Get<Settings>();
+            if (string.IsNullOrEmpty(settings?.DbConnectionString))
+            {
+                settings = new Settings
+                {
+                    DbConnectionString = Environment.GetEnvironmentVariable("AZURE_SQL_CONNECTIONSTRING")!
+                };
+            }
+
+            builder.Services.AddSingleton(settings);
 
             // Add Services
 
