@@ -11,13 +11,13 @@ using IntelligenceHub.Host.Policies;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Host.Logging;
 using Microsoft.IdentityModel.Tokens;
-using IntelligenceHub.Common.Handlers;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Business.Implementations;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.DAL.Implementations;
 using IntelligenceHub.DAL.Interfaces;
+using IntelligenceHub.Business.Handlers;
 
 namespace IntelligenceHub.Host
 {

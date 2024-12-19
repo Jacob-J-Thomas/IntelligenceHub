@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Controllers;
-using IntelligenceHub.Common.Handlers;
+using IntelligenceHub.Business.Handlers;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Net.Http;
