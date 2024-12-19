@@ -26,28 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="API\DTOs\Message.cs" />
-    <Content Include="API\DTOs\Tools\Function.cs" />
-    <Content Include="API\DTOs\Tools\Parameters.cs" />
-    <Content Include="API\DTOs\Tools\Property.cs" />
-    <Content Include="API\DTOs\Tools\ProfileReferenceTool.cs" />
-    <Content Include="API\DTOs\Tools\Tool.cs" />
-    <Content Include="API\DTOs\Profile.cs" />
-    <Content Include="DAL\Models\DbMessage.cs" />
-    <Content Include="DAL\Models\DbProfile.cs" />
-    <Content Include="DAL\Models\DbProfileTool.cs" />
-    <Content Include="DAL\Models\DbProperty.cs" />
-    <Content Include="DAL\Models\DbTool.cs" />
-    <Content Include="API\DTOs\RAG\IndexDocument.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="wwwroot\TestHubClient\lib\signalr.js" />
     <None Include="wwwroot\TestHubClient\lib\signalr.min.js" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.AI.OpenAI" Version="2.0.0" />
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
     <PackageReference Include="Azure.Search.Documents" Version="11.6.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
     <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.3.0" />
@@ -63,7 +47,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DAL\Migrations\" />
+    <ProjectReference Include="..\IntelligenceHub.API\IntelligenceHub.API.csproj" />
+    <ProjectReference Include="..\IntelligenceHub.Business\IntelligenceHub.Business.csproj" />
+    <ProjectReference Include="..\IntelligenceHub.Client\IntelligenceHub.Client.csproj" />
+    <ProjectReference Include="..\IntelligenceHub.Common\IntelligenceHub.Common.csproj" />
+    <ProjectReference Include="..\IntelligenceHub.Controllers\IntelligenceHub.Controllers.csproj" />
+    <ProjectReference Include="..\IntelligenceHub.DAL\IntelligenceHub.DAL.csproj" />
+    <ProjectReference Include="..\IntelligenceHub.Hubs\IntelligenceHub.Hubs.csproj" />
   </ItemGroup>
 
 </Project>
