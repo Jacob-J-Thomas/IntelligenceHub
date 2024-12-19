@@ -31,8 +31,8 @@ jobs:
       ENVIRONMENT: ${{ github.event.inputs.environment }}
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
         uses: actions/checkout@v3
     - uses: azure/login@v2
       with:
@@ -69,8 +69,8 @@ jobs:
 
     # Deploy Infrastructure
     - name: Deploy Bicep
-        uses: azure/CLI@v1
-        with:
+      uses: azure/CLI@v1
+      with:
         inlineScript: |
           az deployment group create \
             --resource-group AppliedAI \
