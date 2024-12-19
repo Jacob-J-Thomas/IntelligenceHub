@@ -3,7 +3,6 @@ using Xunit;
 using Moq;
 using Moq.Protected;
 using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.Business;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Controllers;

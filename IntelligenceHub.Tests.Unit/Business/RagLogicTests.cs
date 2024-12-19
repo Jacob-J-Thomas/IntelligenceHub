@@ -15,7 +15,7 @@ using IntelligenceHub.DAL.Interfaces;
 
 namespace IntelligenceHub.Tests.Unit.Business
 {
-    
+
     public class RagLogicTests
     {
         private readonly Mock<IIndexMetaRepository> _mockMetaRepository;

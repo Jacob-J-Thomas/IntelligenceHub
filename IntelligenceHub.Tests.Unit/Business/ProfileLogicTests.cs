@@ -1,5 +1,7 @@
 using Xunit;
 using Moq;
+using IntelligenceHub.Business;
+using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.API.DTOs;
 using System.Collections.Generic;
