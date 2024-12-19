@@ -1,13 +1,13 @@
 using Xunit;
 using Moq;
 using IntelligenceHub.DAL.Models;
-using IntelligenceHub.Common.Handlers;
 using IntelligenceHub.API.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Business.Implementations;
 using IntelligenceHub.DAL.Interfaces;
+using IntelligenceHub.Business.Handlers;
 
 namespace IntelligenceHub.Tests.Unit.Business
 {
@@ -106,7 +106,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             var result = await _profileLogic.DeleteProfile("NonExistentProfile");
 
             // Assert
-            Assert.Equal("No profile with the name 'NonExistentProfile' was found.", result);
+            Assert.Equal("No profile with the specified name was found. Name: 'NonExistentProfile'", result);
         }
 
         [Fact]
