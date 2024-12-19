@@ -112,6 +112,12 @@ namespace IntelligenceHub.DAL
                             {
                                 var paramName = $"@{property.Name}";
                                 var value = property.GetValue(entity) ?? DBNull.Value;
+
+                                if (property.Name == "TimeStamp" && value is DateTime dateTime)
+                                {
+                                    if (dateTime < new DateTime(1753, 1, 1)) value = DateTime.UtcNow;
+                                }
+
                                 command.Parameters.AddWithValue(paramName, value);
                             }
                         }
@@ -156,6 +162,12 @@ namespace IntelligenceHub.DAL
                             {
                                 var paramName = $"@{property.Name}";
                                 var value = property.GetValue(entity) ?? DBNull.Value;
+
+                                if (property.Name == "TimeStamp" && value is DateTime dateTime)
+                                {
+                                    if (dateTime < new DateTime(1753, 1, 1)) value = DateTime.UtcNow;
+                                }
+
                                 command.Parameters.AddWithValue(paramName, value);
                             }
                         }

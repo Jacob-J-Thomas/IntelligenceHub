@@ -44,12 +44,11 @@ namespace IntelligenceHub.Business
         }
 
         #region Streaming
+
+        // Create a method for the parts of this that are identical to those in ProcessCompletion
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
             if (completionRequest.ProfileOptions == null || string.IsNullOrEmpty(completionRequest.ProfileOptions.Name)) yield break;
-
-            // Get and set profile details, overriding the database with any parameters that aren't null in the request
-            var userMessageTimestamp = DateTime.UtcNow;
 
             var profile = await _profileDb.GetByNameWithToolsAsync(completionRequest.ProfileOptions.Name);
             if (profile == null) profile = DbMappingHandler.MapFromDbProfile(await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name));
@@ -112,16 +111,19 @@ namespace IntelligenceHub.Business
             // save new messages to database
             if (completionRequest.ConversationId is Guid id)
             {
+                var lastUserMessage = completionRequest.Messages.Last(m => m.Role == Role.User);
+                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = lastUserMessage.Content, TimeStamp = lastUserMessage.TimeStamp}, id, null);
+                await _messageHistoryRepository.AddAsync(dbUserMessage);
+
                 var dbMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.Assistant, Content = allCompletionChunks, TimeStamp = DateTime.UtcNow }, id, toolCallDictionary.Keys.ToArray());
                 await _messageHistoryRepository.AddAsync(dbMessage);
-
-                var dbUserMessage = DbMappingHandler.MapToDbMessage(new Message() { Role = Role.User, Content = completionRequest.Messages.Last(m => m.Role == Role.User).Content, TimeStamp = userMessageTimestamp }, id, null);
-                await _messageHistoryRepository.AddAsync(dbUserMessage);
             }
         }
+
         #endregion
 
         #region Controller
+
         public async Task<CompletionResponse?> ProcessCompletion(CompletionRequest completionRequest)
         {
             if (!completionRequest.Messages.Any() || string.IsNullOrEmpty(completionRequest.ProfileOptions.Name)) return null;
@@ -155,11 +157,11 @@ namespace IntelligenceHub.Business
 
             if (completionRequest.ConversationId is Guid id)
             {
-                var dbMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.Assistant || m.Role == Role.Tool), id, completion.ToolCalls.Keys.ToArray());
-                await _messageHistoryRepository.AddAsync(dbMessage);
-
                 var dbUserMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.User), id, null);
                 await _messageHistoryRepository.AddAsync(dbUserMessage);
+
+                var dbMessage = DbMappingHandler.MapToDbMessage(completion.Messages.Last(m => m.Role == Role.Assistant || m.Role == Role.Tool), id, completion.ToolCalls.Keys.ToArray());
+                await _messageHistoryRepository.AddAsync(dbMessage);
             }
             
             if (completion.FinishReason == FinishReason.ToolCalls)
@@ -175,14 +177,6 @@ namespace IntelligenceHub.Business
             var allMessages = new List<Message>();
             var messageHistory = await _messageHistoryRepository.GetConversationAsync(conversationId, maxMessageHistory ?? _defaultMessageHistory);
             if (messageHistory == null || messageHistory.Count < 1) return requestMessages; // no conversation found, return original data and create conversation entry later
-
-            // add messages to the database
-            foreach (var message in messageHistory)
-            {
-                // Move to DAL layer
-                var dbMessage = DbMappingHandler.MapToDbMessage(message, conversationId);
-                await _messageHistoryRepository.AddAsync(dbMessage);
-            }
 
             // ensure the messages are properly arranged, with the user completion appearing very last
             allMessages.AddRange(messageHistory);
