@@ -11,9 +11,9 @@
     MaxMessageHistory INT,
     ResponseFormat NVARCHAR(255),
     [User] NVARCHAR(255),
-    SystemMessage NVARCHAR(255),
+    SystemMessage NVARCHAR(Max),
     [Stop] NVARCHAR(255),
-    ReferenceProfiles NVARCHAR(255),
-    ReferenceDescription NVARCHAR(255),
+    ReferenceProfiles NVARCHAR(2040),
+    ReferenceDescription NVARCHAR(2040),
     ReturnRecursion BIT
 );
