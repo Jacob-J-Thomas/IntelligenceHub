@@ -4,13 +4,14 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.DAL.Implementations
 {
     public class ProfileRepository : GenericRepository<DbProfile>, IProfileRepository
     {
 
-        public ProfileRepository(Settings settings) : base(settings.DbConnectionString)
+        public ProfileRepository(IOptionsMonitor<Settings> settings) : base(settings.CurrentValue.DbConnectionString)
         {
 
         }

@@ -184,8 +184,6 @@ namespace IntelligenceHub.Business.Implementations
             allMessages.AddRange(messageHistory);
             allMessages.AddRange(requestMessages);
 
-            // Reduce the amount of messages to reflect the MaxMessageHistory property
-            if (maxMessageHistory is int maxMessages) allMessages.RemoveRange(maxMessages, allMessages.Count - maxMessages);
             return allMessages;
         }
 

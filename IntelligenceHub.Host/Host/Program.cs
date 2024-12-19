@@ -18,6 +18,7 @@ using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.DAL.Implementations;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.Business.Handlers;
+using DotNetEnv;
 
 namespace IntelligenceHub.Host
 {
@@ -27,14 +28,22 @@ namespace IntelligenceHub.Host
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Load environment variables
+            Env.Load();
+            builder.Configuration.AddEnvironmentVariables();
+
             #region Add Services and Settings
 
-            // Add Settings
-            var insightSettings = builder.Configuration.GetRequiredSection(nameof(AppInsightSettings)).Get<AppInsightSettings>();
-            var agiClientSettings = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings)).Get<AGIClientSettings>();
-            builder.Services.AddSingleton(agiClientSettings);
-            builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(Settings)).Get<Settings>());
-            builder.Services.AddSingleton(builder.Configuration.GetRequiredSection(nameof(SearchServiceClientSettings)).Get<SearchServiceClientSettings>());
+            var insightSettingsSection = builder.Configuration.GetRequiredSection(nameof(AppInsightSettings));
+            var insightSettings = insightSettingsSection.Get<AppInsightSettings>();
+
+            var agiClientSettingsSection = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings));
+            var agiClientSettings = agiClientSettingsSection.Get<AGIClientSettings>();
+
+            builder.Services.Configure<AppInsightSettings>(insightSettingsSection);
+            builder.Services.Configure<AGIClientSettings>(agiClientSettingsSection);
+            builder.Services.Configure<Settings>(builder.Configuration.GetRequiredSection(nameof(Settings)));
+            builder.Services.Configure<SearchServiceClientSettings>(builder.Configuration.GetRequiredSection(nameof(SearchServiceClientSettings)));
 
             // Add Services
 
@@ -118,6 +127,7 @@ namespace IntelligenceHub.Host
                 client.BaseAddress = baseAddressSelector.GetNextBaseAddress();
                 Console.WriteLine($"Configured HttpClient with BaseAddress: {client.BaseAddress}");
             }).AddPolicyHandler(policyWrap);
+
             #endregion
 
             #region Json Serialization Settings

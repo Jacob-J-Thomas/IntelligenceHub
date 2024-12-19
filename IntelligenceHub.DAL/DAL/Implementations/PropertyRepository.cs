@@ -3,12 +3,13 @@ using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.DAL.Implementations
 {
     public class PropertyRepository : GenericRepository<DbProperty>, IPropertyRepository
     {
-        public PropertyRepository(Settings settings) : base(settings.DbConnectionString)
+        public PropertyRepository(IOptionsMonitor<Settings> settings) : base(settings.CurrentValue.DbConnectionString)
         {
         }
 

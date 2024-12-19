@@ -8,6 +8,7 @@ using Azure.Search.Documents.Models;
 using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -19,20 +20,20 @@ namespace IntelligenceHub.Client.Implementations
         private readonly string _openaiKey;
         private readonly string _openaiUrl;
 
-        public AISearchServiceClient(SearchServiceClientSettings searchClientSettings, AGIClientSettings agiClientSettings, Settings settings)
+        public AISearchServiceClient(IOptionsMonitor<SearchServiceClientSettings> searchClientSettings, IOptionsMonitor<AGIClientSettings> agiClientSettings, IOptionsMonitor<Settings> settings)
         {
-            var credential = new AzureKeyCredential(searchClientSettings.Key);
+            var credential = new AzureKeyCredential(searchClientSettings.CurrentValue.Key);
 
             var options = new SearchClientOptions()
             {
                 RetryPolicy = new RetryPolicy(5, DelayStrategy.CreateExponentialDelayStrategy(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(120)))
             };
 
-            _indexClient = new SearchIndexClient(new Uri(searchClientSettings.Endpoint), credential, options);
-            _indexerClient = new SearchIndexerClient(new Uri(searchClientSettings.Endpoint), credential, options);
-            _sqlRagDbConnectionString = settings.DbConnectionString;
-            _openaiUrl = agiClientSettings.SearchServiceCompletionServiceEndpoint;
-            _openaiKey = agiClientSettings.SearchServiceCompletionServiceKey;
+            _indexClient = new SearchIndexClient(new Uri(searchClientSettings.CurrentValue.Endpoint), credential, options);
+            _indexerClient = new SearchIndexerClient(new Uri(searchClientSettings.CurrentValue.Endpoint), credential, options);
+            _sqlRagDbConnectionString = settings.CurrentValue.DbConnectionString;
+            _openaiUrl = agiClientSettings.CurrentValue.SearchServiceCompletionServiceEndpoint;
+            _openaiKey = agiClientSettings.CurrentValue.SearchServiceCompletionServiceKey;
         }
 
         // index operations

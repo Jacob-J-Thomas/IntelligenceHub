@@ -7,7 +7,7 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
 using System.ClientModel.Primitives;
 using IntelligenceHub.Client.Interfaces;
-using IntelligenceHub.Common;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -15,11 +15,11 @@ namespace IntelligenceHub.Client.Implementations
     {
         private AzureOpenAIClient _azureOpenAIClient;
 
-        public AGIClient(AGIClientSettings settings, IHttpClientFactory policyFactory)
+        public AGIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
         {
             var policyClient = policyFactory.CreateClient(ClientPolicy.CompletionClient.ToString());
 
-            var service = settings.Services.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
+            var service = settings.CurrentValue.Services.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
                 ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
 
             var apiKey = service.Key;

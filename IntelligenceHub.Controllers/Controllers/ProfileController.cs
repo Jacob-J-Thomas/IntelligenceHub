@@ -102,8 +102,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
-                if (tools is null || tools.Count < 1) return BadRequest($"Invalid request.'Profiles' property cannot be null or empty: {tools}.");
+                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: '{name}'.");
+                if (tools is null || tools.Count < 1) return BadRequest($"Invalid request. The 'Tools' property cannot be null or empty: '{tools}'.");
                 var errorMessage = await _profileLogic.AddProfileToTools(name, tools);
                 if (errorMessage is null) return Ok(await _profileLogic.GetProfileToolAssociations(name));
                 else return NotFound(errorMessage);
@@ -128,8 +128,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request.Please check the route parameter for the profile name: {name}.");
-                if (tools is null || tools.Count < 1) return BadRequest($"Invalid request.'Profiles' property cannot be null or empty: {tools}.");
+                if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: '{name}'.");
+                if (tools is null || tools.Count < 1) return BadRequest($"Invalid request. The 'Profiles' property cannot be null or empty: '{tools}'.");
                 var errorMessage = await _profileLogic.DeleteProfileAssociations(name, tools);
                 if (errorMessage is null) return NoContent();
                 else return NotFound(errorMessage);

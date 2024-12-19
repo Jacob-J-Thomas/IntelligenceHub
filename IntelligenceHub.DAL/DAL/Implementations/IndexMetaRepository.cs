@@ -1,12 +1,13 @@
 ﻿using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.DAL.Implementations
 {
     public class IndexMetaRepository : GenericRepository<DbIndexMetadata>, IIndexMetaRepository
     {
-        public IndexMetaRepository(Settings settings) : base(settings.DbConnectionString)
+        public IndexMetaRepository(IOptionsMonitor<Settings> settings) : base(settings.CurrentValue.DbConnectionString)
         {
         }
 

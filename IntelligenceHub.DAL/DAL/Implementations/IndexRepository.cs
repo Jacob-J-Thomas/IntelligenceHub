@@ -3,12 +3,13 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.DAL.Implementations
 {
     public class IndexRepository : GenericRepository<DbIndexDocument>, IIndexRepository
     {
-        public IndexRepository(Settings settings) : base(settings.DbConnectionString)
+        public IndexRepository(IOptionsMonitor<Settings> settings) : base(settings.CurrentValue.DbConnectionString)
         {
         }
 

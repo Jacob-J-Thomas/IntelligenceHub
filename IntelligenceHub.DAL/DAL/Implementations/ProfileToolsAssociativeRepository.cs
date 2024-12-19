@@ -3,6 +3,7 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.DAL.Implementations
 {
@@ -11,9 +12,9 @@ namespace IntelligenceHub.DAL.Implementations
     {
         private readonly string _connectionString;
 
-        public ProfileToolsAssociativeRepository(Settings settings)
+        public ProfileToolsAssociativeRepository(IOptionsMonitor<Settings> settings)
         {
-            _connectionString = settings.DbConnectionString;
+            _connectionString = settings.CurrentValue.DbConnectionString;
         }
 
         public async Task<List<DbProfileTool>> GetToolAssociationsAsync(int profileId)

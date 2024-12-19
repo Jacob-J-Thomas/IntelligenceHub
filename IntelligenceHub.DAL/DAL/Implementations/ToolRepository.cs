@@ -3,12 +3,13 @@ using Microsoft.Data.SqlClient;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.DAL.Implementations
 {
     public class ToolRepository : GenericRepository<DbTool>, IToolRepository
     {
-        public ToolRepository(Settings settings) : base(settings.DbConnectionString)
+        public ToolRepository(IOptionsMonitor<Settings> settings) : base(settings.CurrentValue.DbConnectionString)
         {
         }
 

@@ -3,12 +3,13 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.DAL.Implementations
 {
     public class MessageHistoryRepository : GenericRepository<DbMessage>, IMessageHistoryRepository
     {
-        public MessageHistoryRepository(Settings settings) : base(settings.DbConnectionString)
+        public MessageHistoryRepository(IOptionsMonitor<Settings> settings) : base(settings.CurrentValue.DbConnectionString)
         {
         }
 
@@ -23,7 +24,7 @@ namespace IntelligenceHub.DAL.Implementations
                         SELECT TOP(@MaxMessages) *
                         FROM MessageHistory
                         WHERE [ConversationId] = @ConversationId
-                        ORDER BY timestamp DESC;";
+                        ORDER BY timestamp ASC;";
                     using (var command = new SqlCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@MaxMessages", maxMessages);
@@ -37,7 +38,9 @@ namespace IntelligenceHub.DAL.Implementations
                                 var mappedMessage = DbMappingHandler.MapFromDbMessage(dbMessage);
                                 conversationHistory.Add(mappedMessage);
                             }
-                            return conversationHistory;
+
+                            // Reorder the messages in ascending order by timestamp
+                            return conversationHistory.OrderBy(m => m.TimeStamp).ToList();
                         }
                     }
                 }
