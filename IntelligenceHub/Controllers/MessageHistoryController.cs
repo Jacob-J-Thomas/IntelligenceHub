@@ -1,5 +1,5 @@
 ﻿using IntelligenceHub.API.DTOs;
-using IntelligenceHub.Business;
+using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

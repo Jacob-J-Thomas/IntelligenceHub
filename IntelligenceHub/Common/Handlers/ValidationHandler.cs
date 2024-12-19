@@ -5,6 +5,29 @@ namespace IntelligenceHub.Common.Handlers
 {
     public class ValidationHandler : IValidationHandler
     {
+        public List<string> _validModels = new List<string>()
+        {
+            "gpt-4o",
+            "gpt-4o-mini",
+        };
+
+        public List<string> _validToolArgTypes = new List<string>()
+        {
+            // verify these
+            "char",
+            "string",
+            "bool",
+            "int",
+            "double",
+            "float",
+            "date",
+            "enum",
+
+            // Don't think these would work currently, but can test. May work as string:
+            //"array",
+            //"object"
+        };
+
         public ValidationHandler() { }
 
         public string? ValidateChatRequest(CompletionRequest chatRequest)
@@ -30,13 +53,7 @@ namespace IntelligenceHub.Common.Handlers
 
         public string? ValidateBaseDTO(Profile profile)
         {
-            var validModels = new List<string>()
-            {
-                "gpt-4o",
-                "gpt-4o-mini",
-            };
-
-            if (profile.Model != null && validModels.Contains(profile.Model) == false)
+            if (profile.Model != null && _validModels.Contains(profile.Model) == false)
             {
                 return "The model name must match and existing AI model";
             }
@@ -89,6 +106,10 @@ namespace IntelligenceHub.Common.Handlers
             {
                 return "A function name is required for all tools.";
             }
+            if (tool.Function.Name.ToLower() == "all")
+            {
+                return "Profile name 'all' conflicts with the tool/get/all route";
+            }
             if (tool.Function.Parameters.Required != null && tool.Function.Parameters.Required.Length > 0)
             {
                 foreach (var str in tool.Function.Parameters.Required)
@@ -103,42 +124,17 @@ namespace IntelligenceHub.Common.Handlers
             if (tool.Function.Parameters.Properties != null && tool.Function.Parameters.Properties.Count > 0)
             {
                 var errorMessage = ValidateProperties(tool.Function.Parameters.Properties);
-                if (errorMessage != null)
-                {
-                    return errorMessage;
-                }
+                if (errorMessage != null) return errorMessage;
             }
             return null;
         }
 
         public string? ValidateProperties(Dictionary<string, Property> properties)
         {
-            var validTypes = new List<string>()
-            {
-                // verify these
-                "char",
-                "string",
-                "bool",
-                "int",
-                "double",
-                "float",
-                "date",
-                "enum",
-
-                // Don't think these would work currently, but can test. May work as string:
-                //"array",
-                //"object"
-            };
             foreach (var prop in properties)
             {
-                if (prop.Value.Type == null)
-                {
-                    return $"The field 'type' for property {prop.Key} is required";
-                }
-                else if (!validTypes.Contains(prop.Value.Type))
-                {
-                    return $"The 'type' field '{prop.Value.Type}' for property {prop.Key} is invalid. Please ensure one of the following types is selected: '{validTypes}'";
-                }
+                if (prop.Value.Type == null) return $"The field 'type' for property {prop.Key} is required";
+                else if (!_validToolArgTypes.Contains(prop.Value.Type)) return $"The 'type' field '{prop.Value.Type}' for property {prop.Key} is invalid. Please ensure one of the following types is selected: '{_validToolArgTypes}'";
             }
             return null;
         }

@@ -1,8 +1,8 @@
-﻿using IntelligenceHub.Business;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Handlers;
 using Microsoft.AspNetCore.Authorization;
+using IntelligenceHub.Business.Interfaces;
 
 namespace IntelligenceHub.Hubs
 {

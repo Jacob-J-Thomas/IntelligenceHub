@@ -3,7 +3,6 @@ using Xunit;
 using Moq;
 using Moq.Protected;
 using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.Business;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Controllers;
@@ -15,6 +14,7 @@ using IntelligenceHub.Common;
 using Newtonsoft.Json;
 using System.Text;
 using System.Collections.Generic;
+using IntelligenceHub.Business.Interfaces;
 
 namespace IntelligenceHub.Tests.Unit.Controllers
 {

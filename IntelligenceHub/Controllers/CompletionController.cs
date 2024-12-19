@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.Business;
 using System.Text;
 using IntelligenceHub.Common.Handlers;
 using IntelligenceHub.API.DTOs;
@@ -7,6 +6,7 @@ using Newtonsoft.Json;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common;
 using Microsoft.AspNetCore.Authorization;
+using IntelligenceHub.Business.Interfaces;
 
 
 namespace IntelligenceHub.Controllers
