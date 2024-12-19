@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using IntelligenceHub.Business;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.API.DTOs.RAG;
 using Microsoft.AspNetCore.Authorization;
 using IntelligenceHub.Common;
 using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Business.Interfaces;
 
 namespace IntelligenceHub.Controllers
 {
@@ -44,7 +44,7 @@ namespace IntelligenceHub.Controllers
         }
 
         [HttpGet]
-        [Route("Index/GetAll")]
+        [Route("Index/All")]
         [ProducesResponseType(typeof(IEnumerable<IndexMetadata>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

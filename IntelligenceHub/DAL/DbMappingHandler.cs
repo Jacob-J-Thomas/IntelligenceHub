@@ -4,6 +4,7 @@ using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.API.DTOs.RAG;
 using System.Text.Json;
+using IntelligenceHub.Common;
 
 namespace IntelligenceHub.DAL
 {
@@ -51,7 +52,7 @@ namespace IntelligenceHub.DAL
                 // Variables with default values during first database entry
                 Model = profileUpdate?.Model
                     ?? existingProfile?.Model
-                    ?? "gpt-4o-mini",
+                    ?? GlobalVariables.DefaultAGIModel,
 
                 FrequencyPenalty = profileUpdate?.Frequency_Penalty
                     ?? existingProfile?.FrequencyPenalty
