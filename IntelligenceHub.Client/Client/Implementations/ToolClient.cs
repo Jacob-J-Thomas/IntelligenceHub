@@ -17,9 +17,15 @@ namespace IntelligenceHub.Client.Implementations
             _client = clientFactory.CreateClient(GlobalVariables.ClientPolicy.ToolClient.ToString());
         }
 
-        public async Task<HttpResponseMessage> CallFunction(string toolName, string toolArgs, string endpoint, string? httpMethod = "Post", string? key = null)
+        public async Task<HttpResponseMessage> CallFunction(string toolName, string toolArgs, string endpoint, string? httpMethod = "POST", string? key = null)
         {
-            _client = new HttpClient();
+            // validate inputs
+            //if (string.IsNullOrEmpty(endpoint)) return new HttpResponseMessage(System.Net.HttpStatusCode.NotFound) { Content = new StringContent("No endpoint provided") };
+            //if (string.IsNullOrEmpty(toolArgs) && (httpMethod?.ToUpper() == "POST" || httpMethod?.ToUpper() == "PUT" || httpMethod?.ToUpper() == "PATCH"))
+            //{
+            //    return new HttpResponseMessage(System.Net.HttpStatusCode.NotFound) { Content = new StringContent("No tool args provided on a request requiring a body") };
+            //}
+
             _client.DefaultRequestHeaders.Clear();
             _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             if (!string.IsNullOrEmpty(key)) _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", key);
@@ -41,11 +47,18 @@ namespace IntelligenceHub.Client.Implementations
 
             try
             {
-                if (httpMethod == HttpMethod.Post.ToString()) return await _client.PostAsync(endpoint, body);
-                else if (httpMethod == HttpMethod.Get.ToString()) return await _client.GetAsync(endpoint);
-                else if (httpMethod == HttpMethod.Put.ToString()) return await _client.PutAsync(endpoint, body);
-                else if (httpMethod == HttpMethod.Patch.ToString()) return await _client.PatchAsync(endpoint, body);
-                else if (httpMethod == HttpMethod.Delete.ToString()) return await _client.DeleteAsync(endpoint);
+                if (string.IsNullOrEmpty(toolArgs))
+                {
+                    if (httpMethod?.ToUpper() == HttpMethod.Post.ToString()) return await _client.PostAsync(endpoint, null);
+                    else if (httpMethod?.ToUpper() == HttpMethod.Put.ToString()) return await _client.PutAsync(endpoint, null);
+                    else if (httpMethod?.ToUpper() == HttpMethod.Patch.ToString()) return await _client.PatchAsync(endpoint, null);
+                }
+
+                if (httpMethod?.ToUpper() == HttpMethod.Post.ToString()) return await _client.PostAsync(endpoint, body);
+                else if (httpMethod?.ToUpper() == HttpMethod.Get.ToString()) return await _client.GetAsync(endpoint);
+                else if (httpMethod?.ToUpper() == HttpMethod.Put.ToString()) return await _client.PutAsync(endpoint, body);
+                else if (httpMethod?.ToUpper() == HttpMethod.Patch.ToString()) return await _client.PatchAsync(endpoint, body);
+                else if (httpMethod?.ToUpper() == HttpMethod.Delete.ToString()) return await _client.DeleteAsync(endpoint);
                 else return new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
             }
             catch (HttpRequestException ex)
