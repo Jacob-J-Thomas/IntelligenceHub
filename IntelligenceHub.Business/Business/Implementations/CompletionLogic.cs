@@ -1,4 +1,5 @@
 ﻿using Azure.Search.Documents.Models;
+using IntelligenceHub.API.API.DTOs.Profiles;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Business.Interfaces;
@@ -288,7 +289,7 @@ namespace IntelligenceHub.Business.Implementations
             var ragDataString = string.Empty;
             await foreach (var item in resultCollection)
             {
-                if (indexData.QueryType == SearchQueryType.Semantic.ToString())
+                if (indexData.QueryType.ToString()?.ToLower() == SearchQueryType.Semantic.ToString().ToLower())
                 {
                     var semanticResult = item.SemanticSearch;
                     ragDataString += $"\n```\n" +

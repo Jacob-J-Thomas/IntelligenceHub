@@ -5,6 +5,7 @@ using IntelligenceHub.DAL.Models;
 using IntelligenceHub.API.DTOs.RAG;
 using System.Text.Json;
 using IntelligenceHub.Common;
+using IntelligenceHub.API.API.DTOs.Profiles;
 
 namespace IntelligenceHub.DAL
 {
@@ -198,7 +199,7 @@ namespace IntelligenceHub.DAL
             return new IndexMetadata()
             {
                 Name = dbIndexData.Name,
-                QueryType = dbIndexData.QueryType,
+                QueryType = dbIndexData.QueryType?.ConvertStringToQueryType(),
                 ChunkOverlap = dbIndexData.ChunkOverlap,
                 IndexingInterval = dbIndexData.IndexingInterval,
                 MaxRagAttachments = dbIndexData.MaxRagAttachments,
@@ -212,8 +213,8 @@ namespace IntelligenceHub.DAL
                 ScoringProfile = new IndexScoringProfile()
                 {
                     Name = dbIndexData.DefaultScoringProfile ?? string.Empty,
-                    Aggregation = dbIndexData.ScoringAggregation,
-                    Interpolation = dbIndexData.ScoringInterpolation,
+                    SearchAggregation = dbIndexData.ScoringAggregation?.ConvertStringToSearchAggregation(),
+                    SearchInterpolation = dbIndexData.ScoringInterpolation?.ConvertStringToSearchInterpolation(),
                     BoostDurationDays = dbIndexData.ScoringBoostDurationDays,
                     FreshnessBoost = dbIndexData.ScoringFreshnessBoost,
                     TagBoost = dbIndexData.ScoringTagBoost,
@@ -228,7 +229,7 @@ namespace IntelligenceHub.DAL
             return new DbIndexMetadata()
             {
                 Name = indexData.Name,
-                QueryType = indexData.QueryType,
+                QueryType = indexData.QueryType.ToString(),
                 ChunkOverlap = indexData.ChunkOverlap,
                 IndexingInterval = indexData.IndexingInterval,
                 MaxRagAttachments = indexData.MaxRagAttachments,
@@ -240,8 +241,8 @@ namespace IntelligenceHub.DAL
                 GenerateTopicVector = indexData.GenerateTopicVector,
                 GenerateKeywordVector = indexData.GenerateKeywordVector,
                 DefaultScoringProfile = indexData.ScoringProfile?.Name,
-                ScoringAggregation = indexData.ScoringProfile?.Aggregation,
-                ScoringInterpolation = indexData.ScoringProfile?.Interpolation,
+                ScoringAggregation = indexData.ScoringProfile?.SearchAggregation.ToString(),
+                ScoringInterpolation = indexData.ScoringProfile?.SearchInterpolation.ToString(),
                 ScoringFreshnessBoost = indexData.ScoringProfile?.FreshnessBoost ?? 0,
                 ScoringBoostDurationDays = indexData.ScoringProfile?.BoostDurationDays ?? 0,
                 ScoringTagBoost = indexData.ScoringProfile?.TagBoost ?? 0,

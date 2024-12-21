@@ -1,3 +1,4 @@
+using IntelligenceHub.API.API.DTOs.Profiles;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Interfaces;

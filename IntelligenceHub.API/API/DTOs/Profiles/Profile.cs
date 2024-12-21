@@ -1,7 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs.Tools;
 using Newtonsoft.Json;
 
-namespace IntelligenceHub.API.DTOs
+namespace IntelligenceHub.API.API.DTOs.Profiles
 {
     public class Profile
     {

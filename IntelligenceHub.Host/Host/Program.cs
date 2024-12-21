@@ -94,8 +94,7 @@ namespace IntelligenceHub.Host
             // Function Calling Client Policies:
 
             // Define the ToolClient policy
-            builder.Services.AddHttpClient(ClientPolicy.ToolClient.ToString()).AddPolicyHandler(
-                HttpPolicyExtensions
+            builder.Services.AddHttpClient(ClientPolicy.ToolClient.ToString()).AddPolicyHandler(HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
@@ -155,12 +154,14 @@ namespace IntelligenceHub.Host
                 // Set serialization for global enums utilized in DTOs
                 options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             });
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
                 // Set serialization for global enums utilized in DTOs
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             });
             #endregion
 
@@ -231,22 +232,24 @@ namespace IntelligenceHub.Host
                 // Apply the security scheme globally
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
+                    {
+                        new OpenApiSecurityScheme
                         {
-                            new OpenApiSecurityScheme
+                            Reference = new OpenApiReference
                             {
-                                Reference = new OpenApiReference
-                                {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "Bearer"
-                                }
-                            },
-                            Array.Empty<string>()
-                        }
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
                 });
             });
+
             #endregion
 
             #region Build App
+
             var app = builder.Build();
 
             if (app.Environment.IsDevelopment())

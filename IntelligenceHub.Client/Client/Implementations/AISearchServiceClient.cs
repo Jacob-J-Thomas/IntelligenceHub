@@ -9,6 +9,7 @@ using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
 using Microsoft.Extensions.Options;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -19,6 +20,27 @@ namespace IntelligenceHub.Client.Implementations
         private readonly string _sqlRagDbConnectionString;
         private readonly string _openaiKey;
         private readonly string _openaiUrl;
+
+        private readonly string _vectorProfileName = "vector";
+        private readonly string _vectorAlgConfig = "hnsw";
+        private readonly int _ragDimensions = 3072;
+
+        // Rag indexes are created with lower case values
+        private enum RagField
+        {
+            title,
+            content,
+            topic,
+            keywords,
+            created,
+            modified,
+            source,
+            chunk,
+            contentVector,
+            keywordsVector,
+            topicVector,
+            titleVector,
+        }
 
         public AISearchServiceClient(IOptionsMonitor<SearchServiceClientSettings> searchClientSettings, IOptionsMonitor<AGIClientSettings> agiClientSettings, IOptionsMonitor<Settings> settings)
         {
@@ -51,8 +73,8 @@ namespace IntelligenceHub.Client.Implementations
             var searchClient = _indexClient.GetSearchClient(index.Name);
 
             var queryType = SearchQueryType.Simple;
-            if (index.QueryType == SearchQueryType.Full.ToString()) queryType = SearchQueryType.Full;
-            else if (index.QueryType == SearchQueryType.Semantic.ToString()) queryType = SearchQueryType.Semantic;
+            if (index.QueryType.ToString()?.ToLower() == SearchQueryType.Full.ToString().ToLower()) queryType = SearchQueryType.Full;
+            else if (index.QueryType.ToString()?.ToLower() == SearchQueryType.Semantic.ToString().ToLower()) queryType = SearchQueryType.Semantic;
 
             var vectorProfile = new VectorSearchOptions();
             vectorProfile.Queries.Add(new VectorizableTextQuery(query));
@@ -65,12 +87,12 @@ namespace IntelligenceHub.Client.Implementations
                 SemanticSearch = new SemanticSearchOptions()
                 {
                     ErrorMode = SemanticErrorMode.Partial,
-                    SemanticConfigurationName = "semantic"
+                    SemanticConfigurationName = SearchQueryType.Semantic.ToString()
                 },
                 VectorSearch = vectorProfile
             };
 
-            options.HighlightFields.Add("content");
+            options.HighlightFields.Add(RagField.content.ToString());
 
             var response = await searchClient.SearchAsync<IndexDefinition>(query, options);
             return response.Value;
@@ -87,20 +109,20 @@ namespace IntelligenceHub.Client.Implementations
                 DefaultScoringProfile = indexDefinition.ScoringProfile?.Name,
                 SemanticSearch = new SemanticSearch()
                 {
-                    DefaultConfigurationName = "semantic",
+                    DefaultConfigurationName = SearchQueryType.Semantic.ToString(),
                 }
             };
 
             // build a semantic search profile
             var semanticFields = new SemanticPrioritizedFields();
-            semanticFields.TitleField = new SemanticField("title"); // change this and others to global constants
-            semanticFields.ContentFields.Add(new SemanticField("content"));
-            semanticFields.KeywordsFields.Add(new SemanticField("keywords"));
-            searchIndex.SemanticSearch.Configurations.Add(new SemanticConfiguration("semantic", semanticFields));
+            semanticFields.TitleField = new SemanticField(RagField.title.ToString()); // change this and others to global constants
+            semanticFields.ContentFields.Add(new SemanticField(RagField.content.ToString()));
+            semanticFields.KeywordsFields.Add(new SemanticField(RagField.keywords.ToString()));
+            searchIndex.SemanticSearch.Configurations.Add(new SemanticConfiguration(SearchQueryType.Semantic.ToString(), semanticFields));
 
             // build a vector profile
-            searchIndex.VectorSearch.Algorithms.Add(new HnswAlgorithmConfiguration("hnsw"));
-            searchIndex.VectorSearch.Profiles.Add(new VectorSearchProfile("vector", "hnsw"));
+            searchIndex.VectorSearch.Algorithms.Add(new HnswAlgorithmConfiguration(_vectorAlgConfig));
+            searchIndex.VectorSearch.Profiles.Add(new VectorSearchProfile(_vectorProfileName, _vectorAlgConfig));
 
             if (indexDefinition.ScoringProfile != null)
             {
@@ -109,17 +131,17 @@ namespace IntelligenceHub.Client.Implementations
                 if (indexDefinition.ScoringProfile != null && indexDefinition.ScoringProfile.Weights.Any()) scoringProfile.TextWeights = new TextWeights(indexDefinition.ScoringProfile.Weights);
 
                 // assign function aggregation
-                if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.Sum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Sum;
-                else if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.FirstMatching.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.FirstMatching;
-                else if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.Average.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Average;
-                else if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.Minimum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Minimum;
-                else if (indexDefinition.ScoringProfile?.Aggregation == ScoringFunctionAggregation.Maximum.ToString()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Maximum;
+                if (indexDefinition.ScoringProfile?.SearchAggregation.ToString()?.ToLower() == ScoringFunctionAggregation.Sum.ToString().ToLower()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Sum;
+                else if (indexDefinition.ScoringProfile?.SearchAggregation.ToString()?.ToLower() == ScoringFunctionAggregation.FirstMatching.ToString().ToLower()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.FirstMatching;
+                else if (indexDefinition.ScoringProfile?.SearchAggregation.ToString()?.ToLower() == ScoringFunctionAggregation.Average.ToString().ToLower()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Average;
+                else if (indexDefinition.ScoringProfile?.SearchAggregation.ToString()?.ToLower() == ScoringFunctionAggregation.Minimum.ToString().ToLower()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Minimum;
+                else if (indexDefinition.ScoringProfile?.SearchAggregation.ToString()?.ToLower() == ScoringFunctionAggregation.Maximum.ToString().ToLower()) scoringProfile.FunctionAggregation = ScoringFunctionAggregation.Maximum;
 
                 // assign interpolation
                 var interpolation = ScoringFunctionInterpolation.Linear;
-                if (indexDefinition.ScoringProfile?.Interpolation == ScoringFunctionInterpolation.Constant.ToString()) interpolation = ScoringFunctionInterpolation.Constant;
-                else if (indexDefinition.ScoringProfile?.Interpolation == ScoringFunctionInterpolation.Quadratic.ToString()) interpolation = ScoringFunctionInterpolation.Quadratic;
-                else if (indexDefinition.ScoringProfile?.Interpolation == ScoringFunctionInterpolation.Logarithmic.ToString()) interpolation = ScoringFunctionInterpolation.Logarithmic;
+                if (indexDefinition.ScoringProfile?.SearchInterpolation.ToString()?.ToLower() == ScoringFunctionInterpolation.Constant.ToString().ToLower()) interpolation = ScoringFunctionInterpolation.Constant;
+                else if (indexDefinition.ScoringProfile?.SearchInterpolation.ToString()?.ToLower() == ScoringFunctionInterpolation.Quadratic.ToString().ToLower()) interpolation = ScoringFunctionInterpolation.Quadratic;
+                else if (indexDefinition.ScoringProfile?.SearchInterpolation.ToString()?.ToLower() == ScoringFunctionInterpolation.Logarithmic.ToString().ToLower()) interpolation = ScoringFunctionInterpolation.Logarithmic;
 
                 // add scoring functions to the profile
                 if (indexDefinition.ScoringProfile?.FreshnessBoost > 1) scoringProfile.Functions.Add(new FreshnessScoringFunction("modified", indexDefinition.ScoringProfile.FreshnessBoost, new FreshnessScoringParameters(TimeSpan.FromDays(indexDefinition.ScoringProfile.BoostDurationDays)))
@@ -128,16 +150,15 @@ namespace IntelligenceHub.Client.Implementations
                 });
                 else if (indexDefinition.ScoringProfile?.TagBoost > 1)
                 {
-                    scoringProfile.Functions.Add(new TagScoringFunction("title", indexDefinition.ScoringProfile.TagBoost, new TagScoringParameters("keywords"))
+                    scoringProfile.Functions.Add(new TagScoringFunction(RagField.title.ToString(), indexDefinition.ScoringProfile.TagBoost, new TagScoringParameters(RagField.keywords.ToString()))
                     {
                         Interpolation = interpolation
                     });
-                    scoringProfile.Functions.Add(new TagScoringFunction("content", indexDefinition.ScoringProfile.TagBoost, new TagScoringParameters("keywords"))
+                    scoringProfile.Functions.Add(new TagScoringFunction(RagField.content.ToString(), indexDefinition.ScoringProfile.TagBoost, new TagScoringParameters(RagField.keywords.ToString()))
                     {
                         Interpolation = interpolation
                     });
                 }
-
                 searchIndex.ScoringProfiles.Add(scoringProfile);
             }
 
@@ -188,34 +209,49 @@ namespace IntelligenceHub.Client.Implementations
 
         public async Task<bool> CreateIndexer(IndexMetadata index)
         {
+            var ragDimensions = 3072;
+            if (index.EmbeddingModel?.ToLower() != DefaultEmbeddingModel.ToLower()) ragDimensions = 1536;
+
             var connectionString = _sqlRagDbConnectionString;
             var chunkingLengthInChars = 1312; // (avg chars per token = 3.5) * (average recomended chunk size = 375) = 1312.5
 
-            var indexer = new SearchIndexer($"{index.Name}-indexer", index.Name, index.Name)
+            SearchIndexer indexer;
+            if (index.IndexingInterval is TimeSpan interval) 
             {
-                IsDisabled = false, // indexer will automatically run after creation. Adjust this later if needed
-                Schedule = new IndexingSchedule(index.IndexingInterval),
+                indexer = new SearchIndexer($"{index.Name}-indexer", index.Name, index.Name)
+                {
+                    IsDisabled = false, // indexer will automatically run after creation. Adjust this later if needed
+                    Schedule = new IndexingSchedule(interval),
 
-                // probably won't need one
-                //FieldMappings = new FieldMapping[] {}
+                    // probably won't need one
+                    //FieldMappings = new FieldMapping[] {}
 
-                // maybe add later
-                // Parameters = new IndexingParameters(),
-                // OutputFieldMappings = null,
-                // ETag = null,
-                // SkillsetName = null,
-            };
+                    // maybe add later
+                    // Parameters = new IndexingParameters(),
+                    // OutputFieldMappings = null,
+                    // ETag = null,
+                    // SkillsetName = null,
+                };
+            }
+            else
+            {
+                indexer = new SearchIndexer($"{index.Name}-indexer", index.Name, index.Name)
+                {
+                    IsDisabled = false, // indexer will automatically run after creation. Adjust this later if needed
+                };
+            }
+
+            
 
             if (!string.IsNullOrEmpty(index.EmbeddingModel))
             {
                 var skillsetName = index.EmbeddingModel + "-embeddingSkillset";
                 var skills = new List<SearchIndexerSkill>();
 
-
                 if (index.GenerateTitleVector) skills.Add(new AzureOpenAIEmbeddingSkill(
                     new List<InputFieldMappingEntry>()
                     {
-                        new InputFieldMappingEntry("title")
+                        new InputFieldMappingEntry(RagField.title.ToString())
                         {
                             Source = "/document/title"
                         }
@@ -224,14 +260,14 @@ namespace IntelligenceHub.Client.Implementations
                     {
                         new OutputFieldMappingEntry("titleEmbedding")
                         {
-                            TargetName = "titleVector"
+                            TargetName = RagField.titleVector.ToString()
                         },
                     })
                 {
                     ResourceUri = new Uri(_openaiUrl),
                     ApiKey = _openaiKey,
-                    ModelName = index.EmbeddingModel,
-                    Dimensions = 3072,
+                    ModelName = index.EmbeddingModel ?? DefaultEmbeddingModel,
+                    Dimensions = ragDimensions,
 
                     // if running into issues check how using the context property works
                 });
@@ -239,7 +275,7 @@ namespace IntelligenceHub.Client.Implementations
                 if (index.GenerateTopicVector) skills.Add(new AzureOpenAIEmbeddingSkill(
                     new List<InputFieldMappingEntry>()
                     {
-                        new InputFieldMappingEntry("topic")
+                        new InputFieldMappingEntry(RagField.topic.ToString())
                         {
                             Source = "/document/topic"
                         }
@@ -248,20 +284,20 @@ namespace IntelligenceHub.Client.Implementations
                     {
                         new OutputFieldMappingEntry("topicEmbedding")
                         {
-                            TargetName = "topicVector"
+                            TargetName = RagField.topicVector.ToString()
                         },
                     })
                 {
                     ResourceUri = new Uri(_openaiUrl),
                     ApiKey = _openaiKey,
-                    ModelName = index.EmbeddingModel,
-                    Dimensions = 3072,
+                    ModelName = index.EmbeddingModel ?? DefaultEmbeddingModel,
+                    Dimensions = ragDimensions,
                 });
 
                 if (index.GenerateKeywordVector) skills.Add(new AzureOpenAIEmbeddingSkill(
                     new List<InputFieldMappingEntry>()
                     {
-                        new InputFieldMappingEntry("keywords")
+                        new InputFieldMappingEntry(RagField.keywords.ToString())
                         {
                             Source = "/document/keywords"
                         }
@@ -270,14 +306,14 @@ namespace IntelligenceHub.Client.Implementations
                     {
                         new OutputFieldMappingEntry("keywordsEmbedding")
                         {
-                            TargetName = "keywordsVector"
+                            TargetName = RagField.keywordsVector.ToString()
                         },
                     })
                 {
                     ResourceUri = new Uri(_openaiUrl),
                     ApiKey = _openaiKey,
                     ModelName = index.EmbeddingModel,
-                    Dimensions = 3072,
+                    Dimensions = ragDimensions,
                 });
 
                 //chunk content
@@ -302,7 +338,7 @@ namespace IntelligenceHub.Client.Implementations
                     skills.Add(new AzureOpenAIEmbeddingSkill(
                         new List<InputFieldMappingEntry>()
                         {
-                        new InputFieldMappingEntry("content")
+                        new InputFieldMappingEntry(RagField.content.ToString())
                         {
                             Source = "/document/chunkSplits/*"
                         }
@@ -311,14 +347,14 @@ namespace IntelligenceHub.Client.Implementations
                         {
                         new OutputFieldMappingEntry("contentEmbedding")
                         {
-                            TargetName = "contentVector"
+                            TargetName = RagField.contentVector.ToString()
                         },
                         })
                     {
                         ResourceUri = new Uri(_openaiUrl),
                         ApiKey = _openaiKey,
                         ModelName = index.EmbeddingModel,
-                        Dimensions = 3072,
+                        Dimensions = ragDimensions,
                     });
                 }
 
@@ -326,14 +362,8 @@ namespace IntelligenceHub.Client.Implementations
                 await _indexerClient.CreateOrUpdateSkillsetAsync(skillset);
                 indexer.SkillsetName = skillsetName;
             }
-
             var response = await _indexerClient.CreateIndexerAsync(indexer);
             return true;
         }
-
-        #region Private Methods
-
-
-        #endregion
     }
 }

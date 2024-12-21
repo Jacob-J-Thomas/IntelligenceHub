@@ -51,6 +51,30 @@
             Tool
         }
 
+        public enum QueryType
+        {
+            Simple,
+            Full,
+            Semantic
+        }
+
+        public enum SearchInterpolation
+        {
+            Linear,
+            Constant,
+            Quadratic,
+            Logarithmic
+        }
+
+        public enum SearchAggregation
+        {
+            Sum,
+            Average,
+            Minimum,
+            Maximum,
+            FirstMatching
+        }
+
         public const string DefaultAGIModel = "gpt-4o-mini";
         public const string DefaultEmbeddingModel = "text-embedding-3-large";
 

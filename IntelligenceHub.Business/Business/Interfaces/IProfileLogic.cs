@@ -1,4 +1,4 @@
-﻿using IntelligenceHub.API.DTOs;
+﻿using IntelligenceHub.API.API.DTOs.Profiles;
 using IntelligenceHub.API.DTOs.Tools;
 
 namespace IntelligenceHub.Business.Interfaces

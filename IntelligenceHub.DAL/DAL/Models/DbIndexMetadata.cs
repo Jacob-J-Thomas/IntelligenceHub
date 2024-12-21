@@ -13,7 +13,7 @@ namespace IntelligenceHub.DAL.Models
         public string Name { get; set; } = string.Empty;
         public string? QueryType { get; set; }
         [Required]
-        public TimeSpan IndexingInterval { get; set; }
+        public TimeSpan? IndexingInterval { get; set; }
         public string? EmbeddingModel { get; set; }
         public int MaxRagAttachments { get; set; } = 3;
         public float ChunkOverlap { get; set; } = 0.1f;

@@ -1,4 +1,6 @@
 ﻿
+using IntelligenceHub.API.API.DTOs.Profiles;
+
 namespace IntelligenceHub.API.DTOs
 {
     public class CompletionRequest
