@@ -1,5 +1,6 @@
 ﻿using global::IntelligenceHub.API.DTOs.RAG;
 using global::IntelligenceHub.DAL.Models;
+using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Implementations;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.DAL.Interfaces;
@@ -14,6 +15,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         private readonly Mock<IAISearchServiceClient> _mockSearchClient;
         private readonly Mock<IAGIClient> _mockAiClient;
         private readonly Mock<IIndexRepository> _mockRagRepository;
+        private readonly Mock<IValidationHandler> _mockValidationHandler;
         private readonly RagLogic _ragLogic;
 
         public RagLogicTests()
@@ -22,8 +24,9 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockAiClient = new Mock<IAGIClient>();
             _mockMetaRepository = new Mock<IIndexMetaRepository>();
             _mockRagRepository = new Mock<IIndexRepository>();
+            _mockValidationHandler = new Mock<IValidationHandler>();
 
-            _ragLogic = new RagLogic(_mockAiClient.Object, _mockSearchClient.Object, _mockMetaRepository.Object, _mockRagRepository.Object);
+            _ragLogic = new RagLogic(_mockAiClient.Object, _mockSearchClient.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object);
         }
 
         [Fact]

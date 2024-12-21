@@ -1,10 +1,13 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.RAG;
+using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common;
+using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Interfaces;
+using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 
 namespace IntelligenceHub.Business.Implementations
@@ -15,13 +18,15 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IAGIClient _aiClient;
         private readonly IIndexMetaRepository _metaRepository;
         private readonly IIndexRepository _ragRepository;
+        private readonly IValidationHandler _validationHandler;
 
-        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, IIndexMetaRepository metaRepository, IIndexRepository indexRepository)
+        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler)
         {
             _searchClient = aISearchServiceClient;
             _aiClient = agiClient;
             _metaRepository = metaRepository;
             _ragRepository = indexRepository;
+            _validationHandler = validationHandler;
         }
 
         public async Task<IndexMetadata?> GetRagIndex(string index)
@@ -41,7 +46,9 @@ namespace IntelligenceHub.Business.Implementations
 
         public async Task<bool> CreateIndex(IndexMetadata indexDefinition)
         {
-            if (!IsValidIndexName(indexDefinition.Name)) return false;
+            var errorMessage = _validationHandler.ValidateIndexDefinition(indexDefinition);
+            if (!string.IsNullOrEmpty(errorMessage)) return false;
+
             var existing = await _metaRepository.GetByNameAsync(indexDefinition.Name);
             if (existing != null) return false;
 
@@ -52,6 +59,9 @@ namespace IntelligenceHub.Business.Implementations
 
             // create a new table for the index
             var success = await _ragRepository.CreateIndexAsync(indexDefinition.Name);
+            if (!success) return false;
+
+            success = await _ragRepository.EnableChangeTrackingAsync(indexDefinition.Name);
             if (!success) return false;
 
             // create the index in Azure AI Search
@@ -83,7 +93,7 @@ namespace IntelligenceHub.Business.Implementations
 
         public async Task<bool> DeleteIndex(string index)
         {
-            if (!IsValidIndexName(index)) return false;
+            if (!_validationHandler.IsValidIndexName(index)) return false;
             var indexMetadata = await _metaRepository.GetByNameAsync(index);
             if (indexMetadata == null) return false;
             if (await _ragRepository.DeleteIndexAsync(indexMetadata.Name))
@@ -110,7 +120,7 @@ namespace IntelligenceHub.Business.Implementations
 
         public async Task<IEnumerable<IndexDocument>?> GetAllDocuments(string index, int count, int page)
         {
-            if (!IsValidIndexName(index)) return null;
+            if (!_validationHandler.IsValidIndexName(index)) return null;
             var docList = new List<IndexDocument>();
             var dbDocumentList = await _ragRepository.GetAllAsync(count, page);
             foreach (var dbDocument in dbDocumentList) docList.Add(DbMappingHandler.MapFromDbIndexDocument(dbDocument));
@@ -119,7 +129,7 @@ namespace IntelligenceHub.Business.Implementations
 
         public async Task<IndexDocument?> GetDocument(string index, string document)
         {
-            if (!IsValidIndexName(index)) return null;
+            if (!_validationHandler.IsValidIndexName(index)) return null;
             var dbDocument = await _ragRepository.GetDocumentAsync(index, document);
             if (dbDocument == null) return null;
             return DbMappingHandler.MapFromDbIndexDocument(dbDocument);
@@ -127,7 +137,7 @@ namespace IntelligenceHub.Business.Implementations
 
         public async Task<bool> UpsertDocuments(string index, RagUpsertRequest documentUpsertRequest)
         {
-            if (!IsValidIndexName(index)) return false;
+            if (!_validationHandler.IsValidIndexName(index)) return false;
 
             var indexData = await _metaRepository.GetByNameAsync(index);
             if (indexData == null) return false;
@@ -160,7 +170,7 @@ namespace IntelligenceHub.Business.Implementations
         public async Task<int> DeleteDocuments(string index, string[] documentList)
         {
             var deletedDocuments = 0;
-            if (!IsValidIndexName(index)) return -1;
+            if (!_validationHandler.IsValidIndexName(index)) return -1;
             foreach (var documentName in documentList)
             {
                 var document = await _ragRepository.GetDocumentAsync(index, documentName);
@@ -199,63 +209,6 @@ namespace IntelligenceHub.Business.Implementations
             return response?.Messages.Last(m => m.Role == GlobalVariables.Role.Assistant).Content ?? string.Empty;
         }
 
-        private static bool IsValidIndexName(string tableName)
-        {
-            // Regular expression to match valid table names (alphanumeric characters and underscores only)
-
-            // change this to mitigate possibility of DOS attacks
-            var pattern = @"^[a-zA-Z_][a-zA-Z0-9_]*$";
-            var isSuccess = false;
-
-            // Check if the table name matches the pattern and is not a SQL keyword
-            if (Regex.IsMatch(tableName, pattern))
-            {
-                isSuccess = !ContainsSqlKeyword(tableName.ToUpper());
-                if (isSuccess) isSuccess = !ContainsAPIKeyword(tableName.ToUpper());
-            }
-            return isSuccess;
-        }
-
-        private static bool ContainsSqlKeyword(string tableName)
-        {
-            // List of common SQL keywords to prevent improper use
-            var sqlKeywords = new string[]
-            {
-                "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TABLE",
-                "WHERE", "FROM", "JOIN", "UNION", "ORDER", "GROUP", "HAVING"
-            };
-
-            // Check if the table name matches any SQL keyword (case-insensitive)
-            foreach (string keyword in sqlKeywords)
-            {
-                if (string.Equals(tableName, keyword, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool ContainsAPIKeyword(string tableName)
-        {
-            // List of common SQL keywords to prevent conflicts
-            var sqlKeywords = new string[]
-            {
-                "ALL", "CONFIGURE", "DELETE"
-            };
-
-            // Check if the table name matches any SQL keyword (case-insensitive)
-            foreach (string keyword in sqlKeywords)
-            {
-                if (string.Equals(tableName, keyword, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
         #endregion
     }
 }

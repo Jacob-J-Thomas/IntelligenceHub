@@ -44,10 +44,10 @@ namespace IntelligenceHub.DAL
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
                 entity.HasIndex(e => e.Name).IsUnique();
                 entity.Property(e => e.QueryType).HasMaxLength(255);
-                entity.Property(e => e.IndexingInterval).IsRequired();
+                entity.Property(e => e.IndexingInterval).IsRequired().HasDefaultValue(TimeSpan.FromHours(12));
                 entity.Property(e => e.EmbeddingModel).HasMaxLength(255);
                 entity.Property(e => e.MaxRagAttachments).HasDefaultValue(3);
-                entity.Property(e => e.ChunkOverlap).HasDefaultValue(0.1f);
+                entity.Property(e => e.ChunkOverlap).HasDefaultValue(0.1);
                 entity.Property(e => e.GenerateTopic).IsRequired();
                 entity.Property(e => e.GenerateKeywords).IsRequired();
                 entity.Property(e => e.GenerateTitleVector).IsRequired();

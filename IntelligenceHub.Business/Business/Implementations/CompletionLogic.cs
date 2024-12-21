@@ -384,7 +384,7 @@ namespace IntelligenceHub.Business.Implementations
             var ragDataString = string.Empty;
             await foreach (var item in resultCollection)
             {
-                if (indexData.QueryType == SearchQueryType.Semantic.ToString())
+                if (indexData.QueryType.ToString()?.ToLower() == SearchQueryType.Semantic.ToString().ToLower())
                 {
                     var semanticResult = item.SemanticSearch;
                     ragDataString += $"\n```\n" +

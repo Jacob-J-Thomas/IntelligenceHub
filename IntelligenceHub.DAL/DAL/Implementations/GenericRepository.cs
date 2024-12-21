@@ -26,9 +26,18 @@ namespace IntelligenceHub.DAL.Implementations
 
         public async Task<T> AddAsync(T entity)
         {
-            await _dbSet.AddAsync(entity);
-            await _context.SaveChangesAsync();
-            return entity;
+            try
+            {
+                await _dbSet.AddAsync(entity);
+                await _context.SaveChangesAsync();
+                return entity;
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+            
         }
 
         public async Task<int> UpdateAsync(T existingEntity, T entity)

@@ -66,8 +66,34 @@
             Anthropic
         }
 
+        public enum QueryType
+        {
+            Simple,
+            Full,
+            Semantic
+        }
+
+        public enum SearchInterpolation
+        {
+            Linear,
+            Constant,
+            Quadratic,
+            Logarithmic
+        }
+
+        public enum SearchAggregation
+        {
+            Sum,
+            Average,
+            Minimum,
+            Maximum,
+            FirstMatching
+        }
+
         public const string DefaultAGIModel = "gpt-4o-mini";
         public const string DefaultEmbeddingModel = "text-embedding-3-large";
+
+        public const string VectorSearchProfileName = "vector-search-profile";
 
         public const string DefaultExceptionMessage = "Internal Server Error, please reattempt. If this issue persists please contact the system administrator.";
     }

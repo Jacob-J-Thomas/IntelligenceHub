@@ -34,10 +34,6 @@ namespace IntelligenceHub.Controllers
                 if (response == null) return NotFound();
                 else return Ok(response);
             }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
-            }
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
@@ -58,10 +54,6 @@ namespace IntelligenceHub.Controllers
                 if (response is not null && response.Count() > 0) return Ok(response);
                 else return NotFound();
             }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
-            }
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
@@ -78,13 +70,10 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                if (indexDefinition is null) return BadRequest("The request body is malformed.");
                 var response = await _ragLogic.CreateIndex(indexDefinition);
                 if (response) return Ok();
                 else return BadRequest();
-            }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
@@ -103,10 +92,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);
                 if (response) return Ok();
                 else return NotFound();
-            }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
@@ -128,10 +113,6 @@ namespace IntelligenceHub.Controllers
                 if (response) return Ok();
                 else return NotFound();
             }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
-            }
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
@@ -151,10 +132,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.GetAllDocuments(index, count, page); // going to need to add pagination here
                 if (response != null && response.Count() > 1) return Ok(response);
                 else return NotFound();
-            }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
@@ -176,10 +153,6 @@ namespace IntelligenceHub.Controllers
                 if (response is not null) return Ok(response);
                 else return NotFound();
             }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
-            }
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
@@ -196,13 +169,10 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                if (documentUpsertRequest == null || documentUpsertRequest.Documents.Count < 1) return BadRequest();
                 var response = await _ragLogic.UpsertDocuments(index, documentUpsertRequest);
                 if (response) return Ok(response);
                 else return BadRequest();
-            }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
@@ -224,10 +194,6 @@ namespace IntelligenceHub.Controllers
                 var response = await _ragLogic.DeleteDocuments(index, documents);
                 if (response < 1) return NotFound();
                 else return Ok(response);
-            }
-            catch (HttpRequestException ex)
-            {
-                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {

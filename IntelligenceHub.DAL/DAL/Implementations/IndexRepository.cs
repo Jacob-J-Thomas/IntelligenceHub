@@ -36,6 +36,17 @@ namespace IntelligenceHub.DAL.Implementations
                                 Created DATETIMEOFFSET NOT NULL,
                                 Modified DATETIMEOFFSET NOT NULL
                             );";
+
+            await _context.Database.ExecuteSqlRawAsync(query);
+            return true;
+        }
+
+        public async Task<bool> EnableChangeTrackingAsync(string tableName)
+        {
+            var query = $@"ALTER TABLE [dbo].[{tableName}]
+                           ENABLE CHANGE_TRACKING 
+                           WITH (TRACK_COLUMNS_UPDATED = ON);";
+
             await _context.Database.ExecuteSqlRawAsync(query);
             return true;
         }

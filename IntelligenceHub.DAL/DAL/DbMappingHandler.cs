@@ -200,10 +200,10 @@ namespace IntelligenceHub.DAL
             return new IndexMetadata()
             {
                 Name = dbIndexData.Name,
-                QueryType = dbIndexData.QueryType,
-                ChunkOverlap = dbIndexData.ChunkOverlap,
+                QueryType = dbIndexData.QueryType?.ConvertStringToQueryType() ?? QueryType.Simple,
+                ChunkOverlap = dbIndexData.ChunkOverlap ?? .1,
                 IndexingInterval = dbIndexData.IndexingInterval,
-                MaxRagAttachments = dbIndexData.MaxRagAttachments,
+                MaxRagAttachments = dbIndexData.MaxRagAttachments ?? 3,
                 EmbeddingModel = dbIndexData.EmbeddingModel,
                 GenerateTopic = dbIndexData.GenerateTopic,
                 GenerateKeywords = dbIndexData.GenerateKeywords,
@@ -214,11 +214,11 @@ namespace IntelligenceHub.DAL
                 ScoringProfile = new IndexScoringProfile()
                 {
                     Name = dbIndexData.DefaultScoringProfile ?? string.Empty,
-                    Aggregation = dbIndexData.ScoringAggregation,
-                    Interpolation = dbIndexData.ScoringInterpolation,
-                    BoostDurationDays = dbIndexData.ScoringBoostDurationDays,
-                    FreshnessBoost = dbIndexData.ScoringFreshnessBoost,
-                    TagBoost = dbIndexData.ScoringTagBoost,
+                    SearchAggregation = dbIndexData.ScoringAggregation?.ConvertStringToSearchAggregation(),
+                    SearchInterpolation = dbIndexData.ScoringInterpolation?.ConvertStringToSearchInterpolation(),
+                    BoostDurationDays = dbIndexData.ScoringBoostDurationDays ?? 0,
+                    FreshnessBoost = dbIndexData.ScoringFreshnessBoost ?? 0,
+                    TagBoost = dbIndexData.ScoringTagBoost ?? 0,
                     Weights = DeserializeDbWeights(dbIndexData.ScoringWeights) ?? new Dictionary<string, double>()
                 }
             };
@@ -230,9 +230,9 @@ namespace IntelligenceHub.DAL
             return new DbIndexMetadata()
             {
                 Name = indexData.Name,
-                QueryType = indexData.QueryType,
+                QueryType = indexData.QueryType.ToString(),
                 ChunkOverlap = indexData.ChunkOverlap,
-                IndexingInterval = indexData.IndexingInterval,
+                IndexingInterval = indexData.IndexingInterval ?? TimeSpan.FromHours(12),
                 MaxRagAttachments = indexData.MaxRagAttachments,
                 EmbeddingModel = indexData.EmbeddingModel,
                 GenerateTopic = indexData.GenerateTopic,
@@ -242,8 +242,8 @@ namespace IntelligenceHub.DAL
                 GenerateTopicVector = indexData.GenerateTopicVector,
                 GenerateKeywordVector = indexData.GenerateKeywordVector,
                 DefaultScoringProfile = indexData.ScoringProfile?.Name,
-                ScoringAggregation = indexData.ScoringProfile?.Aggregation,
-                ScoringInterpolation = indexData.ScoringProfile?.Interpolation,
+                ScoringAggregation = indexData.ScoringProfile?.SearchAggregation.ToString(),
+                ScoringInterpolation = indexData.ScoringProfile?.SearchInterpolation.ToString(),
                 ScoringFreshnessBoost = indexData.ScoringProfile?.FreshnessBoost ?? 0,
                 ScoringBoostDurationDays = indexData.ScoringProfile?.BoostDurationDays ?? 0,
                 ScoringTagBoost = indexData.ScoringProfile?.TagBoost ?? 0,
