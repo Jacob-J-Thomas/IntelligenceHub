@@ -46,7 +46,7 @@ namespace IntelligenceHub.DAL
                 entity.Property(e => e.IndexingInterval).IsRequired();
                 entity.Property(e => e.EmbeddingModel).HasMaxLength(255);
                 entity.Property(e => e.MaxRagAttachments).HasDefaultValue(3);
-                entity.Property(e => e.ChunkOverlap).HasDefaultValue(0.1f);
+                entity.Property(e => e.ChunkOverlap).HasDefaultValue(0.1);
                 entity.Property(e => e.GenerateTopic).IsRequired();
                 entity.Property(e => e.GenerateKeywords).IsRequired();
                 entity.Property(e => e.GenerateTitleVector).IsRequired();
@@ -96,7 +96,7 @@ namespace IntelligenceHub.DAL
                 entity.Property(e => e.Stop).HasMaxLength(255);
                 entity.Property(e => e.ReferenceProfiles).HasMaxLength(2040);
                 entity.Property(e => e.ReferenceDescription).HasMaxLength(2040);
-                entity.Property(e => e.ReturnRecursion);
+                entity.Property(e => e.ReturnRecursion).HasDefaultValue(false);
             });
 
             modelBuilder.Entity<DbTool>(entity =>
@@ -138,6 +138,7 @@ namespace IntelligenceHub.DAL
 
             modelBuilder.Entity<DbProfileTool>(entity =>
             {
+                entity.ToTable("ProfileTools");
                 entity.HasKey(e => new { e.ProfileID, e.ToolID });
 
                 entity.HasOne(e => e.Profile)

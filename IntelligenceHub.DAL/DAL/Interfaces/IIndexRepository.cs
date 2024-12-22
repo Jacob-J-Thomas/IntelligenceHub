@@ -7,8 +7,10 @@ namespace IntelligenceHub.DAL.Interfaces
         Task<int> GetRagIndexLengthAsync(string tableName);
         Task<DbIndexDocument?> GetDocumentAsync(string tableName, string title);
         Task<bool> CreateIndexAsync(string tableName);
+        Task<bool> EnableChangeTracking(string tableName);
+        Task<bool> MarkIndexForUpdate(string tableName);
         Task<bool> DeleteIndexAsync(string tableName);
-        Task<IEnumerable<DbIndexDocument>> GetAllAsync(int count, int page);
+        Task<IEnumerable<DbIndexDocument>> GetAllAsync(string tableName, int count, int page);
         Task<DbIndexDocument> AddAsync(DbIndexDocument document, string tableName);
         Task<int> UpdateAsync(DbIndexDocument existing, DbIndexDocument document, string tableName);
         Task<int> DeleteAsync(DbIndexDocument document, string tableName);

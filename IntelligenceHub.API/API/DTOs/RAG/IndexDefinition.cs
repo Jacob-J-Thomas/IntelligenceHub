@@ -1,4 +1,5 @@
 ﻿using Azure.Search.Documents.Indexes;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.API.DTOs.RAG
 {
@@ -22,13 +23,13 @@ namespace IntelligenceHub.API.DTOs.RAG
         public DateTimeOffset modified { get; set; }
         [SimpleField]
         public int chunk { get; set; }
-        [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = "vector-search-profile", IsHidden = false)]
+        [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = DefaultVectorSearchProfile, IsHidden = false)]
         public IReadOnlyList<float> titleVector { get; set; }
-        [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = "vector-search-profile", IsHidden = false)]
+        [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = DefaultVectorSearchProfile, IsHidden = false)]
         public IReadOnlyList<float> contentVector { get; set; }
-        [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = "vector-search-profile", IsHidden = false)]
+        [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = DefaultVectorSearchProfile, IsHidden = false)]
         public IReadOnlyList<float> topicVector { get; set; }
-        [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = "vector-search-profile", IsHidden = false)]
+        [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = DefaultVectorSearchProfile, IsHidden = false)]
         public IReadOnlyList<float> keywordVector { get; set; }
     }
 }

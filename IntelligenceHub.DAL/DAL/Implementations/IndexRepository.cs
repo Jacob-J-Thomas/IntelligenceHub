@@ -2,6 +2,7 @@
 using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace IntelligenceHub.DAL.Implementations
 {
@@ -40,23 +41,51 @@ namespace IntelligenceHub.DAL.Implementations
             return true;
         }
 
-        public async Task<bool> DeleteIndexAsync(string tableName)
+        public async Task<bool> EnableChangeTracking(string tableName)
         {
-            var query = $@"DROP TABLE IF EXISTS [{tableName}]";
+            var query = $@"ALTER TABLE [{tableName}]
+                                ENABLE CHANGE_TRACKING
+                                WITH (TRACK_COLUMNS_UPDATED = ON);";
             await _context.Database.ExecuteSqlRawAsync(query);
             return true;
         }
 
-        public async Task<IEnumerable<DbIndexDocument>> GetAllAsync(int count, int page)
+        public async Task<bool> MarkIndexForUpdate(string tableName)
         {
-            return await base.GetAllAsync(count, page);
+            // Dummy operation to mark the whole index as updated
+            var query = $@"UPDATE [{tableName}] SET Modified = Modified";
+            await _context.Database.ExecuteSqlRawAsync(query);
+            return true;
+        }
+
+        public async Task<bool> DeleteIndexAsync(string tableName)
+        {
+            var query = $@"DROP TABLE IF EXISTS [{tableName}]";
+            var rows = await _context.Database.ExecuteSqlRawAsync(query);
+            return rows > 0;
+        }
+
+        public async Task<IEnumerable<DbIndexDocument>> GetAllAsync(string tableName, int count, int page)
+        {
+            // Calculate the number of rows to skip based on the page number
+            var skip = (page - 1) * count;
+
+            // Formulate the SQL query for pagination
+            var query = $@"SELECT * FROM [{tableName}]
+                           ORDER BY Id
+                           OFFSET {skip} ROWS
+                           FETCH NEXT {count} ROWS ONLY";
+
+            // Execute the query and return the result
+            var responseCollection = await _dbSet.FromSqlRaw(query).ToListAsync();
+            return responseCollection;
         }
 
         public async Task<DbIndexDocument> AddAsync(DbIndexDocument document, string tableName)
         {
             var query = $@"INSERT INTO [{tableName}] (Title, Content, Topic, Keywords, Source, Created, Modified)
                                VALUES (@Title, @Content, @Topic, @Keywords, @Source, @Created, @Modified);
-                               SELECT CAST(SCOPE_IDENTITY() as int)";
+                               SELECT CAST(SCOPE_IDENTITY() as int);";
             var parameters = new[]
             {
                     new SqlParameter("@Title", document.Title),

@@ -7,7 +7,7 @@ using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common;
 using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Interfaces;
-using System.Text.RegularExpressions;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Business.Implementations
 {
@@ -60,31 +60,67 @@ namespace IntelligenceHub.Business.Implementations
             var success = await _ragRepository.CreateIndexAsync(indexDefinition.Name);
             if (!success) return false;
 
+            success = await _ragRepository.EnableChangeTracking(indexDefinition.Name);
+            if (!success) return false;
+
             // create the index in Azure AI Search
-            success = await _searchClient.CreateIndex(indexDefinition);
+            success = await _searchClient.UpsertIndex(indexDefinition);
             if (!success) return false;
 
             // Create a datasource for the SQL DB in Azure AI Search
             success = await _searchClient.CreateDatasource(indexDefinition.Name);
             if (!success) return false;
 
-            // create the indexer
-            return await _searchClient.CreateIndexer(indexDefinition);
+            // create the indexer to run scheduled ingestions of the datasource
+            return await _searchClient.UpsertIndexer(indexDefinition);
         }
 
-        public async Task<bool> ConfigureIndex(IndexMetadata newDefinition)
+        public async Task<bool> ConfigureIndex(IndexMetadata indexDefinition)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(_validationHandler.ValidateIndexDefinition(indexDefinition))) return false;
+            var existingDefinition = await _metaRepository.GetByNameAsync(indexDefinition.Name);
+            if (existingDefinition == null) return false;
 
-            //var existingDefinition = await _metaRepository.GetByNameAsync(newDefinition.Name);
-            //if (existingDefinition == null) return false;
+            var success = await _searchClient.UpsertIndex(indexDefinition);
+            if (!success) return false;
 
-            //var response = await _metaRepository.UpdateAsync(existingDefinition, newDefinition);
+            success = await _searchClient.UpsertIndexer(indexDefinition);
+            if (!success) return false;
 
-            //// execute index update on current data to add any missing properties (such as vectors etc)
+            var newDefinition = DbMappingHandler.MapToDbIndexMetadata(indexDefinition);
+            var rows = await _metaRepository.UpdateAsync(existingDefinition, newDefinition);
+            if (rows < 1) return false;
 
-            //if (response > 0) return true;
-            //return false;
+            // NOTE: Given the below code, disabling generative columns will not destroy existing data
+
+            // Create missing generative data
+            if (!existingDefinition.GenerateKeywords && indexDefinition.GenerateKeywords) await GenerateMissingRagField(indexDefinition.Name);
+            if (!existingDefinition.GenerateTopic && indexDefinition.GenerateTopic) await GenerateMissingRagField(indexDefinition.Name);
+            
+            var updateAllDocs = false;
+            if (!existingDefinition.GenerateContentVector && indexDefinition.GenerateContentVector) updateAllDocs = true;
+            if (!existingDefinition.GenerateTopicVector && indexDefinition.GenerateTopicVector) updateAllDocs = true;
+            if (!existingDefinition.GenerateKeywordVector && indexDefinition.GenerateKeywordVector) updateAllDocs = true;
+            if (!existingDefinition.GenerateTitleVector && indexDefinition.GenerateTitleVector) updateAllDocs = true;
+
+            if (updateAllDocs) await _ragRepository.MarkIndexForUpdate(indexDefinition.Name);
+            return await _searchClient.RunIndexer(indexDefinition.Name);
+        }
+
+        private async Task GenerateMissingRagField(string index)
+        {
+            var allDocs = await _ragRepository.GetAllAsync(index, 1000, 1);
+
+            // perform an update in a way that won't nuke performance here
+            foreach ()
+        }
+
+        public async Task<bool> RunIndexUpdate(string index)
+        {
+            if (!_validationHandler.IsValidIndexName(index)) return false;
+            var indexMetadata = await _metaRepository.GetByNameAsync(index);
+            if (indexMetadata == null) return false;
+            return await _searchClient.RunIndexer(index);
         }
 
         public async Task<bool> DeleteIndex(string index)
@@ -118,7 +154,7 @@ namespace IntelligenceHub.Business.Implementations
         {
             if (!_validationHandler.IsValidIndexName(index)) return null;
             var docList = new List<IndexDocument>();
-            var dbDocumentList = await _ragRepository.GetAllAsync(count, page);
+            var dbDocumentList = await _ragRepository.GetAllAsync(index, count, page);
             foreach (var dbDocument in dbDocumentList) docList.Add(DbMappingHandler.MapFromDbIndexDocument(dbDocument));
             return docList;
         }
@@ -193,15 +229,11 @@ namespace IntelligenceHub.Business.Implementations
 
             var completionRequest = new CompletionRequest()
             {
-                ProfileOptions = new Profile() { Name = GlobalVariables.DefaultAGIModel },
-                Messages = new List<Message>()
-                {
-                    new Message() { Role = GlobalVariables.Role.System, Content = GlobalVariables.RagRequestSystemMessage },
-                    new Message() { Role = GlobalVariables.Role.User, Content = completion }
-                }
+                ProfileOptions = new Profile() { Name = GlobalVariables.DefaultAGIModel, System_Message = GlobalVariables.RagRequestSystemMessage, Model = DefaultAGIModel },
+                Messages = new List<Message>() { new Message() { Role = GlobalVariables.Role.User, Content = completion } }
             };
 
-            var response = await _aiClient.PostCompletion(completionRequest);
+            var response = await _aiClient.PostCompletion(completionRequest); // create a seperate method for internal API completions
             return response?.Messages.Last(m => m.Role == GlobalVariables.Role.Assistant).Content ?? string.Empty;
         }
 

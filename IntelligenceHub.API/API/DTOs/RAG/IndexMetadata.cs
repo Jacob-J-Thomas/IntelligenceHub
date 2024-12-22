@@ -9,7 +9,7 @@ namespace IntelligenceHub.API.DTOs.RAG
         public TimeSpan? IndexingInterval { get; set; }
         public string? EmbeddingModel { get; set; }
         public int MaxRagAttachments { get; set; }
-        public float ChunkOverlap { get; set; } = 0.1f;
+        public float? ChunkOverlap { get; set; } = 0.1f;
         public bool GenerateTopic { get; set; }
         public bool GenerateKeywords { get; set; }
         public bool GenerateTitleVector { get; set; }

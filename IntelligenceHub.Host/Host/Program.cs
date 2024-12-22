@@ -154,14 +154,12 @@ namespace IntelligenceHub.Host
                 // Set serialization for global enums utilized in DTOs
                 options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-                options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             });
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
                 // Set serialization for global enums utilized in DTOs
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-                options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             });
             #endregion
 

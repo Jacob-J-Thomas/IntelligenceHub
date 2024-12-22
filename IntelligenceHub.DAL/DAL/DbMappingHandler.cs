@@ -200,8 +200,8 @@ namespace IntelligenceHub.DAL
             {
                 Name = dbIndexData.Name,
                 QueryType = dbIndexData.QueryType?.ConvertStringToQueryType(),
-                ChunkOverlap = dbIndexData.ChunkOverlap,
-                IndexingInterval = dbIndexData.IndexingInterval,
+                ChunkOverlap = (float?)dbIndexData.ChunkOverlap,
+                IndexingInterval = dbIndexData.IndexingInterval.HasValue ? TimeSpan.FromSeconds(dbIndexData.IndexingInterval.Value) : (TimeSpan?)null,
                 MaxRagAttachments = dbIndexData.MaxRagAttachments,
                 EmbeddingModel = dbIndexData.EmbeddingModel,
                 GenerateTopic = dbIndexData.GenerateTopic,
@@ -226,12 +226,13 @@ namespace IntelligenceHub.DAL
         public static DbIndexMetadata MapToDbIndexMetadata(IndexMetadata indexData)
         {
             if (indexData.ScoringProfile == null) indexData.ScoringProfile = new IndexScoringProfile();
+            var chunkOverlap = indexData.ChunkOverlap ?? 0.1f;
             return new DbIndexMetadata()
             {
                 Name = indexData.Name,
                 QueryType = indexData.QueryType.ToString(),
-                ChunkOverlap = indexData.ChunkOverlap,
-                IndexingInterval = indexData.IndexingInterval,
+                ChunkOverlap = (double)chunkOverlap,
+                IndexingInterval = indexData.IndexingInterval.HasValue ? (long?)indexData.IndexingInterval.Value.TotalSeconds : null,
                 MaxRagAttachments = indexData.MaxRagAttachments,
                 EmbeddingModel = indexData.EmbeddingModel,
                 GenerateTopic = indexData.GenerateTopic,
@@ -246,7 +247,7 @@ namespace IntelligenceHub.DAL
                 ScoringFreshnessBoost = indexData.ScoringProfile?.FreshnessBoost ?? 0,
                 ScoringBoostDurationDays = indexData.ScoringProfile?.BoostDurationDays ?? 0,
                 ScoringTagBoost = indexData.ScoringProfile?.TagBoost ?? 0,
-                ScoringWeights = indexData.ScoringProfile?.Weights.Count > 0 ? SerializeDbWeights(indexData.ScoringProfile.Weights) : string.Empty,
+                ScoringWeights = indexData.ScoringProfile?.Weights?.Count > 0 ? SerializeDbWeights(indexData.ScoringProfile.Weights) : string.Empty,
             };
         }
 

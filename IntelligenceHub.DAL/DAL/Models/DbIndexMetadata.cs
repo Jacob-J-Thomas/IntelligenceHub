@@ -13,10 +13,10 @@ namespace IntelligenceHub.DAL.Models
         public string Name { get; set; } = string.Empty;
         public string? QueryType { get; set; }
         [Required]
-        public TimeSpan? IndexingInterval { get; set; }
+        public long? IndexingInterval { get; set; }
         public string? EmbeddingModel { get; set; }
         public int MaxRagAttachments { get; set; } = 3;
-        public float ChunkOverlap { get; set; } = 0.1f;
+        public double ChunkOverlap { get; set; } = 0.1;
         public bool GenerateTopic { get; set; }
         public bool GenerateKeywords { get; set; }
         public bool GenerateTitleVector { get; set; }
@@ -26,9 +26,9 @@ namespace IntelligenceHub.DAL.Models
         public string? DefaultScoringProfile { get; set; }
         public string? ScoringAggregation { get; set; }
         public string? ScoringInterpolation { get; set; }
-        public double ScoringFreshnessBoost { get; set; }
-        public int ScoringBoostDurationDays { get; set; }
-        public double ScoringTagBoost { get; set; }
-        public string? ScoringWeights { get; set; } // serialized Dictioanry<string, double> as json
+        public double ScoringFreshnessBoost { get; set; } = 0.0;
+        public int ScoringBoostDurationDays { get; set; } = 0;
+        public double ScoringTagBoost { get; set; } = 0.0;
+        public string? ScoringWeights { get; set; }
     }
 }
