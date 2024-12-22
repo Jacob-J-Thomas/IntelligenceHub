@@ -67,9 +67,9 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync((DbIndexMetadata)null);
             _mockMetaRepository.Setup(repo => repo.AddAsync(It.IsAny<DbIndexMetadata>())).ReturnsAsync(new DbIndexMetadata());
             _mockRagRepository.Setup(repo => repo.CreateIndexAsync(indexMetadata.Name)).ReturnsAsync(true);
-            _mockSearchClient.Setup(client => client.CreateIndex(indexMetadata)).ReturnsAsync(true);
+            _mockSearchClient.Setup(client => client.UpsertIndex(indexMetadata)).ReturnsAsync(true);
             _mockSearchClient.Setup(client => client.CreateDatasource(indexMetadata.Name)).ReturnsAsync(true);
-            _mockSearchClient.Setup(client => client.CreateIndexer(indexMetadata)).ReturnsAsync(true);
+            _mockSearchClient.Setup(client => client.UpsertIndexer(indexMetadata)).ReturnsAsync(true);
 
             // Act
             var result = await _ragLogic.CreateIndex(indexMetadata);

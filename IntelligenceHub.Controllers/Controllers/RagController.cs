@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IntelligenceHub.Controllers
 {
     [Route("Rag")]
+    [ApiController]
     [Authorize(Policy = "AdminPolicy")]
     public class RagController : ControllerBase
     {
@@ -26,11 +27,13 @@ namespace IntelligenceHub.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Get([FromRoute] string name)
+        public async Task<IActionResult> Get([FromRoute] string index)
         {
             try
             {
-                var response = await _ragLogic.GetRagIndex(name);
+                if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+
+                var response = await _ragLogic.GetRagIndex(index);
                 if (response == null) return NotFound();
                 else return Ok(response);
             }
@@ -85,13 +88,33 @@ namespace IntelligenceHub.Controllers
         [Route("Index/Configure/{index}")]
         public async Task<IActionResult> ConfigureIndex([FromRoute] string index, [FromBody] IndexMetadata indexDefinition)
         {
-            throw new NotImplementedException("Currently index updating is not supported. Please delete and rebuild the index to modify its definition.");
-
             try
             {
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);
                 if (response) return Ok();
                 else return NotFound();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
+            }
+        }
+
+        [HttpPost]
+        [Route("Index/Run")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> RunIndexer([FromBody] string index)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+
+                var response = await _ragLogic.RunIndexUpdate(index);
+                if (response) return Ok();
+                else return BadRequest();
             }
             catch (Exception ex)
             {
@@ -109,6 +132,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+
                 var response = await _ragLogic.DeleteIndex(index);
                 if (response) return Ok();
                 else return NotFound();
@@ -129,8 +154,12 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                if (page < 1) return BadRequest("Page must be 1 or greater");
+                if (count < 1) return BadRequest("Count must be 1 or greater");
+                if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+
                 var response = await _ragLogic.GetAllDocuments(index, count, page); // going to need to add pagination here
-                if (response != null && response.Count() > 1) return Ok(response);
+                if (response != null && response.Count() > 0) return Ok(response);
                 else return NotFound();
             }
             catch (Exception ex)
@@ -169,7 +198,10 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                if (documentUpsertRequest == null || documentUpsertRequest.Documents.Count < 1) return BadRequest();
+                if (documentUpsertRequest == null || documentUpsertRequest.Documents.Count < 1) return BadRequest("The request body is malformed or contains less than 1 document");
+                if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+
+
                 var response = await _ragLogic.UpsertDocuments(index, documentUpsertRequest);
                 if (response) return Ok(response);
                 else return BadRequest();

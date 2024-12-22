@@ -92,6 +92,8 @@
 
         public const string DefaultAGIModel = "gpt-4o-mini";
         public const string DefaultEmbeddingModel = "text-embedding-3-large";
+        public const string DefaultVectorSearchProfile = "vector-search-profile";
+        public const string DefaultVectorAlgConfig = "hnsw";
 
         public const string VectorSearchProfileName = "vector-search-profile";
 

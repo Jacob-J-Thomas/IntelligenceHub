@@ -10,6 +10,7 @@ namespace IntelligenceHub.Business.Interfaces
         Task<bool> ConfigureIndex(IndexMetadata newDefinition);
         Task<bool> DeleteIndex(string index);
         Task<List<IndexDocument>> QueryIndex(string index, string query);
+        Task<bool> RunIndexUpdate(string index);
         Task<IEnumerable<IndexDocument>?> GetAllDocuments(string index, int count, int page);
         Task<IndexDocument?> GetDocument(string index, string document);
         Task<bool> UpsertDocuments(string index, RagUpsertRequest documentUpsertRequest);
