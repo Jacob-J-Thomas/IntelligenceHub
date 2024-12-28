@@ -95,6 +95,8 @@ namespace IntelligenceHub.Host
 
             builder.Services.AddSingleton(new LoadBalancingSelector(serviceUrls));
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
+            builder.Services.AddSingleton<IBackgroundTaskQueueHandler, BackgroundTaskQueueHandler>();
+            builder.Services.AddHostedService<BackgroundWorker>();
 
             #endregion
 
@@ -242,17 +244,17 @@ namespace IntelligenceHub.Host
                 // Apply the security scheme globally
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
-                                {
-                                    new OpenApiSecurityScheme
-                                    {
-                                        Reference = new OpenApiReference
-                                        {
-                                            Type = ReferenceType.SecurityScheme,
-                                            Id = "Bearer"
-                                        }
-                                    },
-                                    Array.Empty<string>()
-                                }
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
                 });
             });
 
