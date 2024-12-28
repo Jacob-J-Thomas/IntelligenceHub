@@ -7,6 +7,9 @@ using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common;
 using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Interfaces;
+using IntelligenceHub.DAL.Models;
+using System.Reflection.Metadata;
+using System.Xml.Linq;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Business.Implementations
@@ -18,18 +21,21 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IIndexMetaRepository _metaRepository;
         private readonly IIndexRepository _ragRepository;
         private readonly IValidationHandler _validationHandler;
+        private readonly IBackgroundTaskQueueHandler _backgroundTaskQueue;
 
-        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler)
+        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue)
         {
             _searchClient = aISearchServiceClient;
             _aiClient = agiClient;
             _metaRepository = metaRepository;
             _ragRepository = indexRepository;
             _validationHandler = validationHandler;
+            _backgroundTaskQueue = backgroundTaskQueue;
         }
 
         public async Task<IndexMetadata?> GetRagIndex(string index)
         {
+            if (!_validationHandler.IsValidIndexName(index)) return null;
             var dbIndexData = await _metaRepository.GetByNameAsync(index);
             if (dbIndexData == null) return null;
             return DbMappingHandler.MapFromDbIndexMetadata(dbIndexData);
@@ -77,7 +83,7 @@ namespace IntelligenceHub.Business.Implementations
 
         public async Task<bool> ConfigureIndex(IndexMetadata indexDefinition)
         {
-            if (string.IsNullOrEmpty(_validationHandler.ValidateIndexDefinition(indexDefinition))) return false;
+            if (!string.IsNullOrEmpty(_validationHandler.ValidateIndexDefinition(indexDefinition))) return false;
             var existingDefinition = await _metaRepository.GetByNameAsync(indexDefinition.Name);
             if (existingDefinition == null) return false;
 
@@ -93,10 +99,9 @@ namespace IntelligenceHub.Business.Implementations
 
             // NOTE: Given the below code, disabling generative columns will not destroy existing data
 
-            // Create missing generative data
-            if (!existingDefinition.GenerateKeywords && indexDefinition.GenerateKeywords) await GenerateMissingRagField(indexDefinition.Name);
-            if (!existingDefinition.GenerateTopic && indexDefinition.GenerateTopic) await GenerateMissingRagField(indexDefinition.Name);
-            
+            // Create missing generative data if required
+            if ((!existingDefinition.GenerateKeywords && indexDefinition.GenerateKeywords || !existingDefinition.GenerateTopic && indexDefinition.GenerateTopic)) _ = GenerateMissingRagFields(indexDefinition);
+
             var updateAllDocs = false;
             if (!existingDefinition.GenerateContentVector && indexDefinition.GenerateContentVector) updateAllDocs = true;
             if (!existingDefinition.GenerateTopicVector && indexDefinition.GenerateTopicVector) updateAllDocs = true;
@@ -107,13 +112,51 @@ namespace IntelligenceHub.Business.Implementations
             return await _searchClient.RunIndexer(indexDefinition.Name);
         }
 
-        private async Task GenerateMissingRagField(string index)
+        private async Task GenerateMissingRagFields(IndexMetadata index)
         {
-            var allDocs = await _ragRepository.GetAllAsync(index, 1000, 1);
+            const int pageSize = 100; // Define a reasonable chunk size for paging
+            int currentPage = 1;
+            bool hasMorePages;
 
-            // perform an update in a way that won't nuke performance here
-            foreach ()
+            do
+            {
+                // Retrieve a single page of documents
+                var pageDocs = await _ragRepository.GetAllAsync(index.Name, pageSize, currentPage);
+                hasMorePages = pageDocs.Any(); // Check if we have documents in this page
+
+                // Queue processing for each document
+                foreach (var document in pageDocs)
+                {
+                    _backgroundTaskQueue.QueueBackgroundWorkItem(async token =>
+                    {
+                        await RunBackgroundDocumentUpdate(index, document);
+                    });
+                }
+                currentPage++;
+            } while (hasMorePages); // Continue while there are more documents
         }
+
+        private async Task RunBackgroundDocumentUpdate(IndexMetadata index, DbIndexDocument document)
+        {
+            var documentDto = DbMappingHandler.MapFromDbIndexDocument(document);
+            if (index.GenerateTopic && string.IsNullOrEmpty(document.Topic)) document.Topic = await GenerateDocumentMetadata("a topic", documentDto);
+            if (index.GenerateKeywords && string.IsNullOrEmpty(document.Keywords)) document.Keywords = await GenerateDocumentMetadata("a comma separated list of keywords", documentDto);
+
+            // Check if document already exists
+            var existingDoc = await _ragRepository.GetDocumentAsync(index.Name, document.Title);
+            if (existingDoc != null)
+            {
+                document.Modified = DateTimeOffset.UtcNow;
+                await _ragRepository.UpdateAsync(existingDoc, document, index.Name);
+            }
+            else
+            {
+                document.Created = DateTimeOffset.UtcNow;
+                document.Modified = DateTimeOffset.UtcNow;
+                await _ragRepository.AddAsync(document, index.Name);
+            }
+        }
+
 
         public async Task<bool> RunIndexUpdate(string index)
         {
@@ -145,9 +188,32 @@ namespace IntelligenceHub.Business.Implementations
             return false;
         }
 
-        public async Task<List<IndexDocument>> QueryIndex(string index, string query)
+        public async Task<List<IndexDocument>?> QueryIndex(string index, string query)
         {
-            throw new NotImplementedException("This API currently recommends performing this operation directly against the AI Search API if required by the client.");
+            if (!_validationHandler.IsValidIndexName(index) || string.IsNullOrEmpty(query)) return null;
+            var indexData = await _metaRepository.GetByNameAsync(index);
+            if (indexData is null) return null;
+
+            var docList = new List<IndexDocument>();
+            var indexDefinition = DbMappingHandler.MapFromDbIndexMetadata(indexData);
+            var response = await _searchClient.SearchIndex(indexDefinition, query);
+            var results = response.GetResultsAsync();
+            await foreach (var res in results)
+            {
+                var newDoc = new IndexDocument()
+                {
+                    Title = res.Document.title,
+                    Keywords = res.Document.keywords,
+                    Topic = res.Document.topic,
+                    Source = res.Document.source,
+                    Created = res.Document.created,
+                    Modified = res.Document.modified
+                };
+                if (indexDefinition.QueryType == QueryType.Semantic) foreach (var caption in res.SemanticSearch.Captions) newDoc.Content += $"Excerpt: {caption.Text}\n\n";
+                else newDoc.Content = res.Document.content;
+                docList.Add(newDoc);
+            }
+            return docList;
         }
 
         public async Task<IEnumerable<IndexDocument>?> GetAllDocuments(string index, int count, int page)
@@ -161,7 +227,7 @@ namespace IntelligenceHub.Business.Implementations
 
         public async Task<IndexDocument?> GetDocument(string index, string document)
         {
-            if (!_validationHandler.IsValidIndexName(index)) return null;
+            if (!_validationHandler.IsValidIndexName(index) || string.IsNullOrEmpty(document)) return null;
             var dbDocument = await _ragRepository.GetDocumentAsync(index, document);
             if (dbDocument == null) return null;
             return DbMappingHandler.MapFromDbIndexDocument(dbDocument);
@@ -170,6 +236,7 @@ namespace IntelligenceHub.Business.Implementations
         public async Task<bool> UpsertDocuments(string index, RagUpsertRequest documentUpsertRequest)
         {
             if (!_validationHandler.IsValidIndexName(index)) return false;
+            if (!string.IsNullOrEmpty(_validationHandler.IsValidRagUpsertRequest(documentUpsertRequest))) return false;
 
             var indexData = await _metaRepository.GetByNameAsync(index);
             if (indexData == null) return false;

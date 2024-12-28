@@ -120,6 +120,7 @@ namespace IntelligenceHub.Business.Handlers
             if (index.Name.Length > 255) return "The index name exceeds the maximum allowed length of 255 characters.";
             if (index.QueryType == null) return "QueryType is required.";
             if (index.IndexingInterval <= TimeSpan.Zero) return "IndexingInterval must be a positive value.";
+            if (index.IndexingInterval > TimeSpan.FromDays(1)) return "The indexing interval cannot exceed 1 day.";
             if (!string.IsNullOrWhiteSpace(index.EmbeddingModel) && index.EmbeddingModel.Length > 255) return "The EmbeddingModel exceeds the maximum allowed length of 255 characters.";
             if (index.MaxRagAttachments < 0) return "MaxRagAttachments must be a non-negative integer.";
             if (index.ChunkOverlap < 0 || index.ChunkOverlap > 1) return "ChunkOverlap must be between 0 and 1 (inclusive).";
@@ -196,6 +197,29 @@ namespace IntelligenceHub.Business.Handlers
             // Check if the table name matches any SQL keyword (case-insensitive)
             foreach (string keyword in sqlKeywords) if (string.Equals(tableName, keyword, StringComparison.OrdinalIgnoreCase)) return true;
             return false;
+        }
+
+        #endregion
+
+        #region Rag Document Upsert Request Validation
+
+        public string? IsValidRagUpsertRequest(RagUpsertRequest request)
+        {
+            if (request.Documents == null || request.Documents.Count == 0) return "The request must contain at least one document.";
+            foreach (var document in request.Documents)
+            {
+                var validationResult = ValidateIndexDocument(document);
+                if (validationResult != null) return validationResult;
+            }
+
+            return null;
+        }
+
+        private string? ValidateIndexDocument(IndexDocument document)
+        {
+            if (string.IsNullOrWhiteSpace(document.Title)) return "Document title cannot be empty.";
+            if (string.IsNullOrWhiteSpace(document.Content)) return "Document content cannot be empty.";
+            return null;
         }
 
         #endregion

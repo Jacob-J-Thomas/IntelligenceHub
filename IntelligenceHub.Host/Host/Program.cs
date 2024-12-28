@@ -87,6 +87,8 @@ namespace IntelligenceHub.Host
             // Handlers
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
             builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.Services.Select(service => service.Endpoint).ToArray()));
+            builder.Services.AddSingleton<IBackgroundTaskQueueHandler, BackgroundTaskQueueHandler>();
+            builder.Services.AddHostedService<BackgroundWorker>();
 
             #endregion
 

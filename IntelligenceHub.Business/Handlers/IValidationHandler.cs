@@ -15,5 +15,6 @@ namespace IntelligenceHub.Business.Handlers
         public string? ValidateProperties(Dictionary<string, Property> properties);
         public string? ValidateIndexDefinition(IndexMetadata index);
         public bool IsValidIndexName(string tableName);
+        public string? IsValidRagUpsertRequest(RagUpsertRequest documentName);
     }
 }
