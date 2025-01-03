@@ -259,18 +259,59 @@ namespace IntelligenceHub.Client.Implementations
 
             var skillsetName = index.Name.ToLower() + "-skillset";
             var skills = new List<SearchIndexerSkill>();
+
+            skills.Add(new SplitSkill(
+                    new List<InputFieldMappingEntry> { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/content" } },
+                    new List<OutputFieldMappingEntry> { new OutputFieldMappingEntry(RagFieldType.textItems.ToString()) { TargetName = RagField.chunkSplits.ToString() } })
+                    {
+                        Context = "/document",
+                        TextSplitMode = TextSplitMode.Pages,
+                        MaximumPageLength = chunkingLengthInChars,
+                        PageOverlapLength = (int)(chunkingLengthInChars * index.ChunkOverlap),
+                    }
+                );
+
+            skills.Add(new AzureOpenAIEmbeddingSkill(
+                new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/textItems/*" } },
+                new List<OutputFieldMappingEntry>() { new OutputFieldMappingEntry(RagFieldType.embedding.ToString()) { TargetName = RagField.contentVector.ToString() } })
+                    {
+                        Context = "/document/content",
+                        ResourceUri = new Uri(_openaiUrl),
+                        ApiKey = _openaiKey,
+                        ModelName = index.EmbeddingModel,
+                        Dimensions = ragDimensions,
+                        DeploymentName = index.EmbeddingModel
+                    }
+                );
+
             if (index.GenerateTitleVector)
             {
                 skills.Add(new AzureOpenAIEmbeddingSkill(
                     new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/title" } },
                     new List<OutputFieldMappingEntry>() { new OutputFieldMappingEntry(RagFieldType.embedding.ToString()) { TargetName = RagField.titleVector.ToString() } })
                     {
-                        Context = "/document/title",
+                        Context = "/document/titleVector",
                         ResourceUri = new Uri(_openaiUrl),
                         ApiKey = _openaiKey,
                         ModelName = index.EmbeddingModel,
                         Dimensions = ragDimensions,
                         DeploymentName = index.EmbeddingModel
+                    }
+                );
+            }
+
+            if (index.GenerateContentVector)
+            {
+                skills.Add(new AzureOpenAIEmbeddingSkill(
+                    new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/contentVector" } },
+                    new List<OutputFieldMappingEntry>() { new OutputFieldMappingEntry(RagFieldType.embedding.ToString()) { TargetName = RagField.contentVector.ToString() } })
+                    {
+                        Context = "/document/contentVector",
+                        ResourceUri = new Uri(_openaiUrl),
+                        ApiKey = _openaiKey,
+                        ModelName = index.EmbeddingModel,
+                        Dimensions = ragDimensions,
+                        DeploymentName = index.EmbeddingModel,
                     }
                 );
             }
@@ -281,7 +322,7 @@ namespace IntelligenceHub.Client.Implementations
                     new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/topic" } },
                     new List<OutputFieldMappingEntry>() { new OutputFieldMappingEntry(RagFieldType.embedding.ToString()) { TargetName = RagField.topicVector.ToString() } })
                     {
-                        Context = "/document/topic",
+                        Context = "/document/topicVector",
                         ResourceUri = new Uri(_openaiUrl),
                         ApiKey = _openaiKey,
                         ModelName = index.EmbeddingModel,
@@ -297,7 +338,7 @@ namespace IntelligenceHub.Client.Implementations
                     new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/keywords" } },
                     new List<OutputFieldMappingEntry>() { new OutputFieldMappingEntry(RagFieldType.embedding.ToString()) { TargetName = RagField.keywordVector.ToString() } })
                     {
-                        Context = "/document/keywords",
+                        Context = "/document/keywordVector",
                         ResourceUri = new Uri(_openaiUrl),
                         ApiKey = _openaiKey,
                         ModelName = index.EmbeddingModel,
@@ -310,29 +351,7 @@ namespace IntelligenceHub.Client.Implementations
             //chunk content
             if (index.GenerateContentVector)
             {
-                skills.Add(new SplitSkill(
-                    new List<InputFieldMappingEntry> { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/content" } },
-                    new List<OutputFieldMappingEntry> { new OutputFieldMappingEntry(RagFieldType.textItems.ToString()) { TargetName = RagField.chunkSplits.ToString() } })
-                    {
-                        Context = "/document",
-                        TextSplitMode = TextSplitMode.Pages,
-                        MaximumPageLength = chunkingLengthInChars,
-                        PageOverlapLength = (int)(chunkingLengthInChars * index.ChunkOverlap),
-                    }
-                );
-
-                skills.Add(new AzureOpenAIEmbeddingSkill(
-                    new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/textItems/*" } },
-                    new List<OutputFieldMappingEntry>() { new OutputFieldMappingEntry(RagFieldType.embedding.ToString()) { TargetName = RagField.contentVector.ToString() } })
-                    {
-                        Context = "/document/content",
-                        ResourceUri = new Uri(_openaiUrl),
-                        ApiKey = _openaiKey,
-                        ModelName = index.EmbeddingModel,
-                        Dimensions = ragDimensions,
-                        DeploymentName = index.EmbeddingModel
-                    }
-                );
+                
             }
 
             var selectors = new List<SearchIndexerIndexProjectionSelector>() 
