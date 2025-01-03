@@ -97,7 +97,6 @@ namespace IntelligenceHub.Business.Implementations
 
             var newDefinition = DbMappingHandler.MapToDbIndexMetadata(indexDefinition);
             var rows = await _metaRepository.UpdateAsync(existingDefinition, newDefinition);
-            if (rows < 1) return false;
 
             // NOTE: Given the below code, disabling generative columns will not destroy existing data
 
@@ -110,8 +109,12 @@ namespace IntelligenceHub.Business.Implementations
             if (!existingDefinition.GenerateKeywordVector && indexDefinition.GenerateKeywordVector) updateAllDocs = true;
             if (!existingDefinition.GenerateTitleVector && indexDefinition.GenerateTitleVector) updateAllDocs = true;
 
-            if (updateAllDocs) await _ragRepository.MarkIndexForUpdate(indexDefinition.Name);
-            return await _searchClient.RunIndexer(indexDefinition.Name);
+            if (updateAllDocs)
+            {
+                await _ragRepository.MarkIndexForUpdate(indexDefinition.Name);
+                return await _searchClient.RunIndexer(indexDefinition.Name);
+            }
+            return true;
         }
 
         private async Task GenerateMissingRagFields(IndexMetadata index)
