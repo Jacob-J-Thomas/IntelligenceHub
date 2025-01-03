@@ -7,6 +7,8 @@ namespace IntelligenceHub.API.DTOs.RAG
     {
         [SimpleField(IsKey = true)]
         public string id { get; set; }
+        [SimpleField(IsFilterable = true)]
+        public string parentId { get; set; }
         [SearchableField(IsFilterable = true)]
         public string title { get; set; }
         [SearchableField(IsFilterable = true)]
@@ -22,7 +24,7 @@ namespace IntelligenceHub.API.DTOs.RAG
         [SimpleField(IsFilterable = true)]
         public DateTimeOffset modified { get; set; }
         [SimpleField]
-        public int chunk { get; set; }
+        public int chunkSplits { get; set; }
         [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = DefaultVectorSearchProfile, IsHidden = false)]
         public IReadOnlyList<float> titleVector { get; set; }
         [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = DefaultVectorSearchProfile, IsHidden = false)]

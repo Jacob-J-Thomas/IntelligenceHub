@@ -33,9 +33,15 @@ namespace IntelligenceHub.Client.Implementations
             source,
             chunk,
             contentVector,
+            contentEmbedding,
             keywordVector,
+            keywordEmbedding,
             topicVector,
+            topicEmbedding,
             titleVector,
+            titleEmbedding,
+            textItems,
+            pages,
             chunkSplits,
         }
 
@@ -104,6 +110,9 @@ namespace IntelligenceHub.Client.Implementations
 
         public async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
         {
+            var vectorSize = 3072;
+            if (indexDefinition.EmbeddingModel != DefaultEmbeddingModel) vectorSize = 1536;
+
             // build fields based off of the class and its attributes
             var fieldBuilder = new FieldBuilder();
             var searchFields = fieldBuilder.Build(typeof(IndexDefinition));
@@ -214,8 +223,21 @@ namespace IntelligenceHub.Client.Implementations
             if (index.IndexingInterval is TimeSpan interval) indexer = new SearchIndexer($"{index.Name}-indexer", index.Name, index.Name) { IsDisabled = false, Schedule = new IndexingSchedule(interval), };
             else indexer = new SearchIndexer($"{index.Name}-indexer", index.Name, index.Name) { IsDisabled = true }; // Set IsDasabled true to prevent indexer from immediately running
 
+            
+
             var response = await _indexerClient.CreateOrUpdateIndexerAsync(indexer);
             if (response.GetRawResponse().IsError) return false;
+
+            // map vector fields
+            //indexer.OutputFieldMappings.Add(new FieldMapping("/document/content") { TargetFieldName = RagField.chunk.ToString() });
+            //if (index.GenerateTitleVector) indexer.FieldMappings.Add(new FieldMapping("document/titleVector/*") { TargetFieldName = RagField.titleVector.ToString() });
+            //if (index.GenerateContentVector) indexer.FieldMappings.Add(new FieldMapping("document/contentVector/*") { TargetFieldName = RagField.contentVector.ToString() });
+            //if (index.GenerateTopicVector) indexer.FieldMappings.Add(new FieldMapping("document/topicVector/*") { TargetFieldName = RagField.topicVector.ToString() });
+            //if (index.GenerateKeywordVector) indexer.FieldMappings.Add(new FieldMapping("document/keywordVector/*") { TargetFieldName = RagField.keywordVector.ToString() });
+            //if (index.GenerateTitleVector) indexer.OutputFieldMappings.Add(new FieldMapping("/document/title") { TargetFieldName = RagField.titleVector.ToString() });
+            //if (index.GenerateContentVector) indexer.OutputFieldMappings.Add(new FieldMapping("/document/content") { TargetFieldName = RagField.contentVector.ToString() });
+            //if (index.GenerateTopicVector) indexer.OutputFieldMappings.Add(new FieldMapping("/document/topic") { TargetFieldName = RagField.topicVector.ToString() });
+            //if (index.GenerateKeywordVector) indexer.OutputFieldMappings.Add(new FieldMapping("/document/keywords") { TargetFieldName = RagField.keywordVector.ToString() });
 
             indexer.SkillsetName = await UpsertSkillset(index);
             await _indexerClient.CreateOrUpdateIndexerAsync(indexer);
@@ -272,10 +294,10 @@ namespace IntelligenceHub.Client.Implementations
             if (index.GenerateKeywordVector)
             {
                 skills.Add(new AzureOpenAIEmbeddingSkill(
-                    new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/keyword" } },
+                    new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/keywords" } },
                     new List<OutputFieldMappingEntry>() { new OutputFieldMappingEntry(RagFieldType.embedding.ToString()) { TargetName = RagField.keywordVector.ToString() } })
                     {
-                        Context = "/document/keyword",
+                        Context = "/document/keywords",
                         ResourceUri = new Uri(_openaiUrl),
                         ApiKey = _openaiKey,
                         ModelName = index.EmbeddingModel,
@@ -300,10 +322,10 @@ namespace IntelligenceHub.Client.Implementations
                 );
 
                 skills.Add(new AzureOpenAIEmbeddingSkill(
-                    new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/chunkSplits/*" } },
+                    new List<InputFieldMappingEntry>() { new InputFieldMappingEntry(RagFieldType.text.ToString()) { Source = "/document/textItems/*" } },
                     new List<OutputFieldMappingEntry>() { new OutputFieldMappingEntry(RagFieldType.embedding.ToString()) { TargetName = RagField.contentVector.ToString() } })
                     {
-                        Context = "/document/chunkSplits/*",
+                        Context = "/document/content",
                         ResourceUri = new Uri(_openaiUrl),
                         ApiKey = _openaiKey,
                         ModelName = index.EmbeddingModel,
@@ -312,8 +334,38 @@ namespace IntelligenceHub.Client.Implementations
                     }
                 );
             }
+
+            var selectors = new List<SearchIndexerIndexProjectionSelector>() 
+            {
+                new SearchIndexerIndexProjectionSelector(index.Name, "title", "/document/chunkSplits/*", new[]
+                {
+                    // convert these to enums
+                    new InputFieldMappingEntry("title") { Source = "/document/title" },
+                    new InputFieldMappingEntry("content") { Source = "/document/content" },
+                    new InputFieldMappingEntry("topic") { Source = "/document/topic" },
+                    new InputFieldMappingEntry("keywords") { Source = "/document/keywords" },
+                    new InputFieldMappingEntry("source") { Source = "/document/source" },
+                    new InputFieldMappingEntry("created") { Source = "/document/created" },
+                    new InputFieldMappingEntry("modified") { Source = "/document/modified" },
+                    new InputFieldMappingEntry("chunkSplits") { Source = "/document/chunkSplits/*" },
+                    new InputFieldMappingEntry("contentVector") { Source = "/document/chunkSplits/*/contentVector" },
+                    new InputFieldMappingEntry("titleVector") { Source = "/document/title/titleVector" },
+                    new InputFieldMappingEntry("topicVector") { Source = "/document/topic/topicVector" },
+                    new InputFieldMappingEntry("keywordVector") { Source = "/document/keywordVector" },
+                })
+            };
+
             // Create Skillset
-            var skillset = new SearchIndexerSkillset(skillsetName, skills);
+            var skillset = new SearchIndexerSkillset(skillsetName, skills) 
+            {
+                //IndexProjection = new SearchIndexerIndexProjection(selectors)
+                //{
+                //    Parameters = new SearchIndexerIndexProjectionsParameters
+                //    {
+                //        ProjectionMode = IndexProjectionMode.SkipIndexingParentDocuments
+                //    }
+                //}
+            };
             await _indexerClient.CreateOrUpdateSkillsetAsync(skillset);
             return skillsetName;
         }
