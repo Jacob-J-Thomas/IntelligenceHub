@@ -23,8 +23,8 @@ namespace IntelligenceHub.API.DTOs.RAG
         public DateTimeOffset created { get; set; }
         [SimpleField(IsFilterable = true)]
         public DateTimeOffset modified { get; set; }
-        [SimpleField]
-        public int chunkSplits { get; set; }
+        [SearchableField(IsFilterable = true)]
+        public string chunkSplits { get; set; }
         [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = DefaultVectorSearchProfile, IsHidden = false)]
         public IReadOnlyList<float> titleVector { get; set; }
         [VectorSearchField(VectorSearchDimensions = 3072, VectorSearchProfileName = DefaultVectorSearchProfile, IsHidden = false)]
