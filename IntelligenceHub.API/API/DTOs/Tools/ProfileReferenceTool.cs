@@ -1,4 +1,5 @@
 ﻿using IntelligenceHub.Common.Extensions;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.API.DTOs.Tools
 {
@@ -22,19 +23,24 @@ namespace IntelligenceHub.API.DTOs.Tools
 
             Function = new Function()
             {
-                Name = "recurse_ai_dialogue",
+                Name = SystemTools.Recurse_ai_dialogue.ToString().ToLower(),
                 Description = $"Starts or continues an internal dialogue between yourself, or between other LLM models and configurations. " +
                               $"Below is the name of each model you can call, along with a description of when it should be used. You " +
                               $"should pass this name as the 'responding_ai_model' parameter associated with this tool. Only provide names " +
-                              $"of tools that exist in the below list, otherwise an error will occur.\n\n"
+                              $"of tools that exist in the below list, otherwise an error will occur.\n\n",
+                Parameters = new Parameters()
+                {
+                    type = "object",
+                    properties = new Dictionary<string, Property>()
+                    {
+                        { "prompt_response", dialogueHistoryProperty },
+                        { "responding_ai_model", recursionProfileNameProperty },
+                    },
+                    required = new string[] { "prompt_response", "responding_ai_model" },
+                }
             };
-                
-            foreach (var profile in referenceProfiles) Function.Description += $"Model Name: {profile.Name}, \nModel System Message: {profile.ReferenceDescription}\n\n";
 
-            Function.Parameters.type = "object";
-            Function.Parameters.properties.Add("prompt_response", dialogueHistoryProperty);
-            Function.Parameters.properties.Add("responding_ai_model", recursionProfileNameProperty);
-            Function.Parameters.required = new string[] { "prompt_response", "responding_ai_model" };
+            foreach (var profile in referenceProfiles) Function.Description += $"Model Name: {profile.Name}, \nModel System Message: {profile.ReferenceDescription}\n\n";
         }
     }
 }

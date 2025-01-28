@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Common;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Business.Handlers
 {
@@ -111,7 +112,7 @@ namespace IntelligenceHub.Business.Handlers
             {
                 return "Profile name 'all' conflicts with the tool/get/all route";
             }
-            if (tool.Function.Name.ToLower() == "recurse_ai_dialogue")
+            if (tool.Function.Name.ToLower() == SystemTools.Recurse_ai_dialogue.ToString().ToLower())
             {
                 return "The function name 'recurse_ai_dialogue' is reserved.";
             }

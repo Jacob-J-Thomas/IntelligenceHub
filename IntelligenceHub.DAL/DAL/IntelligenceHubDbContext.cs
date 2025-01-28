@@ -33,6 +33,7 @@ namespace IntelligenceHub.DAL
                 entity.Property(e => e.Base64Image).HasColumnType("nvarchar(max)");
                 entity.Property(e => e.TimeStamp).IsRequired();
                 entity.Property(e => e.Content).IsRequired().HasColumnType("nvarchar(max)");
+                entity.Property(e => e.TimeStamp).IsRequired().HasDefaultValueSql("GETDATE()");
             });
 
             modelBuilder.Entity<DbIndexMetadata>(entity =>

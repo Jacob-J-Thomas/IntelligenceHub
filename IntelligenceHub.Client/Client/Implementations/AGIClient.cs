@@ -45,7 +45,11 @@ namespace IntelligenceHub.Client.Implementations
                 var completionResult = await chatClient.CompleteChatAsync(messages, options);
 
                 var toolCalls = new Dictionary<string, string>();
-                foreach (var tool in completionResult.Value.ToolCalls) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
+                foreach (var tool in completionResult.Value.ToolCalls)
+                {
+                    if (tool.FunctionName.ToLower() != SystemTools.Recurse_ai_dialogue.ToString().ToLower()) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
+                    else toolCalls.Add(SystemTools.Recurse_ai_dialogue.ToString().ToLower(), string.Empty);
+                }
 
                 var contentString = GetMessageContent(completionResult.Value.Content.FirstOrDefault()?.Text, toolCalls);
 
@@ -72,7 +76,7 @@ namespace IntelligenceHub.Client.Implementations
                 response.Messages.Add(responseMessage);
                 return response ?? new CompletionResponse() { FinishReason = FinishReason.Error };
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return new CompletionResponse() { FinishReason = FinishReason.Error };
             }
@@ -264,13 +268,13 @@ namespace IntelligenceHub.Client.Implementations
 
             //return options;
         }
-
+            
         private string GetMessageContent(string? messageContent, Dictionary<string, string> toolCalls)
         {
             var content = messageContent ?? string.Empty;
             foreach (var tool in toolCalls) 
             {
-                if (tool.Key.Equals("recurse_ai_dialogue")) return JsonSerializer.Deserialize<ProfileReferenceToolExecutionCall>(tool.Value)?.prompt_response ?? content;
+                if (tool.Key.Equals(SystemTools.Recurse_ai_dialogue.ToString().ToLower())) return JsonSerializer.Deserialize<ProfileReferenceToolExecutionCall>(tool.Value)?.prompt_response ?? content;
             }
             return content;
         }
