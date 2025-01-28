@@ -40,7 +40,6 @@
             Length,
             ToolCalls,
             ContentFilter,
-            RecursionExhausted,
             Error
         }
 

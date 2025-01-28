@@ -160,35 +160,26 @@ namespace IntelligenceHub.Business.Implementations
             var completion = await _AIClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReason.Error) return completion;
 
-            try
+            if (completionRequest.ConversationId is Guid id)
             {
-                if (completionRequest.ConversationId is Guid id)
-                {
-                    var compUserMessage = completion.Messages.Last(m => m.Role == Role.User);
-                    compUserMessage.User = _defaultUser;
-                    var dbUserMessage = DbMappingHandler.MapToDbMessage(compUserMessage, id);
-                    await _messageHistoryRepository.AddAsync(dbUserMessage);
+                var compUserMessage = completion.Messages.Last(m => m.Role == Role.User);
+                compUserMessage.User = _defaultUser;
+                var dbUserMessage = DbMappingHandler.MapToDbMessage(compUserMessage, id);
+                await _messageHistoryRepository.AddAsync(dbUserMessage);
 
-                    var compMessage = completion.Messages.Last(m => m.Role == Role.Assistant || m.Role == Role.Tool);
-                    compMessage.User = completionRequest.ProfileOptions.Name;
-                    var dbMessage = DbMappingHandler.MapToDbMessage(compMessage, id);
-                    await _messageHistoryRepository.AddAsync(dbMessage);
-                }
-
-                if (completion.FinishReason == FinishReason.ToolCalls)
-                {
-                    var (toolExecutionResponses, recursiveMessages) = await ExecuteTools(completion.ToolCalls, completion.Messages, completionRequest.ProfileOptions, completionRequest.ConversationId, streaming: false);
-                    if (toolExecutionResponses.Any()) completion.ToolExecutionResponses.AddRange(toolExecutionResponses);
-                    if (recursiveMessages.Any()) completion.Messages = recursiveMessages;
-                }
-                return completion;
+                var compMessage = completion.Messages.Last(m => m.Role == Role.Assistant || m.Role == Role.Tool);
+                compMessage.User = completionRequest.ProfileOptions.Name;
+                var dbMessage = DbMappingHandler.MapToDbMessage(compMessage, id);
+                await _messageHistoryRepository.AddAsync(dbMessage);
             }
-            catch (Exception ex)
+
+            if (completion.FinishReason == FinishReason.ToolCalls)
             {
-
-                throw;
+                var (toolExecutionResponses, recursiveMessages) = await ExecuteTools(completion.ToolCalls, completion.Messages, completionRequest.ProfileOptions, completionRequest.ConversationId, streaming: false);
+                if (toolExecutionResponses.Any()) completion.ToolExecutionResponses.AddRange(toolExecutionResponses);
+                if (recursiveMessages.Any()) completion.Messages = recursiveMessages;
             }
-            
+            return completion;
         }
 
         private async Task<List<Message>> BuildMessageHistory(Guid conversationId, List<Message> requestMessages, int? maxMessageHistory = null)

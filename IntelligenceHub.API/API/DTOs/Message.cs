@@ -7,7 +7,7 @@ namespace IntelligenceHub.API.DTOs
     public class Message
     {
         public Role? Role { get; set; }
-        [JsonIgnore] // if this isn't working it might be because we are utilizing newtonsoft.json instead of system.text.json
+        [JsonIgnore]
         public string User { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public string? Base64Image { get; set; }

@@ -36,50 +36,43 @@ namespace IntelligenceHub.Client.Implementations
 
         public async Task<CompletionResponse> PostCompletion(CompletionRequest completionRequest)
         {
-            try
+            if (string.IsNullOrEmpty(completionRequest.ProfileOptions.Name) || completionRequest.Messages.Count < 1) return new CompletionResponse() { FinishReason = FinishReason.Error };
+            var options = BuildCompletionOptions(completionRequest);
+            var messages = BuildCompletionMessages(completionRequest);
+            var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
+            var completionResult = await chatClient.CompleteChatAsync(messages, options);
+
+            var toolCalls = new Dictionary<string, string>();
+            foreach (var tool in completionResult.Value.ToolCalls)
             {
-                if (string.IsNullOrEmpty(completionRequest.ProfileOptions.Name) || completionRequest.Messages.Count < 1) return new CompletionResponse() { FinishReason = FinishReason.Error };
-                var options = BuildCompletionOptions(completionRequest);
-                var messages = BuildCompletionMessages(completionRequest);
-                var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
-                var completionResult = await chatClient.CompleteChatAsync(messages, options);
-
-                var toolCalls = new Dictionary<string, string>();
-                foreach (var tool in completionResult.Value.ToolCalls)
-                {
-                    if (tool.FunctionName.ToLower() != SystemTools.Recurse_ai_dialogue.ToString().ToLower()) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
-                    else toolCalls.Add(SystemTools.Recurse_ai_dialogue.ToString().ToLower(), string.Empty);
-                }
-
-                var contentString = GetMessageContent(completionResult.Value.Content.FirstOrDefault()?.Text, toolCalls);
-
-                // build the response object
-                var responseMessage = new Message()
-                {
-                    Content = contentString,
-                    Role = completionResult.Value.Role.ToString().ConvertStringToRole() ?? Role.Assistant,
-                    TimeStamp = DateTime.UtcNow
-                };
-
-                foreach (var content in completionResult.Value.Content)
-                {
-                    if (responseMessage.Base64Image == null && content.Kind == ChatMessageContentPartKind.Image) responseMessage.Base64Image = Convert.ToBase64String(content.ImageBytes);
-                    else if (string.IsNullOrEmpty(responseMessage.Content) && content.Kind == ChatMessageContentPartKind.Text) responseMessage.Content = content.Text;
-                }
-
-                var response = new CompletionResponse()
-                {
-                    FinishReason = completionResult.Value.FinishReason.ToString().ConvertStringToFinishReason(),
-                    Messages = completionRequest.Messages,
-                    ToolCalls = toolCalls
-                };
-                response.Messages.Add(responseMessage);
-                return response ?? new CompletionResponse() { FinishReason = FinishReason.Error };
+                if (tool.FunctionName.ToLower() != SystemTools.Recurse_ai_dialogue.ToString().ToLower()) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
+                else toolCalls.Add(SystemTools.Recurse_ai_dialogue.ToString().ToLower(), string.Empty);
             }
-            catch (Exception ex)
+
+            var contentString = GetMessageContent(completionResult.Value.Content.FirstOrDefault()?.Text, toolCalls);
+
+            // build the response object
+            var responseMessage = new Message()
             {
-                return new CompletionResponse() { FinishReason = FinishReason.Error };
+                Content = contentString,
+                Role = completionResult.Value.Role.ToString().ConvertStringToRole() ?? Role.Assistant,
+                TimeStamp = DateTime.UtcNow
+            };
+
+            foreach (var content in completionResult.Value.Content)
+            {
+                if (responseMessage.Base64Image == null && content.Kind == ChatMessageContentPartKind.Image) responseMessage.Base64Image = Convert.ToBase64String(content.ImageBytes);
+                else if (string.IsNullOrEmpty(responseMessage.Content) && content.Kind == ChatMessageContentPartKind.Text) responseMessage.Content = content.Text;
             }
+
+            var response = new CompletionResponse()
+            {
+                FinishReason = completionResult.Value.FinishReason.ToString().ConvertStringToFinishReason(),
+                Messages = completionRequest.Messages,
+                ToolCalls = toolCalls
+            };
+            response.Messages.Add(responseMessage);
+            return response ?? new CompletionResponse() { FinishReason = FinishReason.Error };
         }
 
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
