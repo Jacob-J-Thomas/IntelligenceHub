@@ -1,7 +1,6 @@
 ﻿using Azure.AI.OpenAI;
 using IntelligenceHub.API.API.DTOs.Tools;
 using IntelligenceHub.API.DTOs;
-using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
@@ -45,7 +44,7 @@ namespace IntelligenceHub.Client.Implementations
             var toolCalls = new Dictionary<string, string>();
             foreach (var tool in completionResult.Value.ToolCalls)
             {
-                if (tool.FunctionName.ToLower() != SystemTools.Recurse_ai_dialogue.ToString().ToLower()) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
+                if (tool.FunctionName.ToLower() == SystemTools.Recurse_ai_dialogue.ToString().ToLower()) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
                 else toolCalls.Add(SystemTools.Recurse_ai_dialogue.ToString().ToLower(), string.Empty);
             }
 
@@ -56,6 +55,7 @@ namespace IntelligenceHub.Client.Implementations
             {
                 Content = contentString,
                 Role = completionResult.Value.Role.ToString().ConvertStringToRole() ?? Role.Assistant,
+                User = completionRequest.ProfileOptions.User,
                 TimeStamp = DateTime.UtcNow
             };
 
@@ -123,6 +123,7 @@ namespace IntelligenceHub.Client.Implementations
                 {
                     Id = chunkId++,
                     Role = role?.ConvertStringToRole(),
+                    User = completionRequest.ProfileOptions.User,
                     CompletionUpdate = finalContentString,
                     Base64Image = base64Image,
                     FinishReason = finishReason?.ConvertStringToFinishReason(),
@@ -264,12 +265,18 @@ namespace IntelligenceHub.Client.Implementations
             
         private string GetMessageContent(string? messageContent, Dictionary<string, string> toolCalls)
         {
-            var content = messageContent ?? string.Empty;
-            foreach (var tool in toolCalls) 
+            try
             {
-                if (tool.Key.Equals(SystemTools.Recurse_ai_dialogue.ToString().ToLower())) return JsonSerializer.Deserialize<ProfileReferenceToolExecutionCall>(tool.Value)?.prompt_response ?? content;
+                var content = messageContent ?? string.Empty;
+                foreach (var tool in toolCalls)
+                {
+                    if (tool.Key.Equals(SystemTools.Recurse_ai_dialogue.ToString().ToLower())) return JsonSerializer.Deserialize<ProfileReferenceToolExecutionCall>(tool.Value)?.prompt_response ?? content;
+                }
+                return content;
             }
-            return content;
+            catch (JsonException) { return string.Empty; }
+            catch (NotSupportedException) { return string.Empty; }
+            catch (ArgumentNullException) { return string.Empty; }
         }
     }
 }
