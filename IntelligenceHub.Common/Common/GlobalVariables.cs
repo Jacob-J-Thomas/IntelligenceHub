@@ -56,6 +56,19 @@
             Recurse_ai_dialogue,
         }
 
+        public enum ValidAIModels
+        {
+            Llama,
+            Mixtral,
+            Gemma,
+            Claude,
+            AzureGpt4o,
+            AzureGpt4oMini,
+            Gpt4o,
+            Gpt4omini,
+            Bedrock
+        }
+
         public const string DefaultAGIModel = "gpt-4o-mini";
         public const string DefaultEmbeddingModel = "text-embedding-3-large";
 

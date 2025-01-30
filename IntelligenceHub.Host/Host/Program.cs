@@ -1,7 +1,7 @@
 using DotNetEnv;
+using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Implementations;
-using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
@@ -66,8 +66,9 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IProfileLogic, ProfileLogic>();
             builder.Services.AddScoped<IRagLogic, RagLogic>();
 
-            // Clients
-            builder.Services.AddSingleton<IAGIClient, AGIClient>();
+            // Clients and Client Factory
+            builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
+            builder.Services.AddSingleton<IAGIClient, AzureOpenAIClient>(); // Default AGIClient
             builder.Services.AddSingleton<IToolClient, ToolClient>();
             builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
 

@@ -19,7 +19,7 @@ namespace IntelligenceHub.Business.Implementations
         private const int _defaultMaxRecursionMessageHistory = 20;
         private const string _defaultUser = "User";
 
-        private readonly IAGIClient _AIClient;
+        private readonly IAGIClientFactory _agiClientFactory;
         private readonly IAISearchServiceClient _searchClient;
         private readonly IToolClient _ToolClient;
         private readonly IProfileRepository _profileDb;
@@ -28,7 +28,7 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IIndexMetaRepository _ragMetaRepository;
 
         public CompletionLogic(
-            IAGIClient agiClient,
+            IAGIClientFactory agiClientFactory,
             IAISearchServiceClient searchClient,
             IToolClient ToolClient,
             IToolRepository toolRepository,
@@ -37,12 +37,12 @@ namespace IntelligenceHub.Business.Implementations
             IIndexMetaRepository indexMetaRepository)
         {
             _toolDb = toolRepository;
-            _AIClient = agiClient;
             _ToolClient = ToolClient;
             _profileDb = profileRepository;
             _messageHistoryRepository = messageHistoryRepository;
             _ragMetaRepository = indexMetaRepository;
             _searchClient = searchClient;
+            _agiClientFactory = agiClientFactory;
         }
 
         #region Streaming
@@ -76,7 +76,8 @@ namespace IntelligenceHub.Business.Implementations
                 completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
-            var completionCollection = _AIClient.StreamCompletion(completionRequest);
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Model);
+            var completionCollection = agiClient.StreamCompletion(completionRequest);
             if (completionCollection == null) yield break;
 
             Role? dbMessageRole;
@@ -134,12 +135,10 @@ namespace IntelligenceHub.Business.Implementations
         {
             if (!completionRequest.Messages.Any() || string.IsNullOrEmpty(completionRequest.ProfileOptions.Name)) return null;
 
-            // Get and set profile details, overriding the database with any parameters that aren't null in the request
             var profile = await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name);
             var mappedProfile = DbMappingHandler.MapFromDbProfile(profile);
             completionRequest.ProfileOptions = await BuildCompletionOptions(mappedProfile, completionRequest.ProfileOptions);
 
-            // Get and attach message history if a conversation id exists
             if (completionRequest.ConversationId is Guid conversationId)
             {
                 completionRequest.Messages = await BuildMessageHistory(
@@ -148,7 +147,6 @@ namespace IntelligenceHub.Business.Implementations
                     completionRequest.ProfileOptions.MaxMessageHistory);
             }
 
-            // Add data retrieved from RAG indexing
             if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
             {
                 var completionMessage = completionRequest.Messages.LastOrDefault();
@@ -157,7 +155,8 @@ namespace IntelligenceHub.Business.Implementations
                 completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
-            var completion = await _AIClient.PostCompletion(completionRequest);
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Model);
+            var completion = await agiClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReason.Error) return completion;
 
             if (completionRequest.ConversationId is Guid id)
@@ -337,7 +336,8 @@ namespace IntelligenceHub.Business.Implementations
                 completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
-            var completion = await _AIClient.PostCompletion(completionRequest);
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Model);
+            var completion = await agiClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReason.Error) return completion;
 
             if (completionRequest.ConversationId is Guid id)

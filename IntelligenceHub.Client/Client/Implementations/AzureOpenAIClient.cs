@@ -14,11 +14,11 @@ using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Client.Implementations
 {
-    public class AGIClient : IAGIClient
+    public class AzureOpenAIClient : IAGIClient
     {
-        private AzureOpenAIClient _azureOpenAIClient;
+        private Azure.AI.OpenAI.AzureOpenAIClient _azureOpenAIClient;
 
-        public AGIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
+        public AzureOpenAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
         {
             var policyClient = policyFactory.CreateClient(ClientPolicy.CompletionClient.ToString());
 
@@ -31,7 +31,7 @@ namespace IntelligenceHub.Client.Implementations
             {
                 Transport = new HttpClientPipelineTransport(policyClient)
             };
-            _azureOpenAIClient = new AzureOpenAIClient(policyClient.BaseAddress, credential, options);  //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
+            _azureOpenAIClient = new Azure.AI.OpenAI.AzureOpenAIClient(policyClient.BaseAddress, credential, options);  //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
         }
 
         public async Task<CompletionResponse> PostCompletion(CompletionRequest completionRequest)
