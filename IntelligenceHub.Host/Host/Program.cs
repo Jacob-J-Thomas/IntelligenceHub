@@ -68,7 +68,11 @@ namespace IntelligenceHub.Host
 
             // Clients and Client Factory
             builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
-            builder.Services.AddSingleton<IAGIClient, AzureOpenAIClient>(); // Default AGIClient
+            builder.Services.AddSingleton<IAGIClient, OpenAIClient>(); // Default AGIClient
+            builder.Services.AddSingleton<AzureOpenAIClient>();
+            builder.Services.AddSingleton<AnthropicClient>();
+            builder.Services.AddSingleton<GroqClient>();
+            builder.Services.AddSingleton<BedrockClient>();
             builder.Services.AddSingleton<IToolClient, ToolClient>();
             builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
 

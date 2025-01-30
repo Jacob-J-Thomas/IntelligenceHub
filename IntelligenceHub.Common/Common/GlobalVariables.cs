@@ -66,7 +66,6 @@
             AzureGpt4oMini,
             Gpt4o,
             Gpt4omini,
-            Bedrock
         }
 
         public const string DefaultAGIModel = "gpt-4o-mini";

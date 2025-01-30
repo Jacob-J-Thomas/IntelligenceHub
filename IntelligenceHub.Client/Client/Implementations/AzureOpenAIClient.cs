@@ -191,8 +191,8 @@ namespace IntelligenceHub.Client.Implementations
             if (completion.ProfileOptions.Tools != null) 
                 foreach (var tool in completion.ProfileOptions.Tools)
                 {
-                    var thing = JsonSerializer.Serialize(tool.Function.Parameters);
-                    var newTool = ChatTool.CreateFunctionTool(tool.Function.Name, tool.Function.Description, BinaryData.FromString(thing));
+                    var serializedParameters = JsonSerializer.Serialize(tool.Function.Parameters);
+                    var newTool = ChatTool.CreateFunctionTool(tool.Function.Name, tool.Function.Description, BinaryData.FromString(serializedParameters));
                     options.Tools.Add(newTool);
                 };
 

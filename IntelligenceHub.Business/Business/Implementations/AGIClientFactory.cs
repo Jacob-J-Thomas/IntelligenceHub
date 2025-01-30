@@ -17,28 +17,26 @@ namespace IntelligenceHub.Business.Implementations
 
         public IAGIClient GetClient(string modelName)
         {
-            modelName = modelName.Remove('-').ToLower(); // enums do not support dashes
-            return modelName switch
-            {
-                // OpenAI Models
-                ValidAIModels.Gpt4o.ToString().ToLower() => _serviceProvider.GetRequiredService<OpenAIClient>(),
-                ValidAIModels.Gpt4omini.ToString().ToLower() => _serviceProvider.GetRequiredService<OpenAIClient>(),
+            modelName = modelName.Replace("-", "").ToLower(); // enums do not support dashes
 
-                // Azure OpenAI Models
-                ValidAIModels.AzureGpt4o.ToString().ToLower() => _serviceProvider.GetRequiredService<AzureOpenAIClient>(),
-                ValidAIModels.AzureGpt4omini.ToString().ToLower() => _serviceProvider.GetRequiredService<AzureOpenAIClient>(),
+            // OpenAI Models
+            if (modelName == ValidAIModels.Gpt4o.ToString().ToLower()) return _serviceProvider.GetRequiredService<OpenAIClient>();
+            else if (modelName == ValidAIModels.Gpt4omini.ToString().ToLower()) return _serviceProvider.GetRequiredService<OpenAIClient>();
 
-                // Groq Models
-                ValidAIModels.Llama.ToString().ToLower() => _serviceProvider.GetRequiredService<GroqClient>(),
-                ValidAIModels.Gemma.ToString().ToLower() => _serviceProvider.GetRequiredService<GroqClient>(),
-                ValidAIModels.Mixtral.ToString().ToLower() => _serviceProvider.GetRequiredService<GroqClient>(),
+            // Azure OpenAI Models
+            else if (modelName == ValidAIModels.AzureGpt4o.ToString().ToLower()) return _serviceProvider.GetRequiredService<AzureOpenAIClient>();
+            else if (modelName == ValidAIModels.AzureGpt4oMini.ToString().ToLower()) return _serviceProvider.GetRequiredService<AzureOpenAIClient>();
 
-                // Anthropic Models
-                ValidAIModels.Claude.ToString().ToLower() => _serviceProvider.GetRequiredService<AnthropicClient>(),
+            // Groq Models
+            else if (modelName == ValidAIModels.Gemma.ToString().ToLower()) return _serviceProvider.GetRequiredService<GroqClient>();
+            else if (modelName == ValidAIModels.Llama.ToString().ToLower()) return _serviceProvider.GetRequiredService<GroqClient>();
+            else if (modelName == ValidAIModels.Mixtral.ToString().ToLower()) return _serviceProvider.GetRequiredService<GroqClient>();
 
-                // Bedrock
-                ValidAIModels.Bedrock.ToString().ToLower() => _serviceProvider.GetRequiredService<BedrockClient>(),
-            };
+            // Anthropic Models
+            else if (modelName == ValidAIModels.Claude.ToString().ToLower()) return _serviceProvider.GetRequiredService<AnthropicClient>();
+
+            // Handle Errors
+            else throw new ArgumentException($"Invalid model name: {modelName}");
         }
     }
 }
