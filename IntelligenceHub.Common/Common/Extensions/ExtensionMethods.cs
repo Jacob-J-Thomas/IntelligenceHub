@@ -9,6 +9,7 @@ namespace IntelligenceHub.Common.Extensions
 
         public static FinishReason? ConvertStringToFinishReason(this string finishReason)
         {
+            finishReason = finishReason.ToLower();
             if (finishReason == ChatFinishReason.Stop.ToString()) return FinishReason.Stop;
             if (finishReason == ChatFinishReason.Length.ToString()) return FinishReason.Length;
             if (finishReason == ChatFinishReason.ToolCalls.ToString()) return FinishReason.ToolCalls;
@@ -19,11 +20,12 @@ namespace IntelligenceHub.Common.Extensions
 
         public static Role? ConvertStringToRole(this string role)
         {
+            role = role.ToLower();
             if (role == ChatMessageRole.Assistant.ToString()) return Role.Assistant;
-            if (role == ChatMessageRole.User.ToString()) return Role.User;
-            if (role == ChatMessageRole.Tool.ToString()) return Role.Tool;
-            if (role == ChatMessageRole.Function.ToString()) return Role.Tool;
-            if (role == ChatMessageRole.System.ToString()) return Role.System;
+            else if (role == ChatMessageRole.User.ToString()) return Role.User;
+            else if (role == ChatMessageRole.Tool.ToString()) return Role.Tool;
+            else if (role == ChatMessageRole.Function.ToString()) return Role.Tool;
+            else if (role == ChatMessageRole.System.ToString()) return Role.System;
             return null;
         }
 
@@ -44,6 +46,18 @@ namespace IntelligenceHub.Common.Extensions
             string[] result = commaSeparatedString.Split(',');
             for (int i = 0; i < result.Length; i++) result[i] = result[i].Trim(); // Trim each element to remove leading and trailing whitespaces
             return result;
+        }
+
+        public static AGIServiceHosts? ToServiceHost(this string hostString)
+        {
+            if (string.IsNullOrEmpty(hostString)) throw new ArgumentException(nameof(hostString));
+
+            hostString = hostString.ToLower();
+            if (hostString == AGIServiceHosts.OpenAI.ToString().ToLower()) return AGIServiceHosts.OpenAI;
+            else if (hostString == AGIServiceHosts.Azure.ToString().ToLower()) return AGIServiceHosts.Azure;
+            else if (hostString == AGIServiceHosts.Anthropic.ToString().ToLower()) return AGIServiceHosts.Anthropic;
+            else if (hostString == AGIServiceHosts.Groq.ToString().ToLower()) return AGIServiceHosts.Groq;
+            return null;
         }
     }
 }

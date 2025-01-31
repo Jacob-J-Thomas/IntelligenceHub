@@ -1,28 +1,28 @@
 ﻿using Azure.AI.OpenAI;
 using IntelligenceHub.API.API.DTOs.Tools;
 using IntelligenceHub.API.DTOs;
-using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
-using System.ClientModel;
-using System.ClientModel.Primitives;
-using System.Text.Json;
 using static IntelligenceHub.Common.GlobalVariables;
+using System.ClientModel.Primitives;
+using System.ClientModel;
+using System.Text.Json;
 
 namespace IntelligenceHub.Client.Implementations
 {
-    public class AzureOpenAIClient : IAGIClient
+    public class GroqAIClient : IAGIClient
     {
+        private readonly string _groqApiEndpoint = "https://api.groq.com/openai/v1";
         private Azure.AI.OpenAI.AzureOpenAIClient _azureOpenAIClient;
 
-        public AzureOpenAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
+        public GroqAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
         {
-            var policyClient = policyFactory.CreateClient(ClientPolicy.CompletionClient.ToString());
+            var policyClient = policyFactory.CreateClient(ClientPolicies.CompletionClient.ToString());
 
-            var service = settings.CurrentValue.Services.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
+            var service = settings.CurrentValue.GroqServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
                 ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
 
             var apiKey = service.Key;
@@ -31,7 +31,7 @@ namespace IntelligenceHub.Client.Implementations
             {
                 Transport = new HttpClientPipelineTransport(policyClient)
             };
-            _azureOpenAIClient = new Azure.AI.OpenAI.AzureOpenAIClient(policyClient.BaseAddress, credential, options);  //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
+            _azureOpenAIClient = new Azure.AI.OpenAI.AzureOpenAIClient(new Uri(_groqApiEndpoint), credential, options);  //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
         }
 
         public async Task<CompletionResponse> PostCompletion(CompletionRequest completionRequest)
@@ -56,7 +56,7 @@ namespace IntelligenceHub.Client.Implementations
             {
                 Content = contentString,
                 Role = completionResult.Value.Role.ToString().ConvertStringToRole() ?? Role.Assistant,
-                User = completionRequest.ProfileOptions.User,
+                User = completionRequest.ProfileOptions.User ?? string.Empty,
                 TimeStamp = DateTime.UtcNow
             };
 
@@ -91,8 +91,8 @@ namespace IntelligenceHub.Client.Implementations
             var toolCalls = new Dictionary<string, string>();
             await foreach (var result in resultCollection)
             {
-                if (!string.IsNullOrEmpty(result.Role.ToString())) role = result.Role.ToString() ?? role;
-                if (!string.IsNullOrEmpty(result.FinishReason.ToString())) finishReason = result.FinishReason.ToString() ?? finishReason;
+                if (!string.IsNullOrEmpty(result.Role.ToString())) role = result.Role.ToString() ?? role ?? string.Empty;
+                if (!string.IsNullOrEmpty(result.FinishReason.ToString())) finishReason = result.FinishReason.ToString() ?? finishReason ?? string.Empty;
                 var content = string.Empty;
                 var base64Image = string.Empty;
 
@@ -167,19 +167,12 @@ namespace IntelligenceHub.Client.Implementations
                 TopP = completion.ProfileOptions.Top_P,
                 FrequencyPenalty = completion.ProfileOptions.Frequency_Penalty,
                 PresencePenalty = completion.ProfileOptions.Presence_Penalty,
-                IncludeLogProbabilities = completion.ProfileOptions.Logprobs,
                 EndUserId = completion.ProfileOptions.User,
             };
-
-            // Potentially useful later for testing, validation, and fine tuning. Maps token probabilities
-            //options.LogitBiases
 
             // set response format
             if (completion.ProfileOptions.Response_Format == ResponseFormat.Json.ToString()) options.ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat();
             else if (completion.ProfileOptions.Response_Format == ResponseFormat.Text.ToString()) options.ResponseFormat = ChatResponseFormat.CreateTextFormat();
-
-            // set log probability
-            if (options.IncludeLogProbabilities == true) options.TopLogProbabilityCount = completion.ProfileOptions.Top_Logprobs;
 
             // set stop messages
             if (completion.ProfileOptions.Stop != null && completion.ProfileOptions.Stop.Length > 0)
@@ -188,7 +181,7 @@ namespace IntelligenceHub.Client.Implementations
             }
 
             // set tools
-            if (completion.ProfileOptions.Tools != null) 
+            if (completion.ProfileOptions.Tools != null)
                 foreach (var tool in completion.ProfileOptions.Tools)
                 {
                     var serializedParameters = JsonSerializer.Serialize(tool.Function.Parameters);
@@ -263,7 +256,7 @@ namespace IntelligenceHub.Client.Implementations
 
             //return options;
         }
-            
+
         private string GetMessageContent(string? messageContent, Dictionary<string, string> toolCalls)
         {
             try

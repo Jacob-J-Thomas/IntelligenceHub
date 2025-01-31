@@ -3,6 +3,8 @@ using IntelligenceHub.Client.Interfaces;
 using Anthropic.SDK;
 using Anthropic.SDK.Messaging;
 using static IntelligenceHub.Common.GlobalVariables;
+using Microsoft.Extensions.Options;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -17,9 +19,15 @@ namespace IntelligenceHub.Client.Implementations
 
         private readonly AnthropicClient _anthropicClient;
 
-        public AnthropicAIClient(string apiKey)
+        public AnthropicAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
         {
-            _anthropicClient = new AnthropicClient(apiKey);
+            var policyClient = policyFactory.CreateClient(ClientPolicies.CompletionClient.ToString());
+
+            var service = settings.CurrentValue.AnthropicServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
+                ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
+
+            var apiKey = service.Key;
+            _anthropicClient = new AnthropicClient(apiKey, policyClient);
         }
 
         public async Task<CompletionResponse> PostCompletion(CompletionRequest completionRequest)
@@ -45,29 +53,21 @@ namespace IntelligenceHub.Client.Implementations
             var toolCalls = new Dictionary<string, string>();
             await foreach (var chunk in response)
             {
+                var content = string.Empty;
+                var base64Image = string.Empty;
+                foreach (var contentPart in chunk.Content)
+                {
+                    if (contentPart is ImageContent imageContent) base64Image = imageContent.Source.Data;
+                    else if (contentPart is TextContent textContent) content += textContent.Text;
+                }
 
-
-
-                //var chunkImage = string.Empty;
-                //if (chunk is ImageContent imageContent) chunkImage = imageContent.Source.Data;
-                //else if (chunk is TextContent textContent) chunkImage = textContent.Text;
-                //toolArguments += chunk.ToolCalls.
                 yield return new CompletionStreamChunk
                 {
-                    Base64Image = chunk.ContentBlock.,
-                    CompletionUpdate = chunk.ContentBlock?.Text ?? string.Empty,
+                    Base64Image = base64Image,
+                    CompletionUpdate = content,
+                    ToolCalls = ConvertResponseTools(chunk.ToolCalls),
                     Role = ConvertFromAnthropicRole(chunk.Role),
                     FinishReason = ConvertFinishReason(chunk.StopReason, chunk.ToolCalls.Any())
-                };
-            }
-
-            if (!string.IsNullOrEmpty(toolArguments))
-            {
-                yield return new CompletionStreamChunk()
-                {
-                    ToolCalls = toolArguments,
-                    CompletionUpdate = string.Empty,
-                    FinishReason = FinishReason.ToolCalls,
                 };
             }
         }

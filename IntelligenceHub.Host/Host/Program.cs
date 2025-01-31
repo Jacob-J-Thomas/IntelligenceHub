@@ -69,10 +69,9 @@ namespace IntelligenceHub.Host
             // Clients and Client Factory
             builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
             builder.Services.AddSingleton<IAGIClient, OpenAIClient>(); // Default AGIClient
-            builder.Services.AddSingleton<AzureOpenAIClient>();
-            builder.Services.AddSingleton<AnthropicClient>();
-            builder.Services.AddSingleton<GroqClient>();
-            builder.Services.AddSingleton<BedrockClient>();
+            builder.Services.AddSingleton<OpenAIClient>();
+            builder.Services.AddSingleton<AnthropicAIClient>();
+            builder.Services.AddSingleton<GroqAIClient>();
             builder.Services.AddSingleton<IToolClient, ToolClient>();
             builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
 
@@ -87,7 +86,10 @@ namespace IntelligenceHub.Host
 
             // Handlers
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
-            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.Services.Select(service => service.Endpoint).ToArray()));
+            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.OpenAIServices.Select(service => service.Endpoint).ToArray()));
+            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.AzureServices.Select(service => service.Endpoint).ToArray()));
+            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.AnthropicServices.Select(service => service.Endpoint).ToArray()));
+            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.GroqServices.Select(service => service.Endpoint).ToArray()));
 
             #endregion
 
@@ -95,7 +97,7 @@ namespace IntelligenceHub.Host
             // Function Calling Client Policies:
 
             // Define the ToolClient policy
-            builder.Services.AddHttpClient(ClientPolicy.ToolClient.ToString()).AddPolicyHandler(
+            builder.Services.AddHttpClient(ClientPolicies.ToolClient.ToString()).AddPolicyHandler(
                 HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
@@ -115,7 +117,10 @@ namespace IntelligenceHub.Host
 
             // Define the Completion circuit breaker policy if more than one service exists
             IAsyncPolicy<HttpResponseMessage> policyWrap = retryPolicy;
-            if (agiClientSettings.Services.Count > 1)
+
+            // replace this with seperate policies for each service
+            var allServicesCount = agiClientSettings.GroqServices.Count + agiClientSettings.OpenAIServices.Count + agiClientSettings.AzureServices.Count + agiClientSettings.AnthropicServices.Count;
+            if (allServicesCount > 1)
             {
                 var circuitBreakerPolicy = Policy
                 .Handle<HttpRequestException>()
@@ -136,7 +141,7 @@ namespace IntelligenceHub.Host
             }
 
             // Register the HttpClient with the load balancing handler and policy.
-            builder.Services.AddHttpClient(ClientPolicy.CompletionClient.ToString(), (serviceProvider, client) =>
+            builder.Services.AddHttpClient(ClientPolicies.CompletionClient.ToString(), (serviceProvider, client) =>
             {
                 // Get the BaseAddressSelector from the service provider.
                 var baseAddressSelector = serviceProvider.GetRequiredService<LoadBalancingSelector>();

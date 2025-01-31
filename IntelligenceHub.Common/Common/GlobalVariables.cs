@@ -15,7 +15,7 @@
                 "If you use one of the sources, please reference it in your response using markdown like so: [SourceName](SourceLink)." +
                 "If no SourceLink is present, only provide the sourcename.\n\n";
 
-        public enum ClientPolicy
+        public enum ClientPolicies
         {
             CompletionClient,
             ToolClient
@@ -56,16 +56,12 @@
             Recurse_ai_dialogue,
         }
 
-        public enum ValidAIModels
+        public enum AGIServiceHosts
         {
-            Llama,
-            Mixtral,
-            Gemma,
-            Claude,
-            AzureGpt4o,
-            AzureGpt4oMini,
-            Gpt4o,
-            Gpt4omini,
+            Azure,
+            OpenAI,
+            Anthropic,
+            Groq,
         }
 
         public const string DefaultAGIModel = "gpt-4o-mini";

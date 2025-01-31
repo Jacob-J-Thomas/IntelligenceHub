@@ -17,23 +17,12 @@ namespace IntelligenceHub.Business.Implementations
 
         public IAGIClient GetClient(string modelName)
         {
-            modelName = modelName.Replace("-", "").ToLower(); // enums do not support dashes
+            modelName = modelName.ToLower(); 
 
-            // OpenAI Models
-            if (modelName == ValidAIModels.Gpt4o.ToString().ToLower()) return _serviceProvider.GetRequiredService<OpenAIClient>();
-            else if (modelName == ValidAIModels.Gpt4omini.ToString().ToLower()) return _serviceProvider.GetRequiredService<OpenAIClient>();
-
-            // Azure OpenAI Models
-            else if (modelName == ValidAIModels.AzureGpt4o.ToString().ToLower()) return _serviceProvider.GetRequiredService<AzureOpenAIClient>();
-            else if (modelName == ValidAIModels.AzureGpt4oMini.ToString().ToLower()) return _serviceProvider.GetRequiredService<AzureOpenAIClient>();
-
-            // Groq Models
-            else if (modelName == ValidAIModels.Gemma.ToString().ToLower()) return _serviceProvider.GetRequiredService<GroqClient>();
-            else if (modelName == ValidAIModels.Llama.ToString().ToLower()) return _serviceProvider.GetRequiredService<GroqClient>();
-            else if (modelName == ValidAIModels.Mixtral.ToString().ToLower()) return _serviceProvider.GetRequiredService<GroqClient>();
-
-            // Anthropic Models
-            else if (modelName == ValidAIModels.Claude.ToString().ToLower()) return _serviceProvider.GetRequiredService<AnthropicClient>();
+            if (modelName == AGIServiceHosts.OpenAI.ToString().ToLower()) return _serviceProvider.GetRequiredService<OpenAIClient>();
+            else if (modelName == AGIServiceHosts.Azure.ToString().ToLower()) return _serviceProvider.GetRequiredService<OpenAIClient>();
+            else if (modelName == AGIServiceHosts.Anthropic.ToString().ToLower()) return _serviceProvider.GetRequiredService<AnthropicAIClient>();
+            else if (modelName == AGIServiceHosts.Groq.ToString().ToLower()) return _serviceProvider.GetRequiredService<GroqAIClient>();
 
             // Handle Errors
             else throw new ArgumentException($"Invalid model name: {modelName}");

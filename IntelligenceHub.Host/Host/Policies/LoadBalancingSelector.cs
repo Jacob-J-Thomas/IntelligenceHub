@@ -18,9 +18,7 @@
 
             // Ensure the index is non-negative (in case of overflow).
             if (nextIndex < 0) nextIndex = 0;
-
             return _backendUris[nextIndex];
         }
     }
-
 }

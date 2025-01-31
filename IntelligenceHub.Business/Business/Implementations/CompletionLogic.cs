@@ -76,7 +76,8 @@ namespace IntelligenceHub.Business.Implementations
                 completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
-            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Model);
+            if (completionRequest.ProfileOptions.Host == null) yield break;
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host.ToString());
             var completionCollection = agiClient.StreamCompletion(completionRequest);
             if (completionCollection == null) yield break;
 
@@ -155,7 +156,8 @@ namespace IntelligenceHub.Business.Implementations
                 completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
-            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Model);
+            if (completionRequest.ProfileOptions.Host == null) return null;
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host.ToString());
             var completion = await agiClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReason.Error) return completion;
 
@@ -231,6 +233,9 @@ namespace IntelligenceHub.Business.Implementations
                 Tools = profileOptions?.Tools ?? profile.Tools,
                 System_Message = profileOptions?.System_Message ?? profile.System_Message,
                 Reference_Profiles = profileReferences,
+                Host = profileOptions?.Host ?? profile.Host,
+                Tool_Choice = profileOptions?.Tool_Choice ?? profile.Tool_Choice,
+                ReferenceDescription = profileOptions?.ReferenceDescription ?? profile.ReferenceDescription
             };
         }
         #endregion
