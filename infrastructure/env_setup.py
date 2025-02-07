@@ -48,8 +48,6 @@ required_env_vars = [
     "AGIClientSettings_AzureServices_0_Key",
     "AGIClientSettings_OpenAIServices_0_Endpoint",
     "AGIClientSettings_OpenAIServices_0_Key",
-    "AGIClientSettings_GroqServices_0_Endpoint",
-    "AGIClientSettings_GroqServices_0_Key",
     "AGIClientSettings_AnthropicServices_0_Endpoint",
     "AGIClientSettings_AnthropicServices_0_Key",
     "AGIClientSettings_SearchServiceCompletionServiceEndpoint",
@@ -94,7 +92,6 @@ if len(replacements) != len(required_env_vars):
     additional_services = {
         "AzureServices": [],
         "OpenAIServices": [],
-        "GroqServices": [],
         "AnthropicServices": []
     }
     for service_type in additional_services.keys():

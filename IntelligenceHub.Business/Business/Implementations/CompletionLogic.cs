@@ -3,6 +3,7 @@ using IntelligenceHub.API.API.DTOs.Tools;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Business.Interfaces;
+using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL;
@@ -77,7 +78,7 @@ namespace IntelligenceHub.Business.Implementations
             }
 
             if (completionRequest.ProfileOptions.Host == null) yield break;
-            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host.ToString());
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host);
             var completionCollection = agiClient.StreamCompletion(completionRequest);
             if (completionCollection == null) yield break;
 
@@ -157,7 +158,7 @@ namespace IntelligenceHub.Business.Implementations
             }
 
             if (completionRequest.ProfileOptions.Host == null) return null;
-            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host.ToString());
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host);
             var completion = await agiClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReason.Error) return completion;
 
@@ -341,7 +342,7 @@ namespace IntelligenceHub.Business.Implementations
                 completionRequest.Messages.Add(completionMessageWithRagData);
             }
 
-            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Model);
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host);
             var completion = await agiClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReason.Error) return completion;
 

@@ -21,6 +21,7 @@ using Polly.Extensions.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static IntelligenceHub.Common.GlobalVariables;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IntelligenceHub.Host
 {
@@ -68,10 +69,10 @@ namespace IntelligenceHub.Host
 
             // Clients and Client Factory
             builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
-            builder.Services.AddSingleton<IAGIClient, OpenAIClient>(); // Default AGIClient
+            builder.Services.AddSingleton<IAGIClient, AzureAIClient>(); // default client
             builder.Services.AddSingleton<OpenAIClient>();
+            builder.Services.AddSingleton<AzureAIClient>();
             builder.Services.AddSingleton<AnthropicAIClient>();
-            builder.Services.AddSingleton<GroqAIClient>();
             builder.Services.AddSingleton<IToolClient, ToolClient>();
             builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
 
@@ -85,11 +86,15 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IIndexMetaRepository, IndexMetaRepository>();
 
             // Handlers
+            var serviceUrls = new Dictionary<string, string[]>
+                {
+                    { ClientPolicies.AzureAIClientPolicy.ToString(), agiClientSettings.AzureServices.Select(service => service.Endpoint).ToArray() },
+                    { ClientPolicies.OpenAIClientPolicy.ToString(), agiClientSettings.OpenAIServices.Select(service => service.Endpoint).ToArray() },
+                    { ClientPolicies.AnthropicAIClientPolicy.ToString(), agiClientSettings.AnthropicServices.Select(service => service.Endpoint).ToArray() }
+                };
+
+            builder.Services.AddSingleton(new LoadBalancingSelector(serviceUrls));
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
-            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.OpenAIServices.Select(service => service.Endpoint).ToArray()));
-            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.AzureServices.Select(service => service.Endpoint).ToArray()));
-            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.AnthropicServices.Select(service => service.Endpoint).ToArray()));
-            builder.Services.AddSingleton(new LoadBalancingSelector(agiClientSettings.GroqServices.Select(service => service.Endpoint).ToArray()));
 
             #endregion
 
@@ -97,7 +102,7 @@ namespace IntelligenceHub.Host
             // Function Calling Client Policies:
 
             // Define the ToolClient policy
-            builder.Services.AddHttpClient(ClientPolicies.ToolClient.ToString()).AddPolicyHandler(
+            builder.Services.AddHttpClient(ClientPolicies.ToolClientPolicy.ToString()).AddPolicyHandler(
                 HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
@@ -110,46 +115,46 @@ namespace IntelligenceHub.Host
                 .OrResult(r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
                 .WaitAndRetryAsync(5, _ =>
                 {
-                    // Random jitter up to 5 seconds
+                    // Add random jitter up to 5 seconds.
                     var jitter = TimeSpan.FromMilliseconds(new Random().Next(0, 5000));
                     return TimeSpan.FromSeconds(10) + jitter;
                 });
 
-            // Define the Completion circuit breaker policy if more than one service exists
+            // Define the Completion circuit breaker policy if more than one service exists.
             IAsyncPolicy<HttpResponseMessage> policyWrap = retryPolicy;
 
-            // replace this with seperate policies for each service
-            var allServicesCount = agiClientSettings.GroqServices.Count + agiClientSettings.OpenAIServices.Count + agiClientSettings.AzureServices.Count + agiClientSettings.AnthropicServices.Count;
-            if (allServicesCount > 1)
+            // Register the HttpClient with the load balancing handler and appropriate policy for each AI client type. -> Services with more than 1 instance will have a circuit breaker policy.
+            void RegisterClientPolicy(IServiceCollection services, string policyName, string serviceName, int serviceCount)
             {
-                var circuitBreakerPolicy = Policy
-                .Handle<HttpRequestException>()
-                .OrResult<HttpResponseMessage>(r => (int)r.StatusCode >= 500)
-                .CircuitBreakerAsync(
-                    handledEventsAllowedBeforeBreaking: 3,  // Break after 3 consecutive failures.
-                    durationOfBreak: TimeSpan.FromSeconds(30), // Open the circuit for 30 seconds.
-                    onBreak: (result, breakDelay) =>
-                    {
-                        Console.WriteLine($"Circuit opened for {breakDelay.TotalSeconds} seconds.");
-                    },
-                    onReset: () => Console.WriteLine("Circuit closed - normal operation resumed."),
-                    onHalfOpen: () => Console.WriteLine("Circuit is half-open - trial requests allowed.")
-                );
+                IAsyncPolicy<HttpResponseMessage> policy = retryPolicy;
 
-                // Combine the Completion retry and circuit breaker policies.
-                policyWrap = Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
+                if (serviceCount > 1)
+                {
+                    var circuitBreakerPolicy = Policy
+                    .Handle<HttpRequestException>()
+                    .OrResult<HttpResponseMessage>(r => (int)r.StatusCode >= 500)
+                    .CircuitBreakerAsync(
+                        handledEventsAllowedBeforeBreaking: 3,  // Break after 3 consecutive failures.
+                        durationOfBreak: TimeSpan.FromSeconds(30), // Open the circuit for 30 seconds.
+                        onBreak: (result, breakDelay) =>
+                        {
+                            Console.WriteLine($"Circuit opened for {breakDelay.TotalSeconds} seconds.");
+                        },
+                        onReset: () => Console.WriteLine("Circuit closed - normal operation resumed."),
+                        onHalfOpen: () => Console.WriteLine("Circuit is half-open - trial requests allowed.")
+                    );
+
+                    // Combine the Completion retry and circuit breaker policies.
+                    policy = Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
+                }
+
+                LoadBalancingSelector.RegisterHttpClientWithPolicy(services, policyName, serviceName, policy);
             }
 
-            // Register the HttpClient with the load balancing handler and policy.
-            builder.Services.AddHttpClient(ClientPolicies.CompletionClient.ToString(), (serviceProvider, client) =>
-            {
-                // Get the BaseAddressSelector from the service provider.
-                var baseAddressSelector = serviceProvider.GetRequiredService<LoadBalancingSelector>();
-
-                // Set the HttpClient's BaseAddress to the next available backend URL.
-                client.BaseAddress = baseAddressSelector.GetNextBaseAddress();
-                Console.WriteLine($"Configured HttpClient with BaseAddress: {client.BaseAddress}");
-            }).AddPolicyHandler(policyWrap);
+            // Register policies for each service type
+            RegisterClientPolicy(builder.Services, ClientPolicies.AzureAIClientPolicy.ToString(), ClientPolicies.AzureAIClientPolicy.ToString(), agiClientSettings.AzureServices.Count);
+            RegisterClientPolicy(builder.Services, ClientPolicies.OpenAIClientPolicy.ToString(), ClientPolicies.OpenAIClientPolicy.ToString(), agiClientSettings.OpenAIServices.Count);
+            RegisterClientPolicy(builder.Services, ClientPolicies.AnthropicAIClientPolicy.ToString(), ClientPolicies.AnthropicAIClientPolicy.ToString(), agiClientSettings.AnthropicServices.Count);
 
             #endregion
 
@@ -237,17 +242,17 @@ namespace IntelligenceHub.Host
                 // Apply the security scheme globally
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
-                        {
-                            new OpenApiSecurityScheme
-                            {
-                                Reference = new OpenApiReference
                                 {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "Bearer"
+                                    new OpenApiSecurityScheme
+                                    {
+                                        Reference = new OpenApiReference
+                                        {
+                                            Type = ReferenceType.SecurityScheme,
+                                            Id = "Bearer"
+                                        }
+                                    },
+                                    Array.Empty<string>()
                                 }
-                            },
-                            Array.Empty<string>()
-                        }
                 });
             });
             #endregion

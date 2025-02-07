@@ -15,17 +15,12 @@ namespace IntelligenceHub.Business.Implementations
             _serviceProvider = serviceProvider;
         }
 
-        public IAGIClient GetClient(string modelName)
+        public IAGIClient GetClient(AGIServiceHosts? host)
         {
-            modelName = modelName.ToLower(); 
-
-            if (modelName == AGIServiceHosts.OpenAI.ToString().ToLower()) return _serviceProvider.GetRequiredService<OpenAIClient>();
-            else if (modelName == AGIServiceHosts.Azure.ToString().ToLower()) return _serviceProvider.GetRequiredService<OpenAIClient>();
-            else if (modelName == AGIServiceHosts.Anthropic.ToString().ToLower()) return _serviceProvider.GetRequiredService<AnthropicAIClient>();
-            else if (modelName == AGIServiceHosts.Groq.ToString().ToLower()) return _serviceProvider.GetRequiredService<GroqAIClient>();
-
-            // Handle Errors
-            else throw new ArgumentException($"Invalid model name: {modelName}");
+            if (host == AGIServiceHosts.OpenAI) return _serviceProvider.GetRequiredService<OpenAIClient>();
+            else if (host == AGIServiceHosts.Azure) return _serviceProvider.GetRequiredService<AzureAIClient>();
+            else if (host == AGIServiceHosts.Anthropic) return _serviceProvider.GetRequiredService<AnthropicAIClient>();
+            else throw new ArgumentException($"Invalid service name: {host}");
         }
     }
 }

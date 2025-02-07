@@ -1,28 +1,28 @@
 ﻿using Azure.AI.OpenAI;
 using IntelligenceHub.API.API.DTOs.Tools;
 using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
-using static IntelligenceHub.Common.GlobalVariables;
-using System.ClientModel.Primitives;
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Text.Json;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Client.Implementations
 {
-    public class GroqAIClient : IAGIClient
+    public class AzureAIClient : IAGIClient
     {
-        private readonly string _groqApiEndpoint = "https://api.groq.com/openai/v1";
-        private Azure.AI.OpenAI.AzureOpenAIClient _azureOpenAIClient;
+        internal AzureOpenAIClient _azureOpenAIClient;
 
-        public GroqAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
+        public AzureAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
         {
-            var policyClient = policyFactory.CreateClient(ClientPolicies.CompletionClient.ToString());
+            var policyClient = policyFactory.CreateClient(ClientPolicies.AzureAIClientPolicy.ToString());
 
-            var service = settings.CurrentValue.GroqServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
+            var service = settings.CurrentValue.AzureServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
                 ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
 
             var apiKey = service.Key;
@@ -31,8 +31,11 @@ namespace IntelligenceHub.Client.Implementations
             {
                 Transport = new HttpClientPipelineTransport(policyClient)
             };
-            _azureOpenAIClient = new Azure.AI.OpenAI.AzureOpenAIClient(new Uri(_groqApiEndpoint), credential, options);  //+ "chat/completions"; add this if url is for OpenAI instead of Azure OpenAI
+            _azureOpenAIClient = new AzureOpenAIClient(policyClient.BaseAddress, credential, options);
         }
+
+        // parameterless constructor for derived classes
+        public AzureAIClient() { }
 
         public async Task<CompletionResponse> PostCompletion(CompletionRequest completionRequest)
         {
@@ -40,12 +43,13 @@ namespace IntelligenceHub.Client.Implementations
             var options = BuildCompletionOptions(completionRequest);
             var messages = BuildCompletionMessages(completionRequest);
             var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
+
             var completionResult = await chatClient.CompleteChatAsync(messages, options);
 
             var toolCalls = new Dictionary<string, string>();
             foreach (var tool in completionResult.Value.ToolCalls)
             {
-                if (tool.FunctionName.ToLower() == SystemTools.Recurse_ai_dialogue.ToString().ToLower()) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
+                if (tool.FunctionName.ToLower() != SystemTools.Recurse_ai_dialogue.ToString().ToLower()) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
                 else toolCalls.Add(SystemTools.Recurse_ai_dialogue.ToString().ToLower(), string.Empty);
             }
 
@@ -115,11 +119,13 @@ namespace IntelligenceHub.Client.Implementations
                     }
 
                     if (toolCalls.ContainsKey(currentTool)) toolCalls[currentTool] = currentToolArgs;
-                    else toolCalls.Add(currentTool, currentToolArgs);
+                    else
+                    {
+                        if (currentTool.ToLower() != SystemTools.Recurse_ai_dialogue.ToString().ToLower()) toolCalls.Add(currentTool, currentToolArgs);
+                        else toolCalls.Add(SystemTools.Recurse_ai_dialogue.ToString().ToLower(), string.Empty);
+                    }
                 }
-
                 var finalContentString = GetMessageContent(content, toolCalls);
-
                 yield return new CompletionStreamChunk()
                 {
                     Id = chunkId++,
@@ -167,12 +173,19 @@ namespace IntelligenceHub.Client.Implementations
                 TopP = completion.ProfileOptions.Top_P,
                 FrequencyPenalty = completion.ProfileOptions.Frequency_Penalty,
                 PresencePenalty = completion.ProfileOptions.Presence_Penalty,
+                IncludeLogProbabilities = completion.ProfileOptions.Logprobs,
                 EndUserId = completion.ProfileOptions.User,
             };
+
+            // Potentially useful later for testing, validation, and fine tuning. Maps token probabilities
+            //options.LogitBiases
 
             // set response format
             if (completion.ProfileOptions.Response_Format == ResponseFormat.Json.ToString()) options.ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat();
             else if (completion.ProfileOptions.Response_Format == ResponseFormat.Text.ToString()) options.ResponseFormat = ChatResponseFormat.CreateTextFormat();
+
+            // set log probability
+            if (options.IncludeLogProbabilities == true) options.TopLogProbabilityCount = completion.ProfileOptions.Top_Logprobs;
 
             // set stop messages
             if (completion.ProfileOptions.Stop != null && completion.ProfileOptions.Stop.Length > 0)
@@ -181,7 +194,7 @@ namespace IntelligenceHub.Client.Implementations
             }
 
             // set tools
-            if (completion.ProfileOptions.Tools != null)
+            if (completion.ProfileOptions.Tools != null) 
                 foreach (var tool in completion.ProfileOptions.Tools)
                 {
                     var serializedParameters = JsonSerializer.Serialize(tool.Function.Parameters);
@@ -202,59 +215,6 @@ namespace IntelligenceHub.Client.Implementations
             // Tools and RAG DBs are not supported simultaneously, therefore RAG data is being attached at the business logic level via a direct query for now
             //if (!string.IsNullOrEmpty(completion.ProfileOptions.RagDatabase)) options = AttachDatabaseOptions(completion.ProfileOptions.RagDatabase, options);
             return options;
-        }
-
-        public async Task<float[]?> GetEmbeddings(string completion, string? embeddingModel = null)
-        {
-            embeddingModel = embeddingModel ?? DefaultEmbeddingModel;
-            var embeddingClient = _azureOpenAIClient.GetEmbeddingClient(embeddingModel);
-            var embeddingResponse = await embeddingClient.GenerateEmbeddingAsync(completion);
-            return embeddingResponse.Value.ToFloats().ToArray();
-        }
-
-        // below code is currently not being used since Azure OpenAI does not support tools with RAG via AI Search.
-        // Therefore AI Search indexes are queried directly and the we manually attach the data to the final user request.
-        private ChatCompletionOptions AttachDatabaseOptions(string indexName, ChatCompletionOptions options)
-        {
-            throw new NotImplementedException("This method has been deprecated in favor of attaching RAG data via direct requests to Azure AI Search Services");
-
-            //var fieldMappings = new DataSourceFieldMappings();
-
-            //// configure below dynamically based off of RAG database definition
-            //fieldMappings.VectorFieldNames.Add("contentVector");
-            //fieldMappings.VectorFieldNames.Add("titleVector");
-
-            // get below values from database
-            //options.AddDataSource(new AzureSearchChatDataSource()
-            //{
-            //    Endpoint = new Uri(_aiSearchServiceUrl), // retrieve from RagDB
-            //    Authentication = DataSourceAuthentication.FromApiKey(_aiSearchServiceKey), // retrieve from RagDB
-            //    IndexName = indexName, // create an Options property for API requests to hold this and below values
-            //    InScope = false, // add to DatabaseOptions
-            //    SemanticConfiguration = "semantic", // add to DatabaseOptions ?? defaultValue
-            //    QueryType = "vector", // add to DatabaseOptions ?? defaultValue
-            //    VectorizationSource = DataSourceVectorizer.FromDeploymentName(_embeddingModel), // add string to dbOptions
-            //    FieldMappings = fieldMappings,
-
-            //    // Add these
-            //    TopNDocuments = 5, // get from databaseOptions ?? defaultValue
-            //    OutputContextFlags = DataSourceOutputContexts.Citations | // probably just hard code value as this?
-            //        DataSourceOutputContexts.Intent |
-            //        DataSourceOutputContexts.AllRetrievedDocuments,
-
-            //    Strictness = 4, // get from databaseOptions ?? null
-
-            //    // not sure if we want to set this or not
-            //    MaxSearchQueries = 5,
-
-
-
-            //    // probably don't use below for now
-            //    //AllowPartialResult = false,
-            //    //Filter = // seems very useful
-            //});
-
-            //return options;
         }
 
         private string GetMessageContent(string? messageContent, Dictionary<string, string> toolCalls)

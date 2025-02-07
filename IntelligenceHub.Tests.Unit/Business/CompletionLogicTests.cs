@@ -33,7 +33,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockRagMetaRepository = new Mock<IIndexMetaRepository>();
             _mockAIClient = new Mock<IAGIClient>();
 
-            _mockAgiClientFactory.Setup(factory => factory.GetClient(It.IsAny<string>())).Returns(_mockAIClient.Object);
+            _mockAgiClientFactory.Setup(factory => factory.GetClient(It.IsAny<AGIServiceHosts>())).Returns(_mockAIClient.Object);
             
             _completionLogic = new CompletionLogic(
                 _mockAgiClientFactory.Object,

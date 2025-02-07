@@ -5,23 +5,27 @@ using Anthropic.SDK.Messaging;
 using static IntelligenceHub.Common.GlobalVariables;
 using Microsoft.Extensions.Options;
 using IntelligenceHub.Common.Config;
+using IntelligenceHub.API.API.DTOs.Tools;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace IntelligenceHub.Client.Implementations
 {
     public class AnthropicAIClient : IAGIClient
     {
-        private enum JsonStrings 
+        private enum AnthropicSpecificStrings 
         {
             user_id,
             stop_sequence,
             max_tokens,
+            end_turn
         }
 
         private readonly AnthropicClient _anthropicClient;
 
         public AnthropicAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
         {
-            var policyClient = policyFactory.CreateClient(ClientPolicies.CompletionClient.ToString());
+            var policyClient = policyFactory.CreateClient(ClientPolicies.AnthropicAIClientPolicy.ToString());
 
             var service = settings.CurrentValue.AnthropicServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
                 ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
@@ -35,12 +39,19 @@ namespace IntelligenceHub.Client.Implementations
             var request = BuildCompletionParameters(completionRequest);
             var response = await _anthropicClient.Messages.GetClaudeMessageAsync(request);
 
+            var toolCalls = ConvertResponseTools(response.ToolCalls);
+
+            var responseContent = response.ContentBlock?.Text ?? string.Empty;
+            if (response.Content != null) responseContent = string.Join("", response.Content.OfType<TextContent>().Select(tc => tc.Text));
+            var contentString = GetMessageContent(responseContent, toolCalls);
+
             var messages = completionRequest.Messages;
-            messages.Add(ConvertFromAnthropicMessage(response));
+            var responseMessage = ConvertFromAnthropicMessage(response, contentString);
+            messages.Add(responseMessage);
             return new CompletionResponse
             {
                 Messages = messages,
-                ToolCalls = ConvertResponseTools(response.ToolCalls),
+                ToolCalls = toolCalls,
                 FinishReason = ConvertFinishReason(response.StopReason, response.ToolCalls.Any())
             };
         }
@@ -61,10 +72,12 @@ namespace IntelligenceHub.Client.Implementations
                     else if (contentPart is TextContent textContent) content += textContent.Text;
                 }
 
+                var contentString = GetMessageContent(content, toolCalls);
+
                 yield return new CompletionStreamChunk
                 {
                     Base64Image = base64Image,
-                    CompletionUpdate = content,
+                    CompletionUpdate = contentString,
                     ToolCalls = ConvertResponseTools(chunk.ToolCalls),
                     Role = ConvertFromAnthropicRole(chunk.Role),
                     FinishReason = ConvertFinishReason(chunk.StopReason, chunk.ToolCalls.Any())
@@ -80,19 +93,18 @@ namespace IntelligenceHub.Client.Implementations
             {
                 var messageContents = ConvertToAnthropicMessage(message);
                 if (message.Role == Role.System) systemMessages.Add(new Anthropic.SDK.Messaging.SystemMessage(message.Content));
-                else anthropicMessages.Add(new Anthropic.SDK.Messaging.Message { Content = messageContents, Role = ConvertToAnthropicRole(message.Role) });
+                else if (!string.IsNullOrEmpty(message.Content)) anthropicMessages.Add(new Anthropic.SDK.Messaging.Message { Content = messageContents, Role = ConvertToAnthropicRole(message.Role) });
             }
 
-            var anthropicTools = new List<Anthropic.SDK.Messaging.Tool>();
+            var anthropicTools = new List<Anthropic.SDK.Common.Tool>();
             foreach (var tool in request.ProfileOptions.Tools)
             {
                 var schema = ConvertToolParameters(tool);
-                var anthropicTool = new Anthropic.SDK.Messaging.Tool()
-                {
-                    Name = tool.Function.Name,
-                    Description = tool.Function.Description,
-                    InputSchema = schema,
-                };
+                var serializedParams = JsonSerializer.Serialize(tool.Function.Parameters);
+                var nodefiedParams = JsonNode.Parse(serializedParams);
+
+                var function = new Anthropic.SDK.Common.Function(tool.Function.Name, tool.Function.Description, nodefiedParams);
+                var anthropicTool = new Anthropic.SDK.Common.Tool(function);
                 anthropicTools.Add(anthropicTool);
             }
 
@@ -106,8 +118,8 @@ namespace IntelligenceHub.Client.Implementations
                 Stream = false,
                 StopSequences = request.ProfileOptions.Stop,
                 System = systemMessages,
-                Tools = (IList<Anthropic.SDK.Common.Tool>)anthropicTools,
-                Metadata = new Dictionary<string, string> { { JsonStrings.user_id.ToString(), request.ProfileOptions.User ?? string.Empty } },
+                Tools = anthropicTools,
+                Metadata = new Dictionary<string, string> { { AnthropicSpecificStrings.user_id.ToString(), request.ProfileOptions.User ?? string.Empty } },
             };
 
             if (request.ProfileOptions.Max_Tokens.HasValue) messageParams.MaxTokens = request.ProfileOptions.Max_Tokens.Value;
@@ -115,6 +127,22 @@ namespace IntelligenceHub.Client.Implementations
             if (request.ProfileOptions.Top_P.HasValue) messageParams.TopP = (decimal?)request.ProfileOptions.Top_P.Value;
             if (toolChoiceType.HasValue) messageParams.ToolChoice = new ToolChoice() { Name = request.ProfileOptions.Tool_Choice, Type = (ToolChoiceType)toolChoiceType };
             return messageParams;
+        }
+
+        private string GetMessageContent(string? messageContent, Dictionary<string, string> toolCalls)
+        {
+            try
+            {
+                var content = messageContent ?? string.Empty;
+                foreach (var tool in toolCalls)
+                {
+                    if (tool.Key.Equals(SystemTools.Recurse_ai_dialogue.ToString().ToLower())) return JsonSerializer.Deserialize<ProfileReferenceToolExecutionCall>(tool.Value)?.prompt_response ?? content;
+                }
+                return content;
+            }
+            catch (JsonException) { return string.Empty; }
+            catch (NotSupportedException) { return string.Empty; }
+            catch (ArgumentNullException) { return string.Empty; }
         }
 
         private List<ContentBase> ConvertToAnthropicMessage(API.DTOs.Message message)
@@ -125,9 +153,8 @@ namespace IntelligenceHub.Client.Implementations
             return content;
         }
 
-        private IntelligenceHub.API.DTOs.Message ConvertFromAnthropicMessage(MessageResponse message)
+        private IntelligenceHub.API.DTOs.Message ConvertFromAnthropicMessage(MessageResponse message, string contentString)
         {
-            var contentString = message.ContentBlock?.Text ?? string.Empty;
             return new API.DTOs.Message
             {
                 Content = contentString,
@@ -177,7 +204,11 @@ namespace IntelligenceHub.Client.Implementations
         private Dictionary<string, string> ConvertResponseTools(List<Anthropic.SDK.Common.Function> toolCalls)
         {
             var intelligenceHubTools = new Dictionary<string, string>();
-            foreach (var tool in toolCalls) intelligenceHubTools.Add(tool.Name, tool.Arguments.ToJsonString());
+            foreach (var tool in toolCalls)
+            {
+                if (tool.Name.ToLower() != SystemTools.Recurse_ai_dialogue.ToString().ToLower()) intelligenceHubTools.Add(tool.Name, tool.Arguments.ToJsonString());
+                else intelligenceHubTools.Add(SystemTools.Recurse_ai_dialogue.ToString().ToLower(), string.Empty);
+            }
             return intelligenceHubTools;
         }
 
@@ -185,8 +216,9 @@ namespace IntelligenceHub.Client.Implementations
         {
             var reason = FinishReason.Stop;
             if (hasTools) reason = FinishReason.ToolCalls;
-            else if (anthropicStopReason.ToLower() == JsonStrings.stop_sequence.ToString().ToLower()) reason = FinishReason.Stop;
-            else if (anthropicStopReason.ToLower() == JsonStrings.max_tokens.ToString().ToLower()) reason = FinishReason.Length;
+            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.end_turn.ToString().ToLower()) reason = FinishReason.Stop;
+            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.stop_sequence.ToString().ToLower()) reason = FinishReason.Stop;
+            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.max_tokens.ToString().ToLower()) reason = FinishReason.Length;
             return reason;
         }
     }

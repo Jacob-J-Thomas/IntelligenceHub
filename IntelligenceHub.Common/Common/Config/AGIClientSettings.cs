@@ -4,7 +4,6 @@
     {
         public List<AGIServiceDetails> AzureServices { get; set; }
         public List<AGIServiceDetails> OpenAIServices { get; set; }
-        public List<AGIServiceDetails> GroqServices { get; set; }
         public List<AGIServiceDetails> AnthropicServices { get; set; }
         public string SearchServiceCompletionServiceEndpoint { get; set; }
         public string SearchServiceCompletionServiceKey { get; set; }

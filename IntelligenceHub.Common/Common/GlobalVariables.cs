@@ -17,8 +17,10 @@
 
         public enum ClientPolicies
         {
-            CompletionClient,
-            ToolClient
+            AzureAIClientPolicy,
+            OpenAIClientPolicy,
+            AnthropicAIClientPolicy,
+            ToolClientPolicy
         }
 
         public enum ResponseFormat
@@ -60,8 +62,7 @@
         {
             Azure,
             OpenAI,
-            Anthropic,
-            Groq,
+            Anthropic
         }
 
         public const string DefaultAGIModel = "gpt-4o-mini";
