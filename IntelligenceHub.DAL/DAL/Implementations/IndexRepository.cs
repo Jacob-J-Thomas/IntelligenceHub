@@ -52,16 +52,7 @@ namespace IntelligenceHub.DAL.Implementations
             return true;
         }
 
-        public async Task<bool> EnableChangeTracking(string tableName)
-        {
-            var query = $@"ALTER TABLE [{tableName}]
-                                ENABLE CHANGE_TRACKING
-                                WITH (TRACK_COLUMNS_UPDATED = ON);";
-            await _context.Database.ExecuteSqlRawAsync(query);
-            return true;
-        }
-
-        public async Task<bool> MarkIndexForUpdate(string tableName)
+        public async Task<bool> MarkIndexForUpdateAsync(string tableName)
         {
             // Dummy operation to mark the whole index as updated
             var query = $@"UPDATE [{tableName}] SET Modified = Modified";

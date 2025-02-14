@@ -78,14 +78,6 @@ namespace IntelligenceHub.DAL
                     ?? existingProfile?.TopP
                     ?? 1,
 
-                MaxTokens = profileUpdate?.Max_Tokens
-                    ?? existingProfile?.MaxTokens
-                    ?? 1200,
-
-                ReturnRecursion = profileUpdate?.Return_Recursion
-                    ?? existingProfile?.ReturnRecursion
-                    ?? false,
-
                 Stop = profileUpdate?.Stop?.ToCommaSeparatedString() ?? existingProfile?.Stop,
                 ReferenceProfiles = profileUpdate?.Reference_Profiles?.ToCommaSeparatedString() ?? existingProfile?.ReferenceProfiles,
             };
@@ -224,9 +216,9 @@ namespace IntelligenceHub.DAL
                     Name = dbIndexData.DefaultScoringProfile ?? string.Empty,
                     SearchAggregation = dbIndexData.ScoringAggregation?.ConvertStringToSearchAggregation(),
                     SearchInterpolation = dbIndexData.ScoringInterpolation?.ConvertStringToSearchInterpolation(),
-                    BoostDurationDays = dbIndexData.ScoringBoostDurationDays,
-                    FreshnessBoost = dbIndexData.ScoringFreshnessBoost,
-                    TagBoost = dbIndexData.ScoringTagBoost,
+                    BoostDurationDays = dbIndexData.ScoringBoostDurationDays ?? 0,
+                    FreshnessBoost = dbIndexData.ScoringFreshnessBoost ?? 0,
+                    TagBoost = dbIndexData.ScoringTagBoost ?? 0,
                     Weights = DeserializeDbWeights(dbIndexData.ScoringWeights) ?? new Dictionary<string, double>()
                 }
             };
@@ -235,7 +227,7 @@ namespace IntelligenceHub.DAL
         public static DbIndexMetadata MapToDbIndexMetadata(IndexMetadata indexData)
         {
             if (indexData.ScoringProfile == null) indexData.ScoringProfile = new IndexScoringProfile();
-            var chunkOverlap = indexData.ChunkOverlap ?? 0.1f;
+            var chunkOverlap = indexData.ChunkOverlap;
             return new DbIndexMetadata()
             {
                 Name = indexData.Name,

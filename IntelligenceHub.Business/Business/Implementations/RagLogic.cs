@@ -111,7 +111,7 @@ namespace IntelligenceHub.Business.Implementations
 
             if (updateAllDocs)
             {
-                await _ragRepository.MarkIndexForUpdate(indexDefinition.Name);
+                await _ragRepository.MarkIndexForUpdateAsync(indexDefinition.Name);
                 return await _searchClient.RunIndexer(indexDefinition.Name);
             }
             return true;

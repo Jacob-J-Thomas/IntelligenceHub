@@ -65,19 +65,24 @@ namespace IntelligenceHub.Business.Implementations
                     completionRequest.ProfileOptions.MaxMessageHistory);
             }
 
+            // construct AGI Client based on the required host
+            if (completionRequest.ProfileOptions.Host == null) yield break;
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host);
+
             // Add data retrieved from RAG indexing
             if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
             {
                 var completionMessage = completionRequest.Messages.LastOrDefault();
                 if (completionMessage == null) yield break;
 
-                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionMessage);
-                completionRequest.Messages.Remove(completionMessage);
-                completionRequest.Messages.Add(completionMessageWithRagData);
+                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionRequest, agiClient);
+                if (completionMessageWithRagData != null)
+                {
+                    completionRequest.Messages.Remove(completionMessage);
+                    completionRequest.Messages.Add(completionMessageWithRagData);
+                }
             }
 
-            if (completionRequest.ProfileOptions.Host == null) yield break;
-            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host);
             var completionCollection = agiClient.StreamCompletion(completionRequest);
             if (completionCollection == null) yield break;
 
@@ -148,16 +153,21 @@ namespace IntelligenceHub.Business.Implementations
                     completionRequest.ProfileOptions.MaxMessageHistory);
             }
 
-            if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
-            {
-                var completionMessage = completionRequest.Messages.LastOrDefault();
-                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionMessage);
-                completionRequest.Messages.Remove(completionMessage);
-                completionRequest.Messages.Add(completionMessageWithRagData);
-            }
-
+            // construct AGI Client based on the required host
             if (completionRequest.ProfileOptions.Host == null) return null;
             var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host);
+
+            if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase))
+            {
+                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionRequest, agiClient);
+                if (completionMessageWithRagData != null)
+                {
+                    var completionMessage = completionRequest.Messages.LastOrDefault();
+                    completionRequest.Messages.Remove(completionMessage);
+                    completionRequest.Messages.Add(completionMessageWithRagData);
+                }
+            }
+
             var completion = await agiClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReason.Error) return completion;
 
@@ -339,16 +349,21 @@ namespace IntelligenceHub.Business.Implementations
             // Build Options
             completionRequest.ProfileOptions = await BuildCompletionOptions(completionRequest.ProfileOptions);
 
+            // construct AGI Client based on the required host
+            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host);
+
             // Add data retrieved from RAG indexing
             if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.RagDatabase) && completionRequest.Messages.Any())
             {
                 var completionMessage = completionRequest.Messages.LastOrDefault() ?? new Message() { Role = Role.User, User = _defaultUser, Content = string.Empty, TimeStamp = DateTime.UtcNow };
-                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionMessage);
-                completionRequest.Messages.Remove(completionMessage);
-                completionRequest.Messages.Add(completionMessageWithRagData);
+                var completionMessageWithRagData = await RetrieveRagData(completionRequest.ProfileOptions.RagDatabase, completionRequest, agiClient);
+                if (completionMessageWithRagData != null)
+                {
+                    completionRequest.Messages.Remove(completionMessage);
+                    completionRequest.Messages.Add(completionMessageWithRagData);
+                }
             }
 
-            var agiClient = _agiClientFactory.GetClient(completionRequest.ProfileOptions.Host);
             var completion = await agiClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReason.Error) return completion;
 
@@ -373,15 +388,31 @@ namespace IntelligenceHub.Business.Implementations
             return completion;
         }
 
-        private async Task<Message> RetrieveRagData(string indexName, Message completion)
+        private async Task<Message?> RetrieveRagData(string indexName, CompletionRequest originalRequest, IAGIClient agiClient)
         {
             var dbIndex = await _ragMetaRepository.GetByNameAsync(indexName);
+            if (!originalRequest.Messages.Any() || dbIndex == null) return null;
+
+            var originalMessageContent = originalRequest.Messages.LastOrDefault()?.Content ?? string.Empty;
+
+            // Create a copy of the original request with modified content (without altering the original)
+            var modifiedRequest = new CompletionRequest
+            {
+                Messages = new List<Message>(originalRequest.Messages)
+            };
+            modifiedRequest.Messages.LastOrDefault().Content = "Please use the below data to construct an intentful natural language query that can be used to search a RAG database. " +
+                                                               "If the message does not seem to require a query to be constructed, please respond with a single .\n\n" + originalMessageContent;
+
+            var completionResponse = await agiClient.PostCompletion(modifiedRequest);
+            var intentfulQuery = completionResponse.Messages.LastOrDefault()?.Content ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(intentfulQuery)) return null;
 
             var indexData = DbMappingHandler.MapFromDbIndexMetadata(dbIndex);
-            var ragData = await _searchClient.SearchIndex(indexData, completion.Content);
+            var ragData = await _searchClient.SearchIndex(indexData, intentfulQuery);
 
             var resultCollection = ragData.GetResultsAsync();
             var ragDataString = string.Empty;
+
             await foreach (var item in resultCollection)
             {
                 if (indexData.QueryType == QueryType.Semantic)
@@ -390,8 +421,8 @@ namespace IntelligenceHub.Business.Implementations
                     ragDataString += $"\n```\n" +
                                      $"\nTitle: {item.Document.title}" +
                                      $"\nSource: {item.Document.source}" +
-                                     $"\nCreation Date: {item.Document.created.ToString("yyyy-MM-ddTHH:mm:ss")}" +
-                                     $"\nLast Updated Date: {item.Document.modified.ToString("yyyy-MM-ddTHH:mm:ss")}";
+                                     $"\nCreation Date: {item.Document.created:yyyy-MM-ddTHH:mm:ss}" +
+                                     $"\nLast Updated Date: {item.Document.modified:yyyy-MM-ddTHH:mm:ss}";
                     foreach (var caption in semanticResult.Captions) ragDataString += $"\nContent Chunk: {caption.Text}";
                     ragDataString += $"\n```\n";
                 }
@@ -400,20 +431,24 @@ namespace IntelligenceHub.Business.Implementations
                     ragDataString += $"\n```\n" +
                                      $"\nTitle: {item.Document.title}" +
                                      $"\nSource: {item.Document.source}" +
-                                     $"\nCreation Date: {item.Document.created.ToString("yyyy-MM-ddTHH:mm:ss")}" +
-                                     $"\nLast Updated Date: {item.Document.modified.ToString("yyyy-MM-ddTHH:mm:ss")}" +
+                                     $"\nCreation Date: {item.Document.created:yyyy-MM-ddTHH:mm:ss}" +
+                                     $"\nLast Updated Date: {item.Document.modified:yyyy-MM-ddTHH:mm:ss}" +
                                      $"\nContent: {item.Document.content}" +
                                      $"\n```\n";
                 }
             }
 
-            completion.Content = $"\n\nBelow is a list of documents, each of which is delimited with triple backticks. If relevant, " +
-                $"please cite these documents in markdown plain in-text citation (i.e. '(Title)[Source]') when responding to the " +
-                $"following prompt: {completion.Content}\n\n"
-                + ragDataString;
+            // Construct a new message with the appended RAG data
+            var messageWithRagAppended = new Message
+            {
+                Content = $"\n\nBelow is a list of documents, each of which is delimited with triple backticks. If relevant, " +
+                          $"please cite these documents in markdown plain in-text citation (i.e. '(Title)[Source]') when responding to the " +
+                          $"following prompt: {originalMessageContent}\n\n" + ragDataString
+            };
 
-            return completion;
+            return messageWithRagAppended;
         }
+
 
         private async Task<List<Message>> GenerateImage(string imageGenArgs, AGIServiceHosts? host, List<Message> messages)
         {
