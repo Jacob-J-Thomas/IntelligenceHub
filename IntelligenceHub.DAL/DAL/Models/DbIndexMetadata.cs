@@ -14,7 +14,7 @@ namespace IntelligenceHub.DAL.Models
         public string Name { get; set; } = string.Empty;
         public string? QueryType { get; set; }
         [Required]
-        public long? IndexingInterval { get; set; }
+        public TimeSpan IndexingInterval { get; set; }
         public string? EmbeddingModel { get; set; }
         public int? MaxRagAttachments { get; set; } = 3;
         public double? ChunkOverlap { get; set; } = 0.1;
@@ -30,6 +30,6 @@ namespace IntelligenceHub.DAL.Models
         public double? ScoringFreshnessBoost { get; set; }
         public int? ScoringBoostDurationDays { get; set; }
         public double? ScoringTagBoost { get; set; }
-        public string? ScoringWeights { get; set; } // serialized Dictioanry<string, double> as json
+        public string? ScoringWeights { get; set; } // serialized Dictionary<string, double> as json
     }
 }

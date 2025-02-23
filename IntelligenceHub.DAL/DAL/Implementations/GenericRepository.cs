@@ -1,5 +1,6 @@
 ﻿using IntelligenceHub.DAL.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace IntelligenceHub.DAL.Implementations
 {
@@ -13,6 +14,9 @@ namespace IntelligenceHub.DAL.Implementations
             _context = context;
             _dbSet = _context.Set<T>();
         }
+
+        // Prodive a methodology for safely exposing database
+        public DatabaseFacade Database => _context.Database;
 
         public async Task<IEnumerable<T>> GetAllAsync(int? count = null, int? page = null)
         {

@@ -272,7 +272,7 @@ namespace IntelligenceHub.Host
 
                 app.UseCors(policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000", "https://intelligencehub-dev.azurewebsites.net") // Specify allowed origin explicitly
+                    policy.WithOrigins("http://localhost:3000", "https://localhost:7228", "https://intelligencehub-dev.azurewebsites.net") // Specify allowed origin explicitly
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials()

@@ -175,9 +175,12 @@ namespace IntelligenceHub.DAL
         {
             return new IndexDocument()
             {
+                Id = dbDocument.Id,
                 Title = dbDocument.Title,
-                Content = dbDocument.Content,
+                Chunk = dbDocument.Content,
                 Topic = dbDocument.Topic,
+                Keywords = dbDocument.Keywords,
+                Source = dbDocument.Source,
                 Created = dbDocument.Created,
                 Modified = dbDocument.Modified
             };
@@ -187,9 +190,12 @@ namespace IntelligenceHub.DAL
         {
             return new DbIndexDocument()
             {
+                Id = document.Id,
                 Title = document.Title,
-                Content = document.Content,
+                Content = document.Chunk,
                 Topic = document.Topic,
+                Keywords = document.Keywords,
+                Source = document.Source,
                 Created = document.Created,
                 Modified = document.Modified
             };
@@ -201,8 +207,8 @@ namespace IntelligenceHub.DAL
             {
                 Name = dbIndexData.Name,
                 QueryType = dbIndexData.QueryType?.ConvertStringToQueryType() ?? QueryType.Simple,
-                ChunkOverlap = (float?)dbIndexData.ChunkOverlap ?? .1, // make this a global variable
-                IndexingInterval = dbIndexData.IndexingInterval.HasValue ? TimeSpan.FromSeconds(dbIndexData.IndexingInterval.Value) : (TimeSpan?)null,
+                ChunkOverlap = dbIndexData.ChunkOverlap ?? .1, // make this a global variable
+                IndexingInterval = dbIndexData.IndexingInterval,
                 MaxRagAttachments = dbIndexData.MaxRagAttachments ?? 3, // make this a global variable
                 EmbeddingModel = dbIndexData.EmbeddingModel,
                 GenerateTopic = dbIndexData.GenerateTopic,
@@ -232,16 +238,16 @@ namespace IntelligenceHub.DAL
             {
                 Name = indexData.Name,
                 QueryType = indexData.QueryType.ToString(),
-                ChunkOverlap = (double)chunkOverlap,
-                IndexingInterval = indexData.IndexingInterval.HasValue ? (long?)indexData.IndexingInterval.Value.TotalSeconds : null,
-                MaxRagAttachments = indexData.MaxRagAttachments,
-                EmbeddingModel = indexData.EmbeddingModel,
-                GenerateTopic = indexData.GenerateTopic,
-                GenerateKeywords = indexData.GenerateKeywords,
-                GenerateTitleVector = indexData.GenerateTitleVector,
-                GenerateContentVector = indexData.GenerateContentVector,
-                GenerateTopicVector = indexData.GenerateTopicVector,
-                GenerateKeywordVector = indexData.GenerateKeywordVector,
+                ChunkOverlap = chunkOverlap ?? .1,
+                IndexingInterval = indexData.IndexingInterval ?? TimeSpan.FromHours(23.99), // only slightly under 1 day is supported
+                MaxRagAttachments = indexData.MaxRagAttachments ?? 3, // make this a global variable,
+                EmbeddingModel = indexData.EmbeddingModel ?? DefaultEmbeddingModel,
+                GenerateTopic = indexData.GenerateTopic ?? false,
+                GenerateKeywords = indexData.GenerateKeywords ?? false,
+                GenerateTitleVector = indexData.GenerateTitleVector ?? true,
+                GenerateContentVector = indexData.GenerateContentVector ?? true,
+                GenerateTopicVector = indexData.GenerateTopicVector ?? false,
+                GenerateKeywordVector = indexData.GenerateKeywordVector ?? false,
                 DefaultScoringProfile = indexData.ScoringProfile?.Name,
                 ScoringAggregation = indexData.ScoringProfile?.SearchAggregation.ToString(),
                 ScoringInterpolation = indexData.ScoringProfile?.SearchInterpolation.ToString(),

@@ -221,7 +221,7 @@ namespace IntelligenceHub.Business.Handlers
         private string? ValidateIndexDocument(IndexDocument document)
         {
             if (string.IsNullOrWhiteSpace(document.Title)) return "Document title cannot be empty.";
-            if (string.IsNullOrWhiteSpace(document.Content)) return "Document content cannot be empty.";
+            if (string.IsNullOrWhiteSpace(document.Chunk)) return "Document content cannot be empty.";
             return null;
         }
 

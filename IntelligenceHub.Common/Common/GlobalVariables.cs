@@ -3,11 +3,12 @@
     public static class GlobalVariables
     {
         public const string RagRequestSystemMessage = 
-            "You are part of an API that chunks documents for retrieval augmented " +
-            "generation tasks. Your job is to take the requests, which are sent to you programatically, " +
-            "and shorten the data into a topic, keywords, or another form of data. Please take care to " +
-            "only provide the data requested in the completion, as any words unrelated to the completion " +
-            "request will be interpreted as part of the topic or keyword.";
+            "You are part of an API that chunks documents for retrieval augmented generation tasks. Your job " +
+            "is to take the requests, which are sent to you programatically, and shorten the data into a topic, " +
+            "keywords, or another form of data. Take care to only provide the data requested in the completion, " +
+            "as any words unrelated to the completion request will be interpreted as part of the topic or " +
+            "keyword. It is vital that you keep all responses brief as well, as any response from you that " +
+            "exceeds 255 characters will be truncated.";
 
         public const string RagRequestPrependedInstructions = 
             "Below you will find a set of documents, each delimited with tripple backticks. " +
@@ -92,8 +93,13 @@
 
         public const string DefaultAGIModel = "gpt-4o-mini";
         public const string DefaultEmbeddingModel = "text-embedding-3-large";
+
+        // Move these to AzureAISearch class?
         public const string DefaultVectorSearchProfile = "vector-search-profile";
         public const string DefaultVectorAlgConfig = "hnsw";
+        public const string DefaultKnnSearchProfile = "ExhaustiveKnnProfile";
+        public const string DefaultKnnConfig = "ExhaustiveKnn";
+        public const string DefaultVectorizer = "Vectorizer";
 
         public const string VectorSearchProfileName = "vector-search-profile";
 

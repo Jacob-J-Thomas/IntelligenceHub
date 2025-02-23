@@ -86,10 +86,15 @@ namespace IntelligenceHub.Controllers
 
         [HttpPost]
         [Route("Index/Configure/{index}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> ConfigureIndex([FromRoute] string index, [FromBody] IndexMetadata indexDefinition)
         {
             try
             {
+                if (indexDefinition is null) return BadRequest("The request body is malformed.");
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);
                 if (response) return Ok();
                 else return NotFound();

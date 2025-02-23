@@ -4,7 +4,7 @@
     {
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
+        public string Chunk { get; set; } = string.Empty;
         public string? Topic { get; set; }
         public string? Keywords { get; set; }
         public string Source { get; set; } = string.Empty;

@@ -142,6 +142,8 @@ namespace IntelligenceHub.Business.Implementations
             if (!completionRequest.Messages.Any() || string.IsNullOrEmpty(completionRequest.ProfileOptions.Name)) return null;
 
             var profile = await _profileDb.GetByNameAsync(completionRequest.ProfileOptions.Name);
+            if (profile == null) return null;
+
             var mappedProfile = DbMappingHandler.MapFromDbProfile(profile);
             completionRequest.ProfileOptions = await BuildCompletionOptions(mappedProfile, completionRequest.ProfileOptions);
 
@@ -419,21 +421,21 @@ namespace IntelligenceHub.Business.Implementations
                 {
                     var semanticResult = item.SemanticSearch;
                     ragDataString += $"\n```\n" +
-                                     $"\nTitle: {item.Document.title}" +
-                                     $"\nSource: {item.Document.source}" +
-                                     $"\nCreation Date: {item.Document.created:yyyy-MM-ddTHH:mm:ss}" +
-                                     $"\nLast Updated Date: {item.Document.modified:yyyy-MM-ddTHH:mm:ss}";
+                                     $"\nTitle: {item.Document.Title}" +
+                                     $"\nSource: {item.Document.Source}" +
+                                     $"\nCreation Date: {item.Document.Created:yyyy-MM-ddTHH:mm:ss}" +
+                                     $"\nLast Updated Date: {item.Document.Modified:yyyy-MM-ddTHH:mm:ss}";
                     foreach (var caption in semanticResult.Captions) ragDataString += $"\nContent Chunk: {caption.Text}";
                     ragDataString += $"\n```\n";
                 }
                 else
                 {
                     ragDataString += $"\n```\n" +
-                                     $"\nTitle: {item.Document.title}" +
-                                     $"\nSource: {item.Document.source}" +
-                                     $"\nCreation Date: {item.Document.created:yyyy-MM-ddTHH:mm:ss}" +
-                                     $"\nLast Updated Date: {item.Document.modified:yyyy-MM-ddTHH:mm:ss}" +
-                                     $"\nContent: {item.Document.content}" +
+                                     $"\nTitle: {item.Document.Title}" +
+                                     $"\nSource: {item.Document.Source}" +
+                                     $"\nCreation Date: {item.Document.Created:yyyy-MM-ddTHH:mm:ss}" +
+                                     $"\nLast Updated Date: {item.Document.Modified:yyyy-MM-ddTHH:mm:ss}" +
+                                     $"\nContent: {item.Document.chunk}" +
                                      $"\n```\n";
                 }
             }

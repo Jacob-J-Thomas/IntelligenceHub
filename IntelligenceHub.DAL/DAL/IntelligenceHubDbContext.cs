@@ -29,6 +29,7 @@ namespace IntelligenceHub.DAL
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.ConversationId).IsRequired();
+                entity.Property(e => e.User).HasMaxLength(255);
                 entity.Property(e => e.Role).IsRequired().HasMaxLength(255);
                 entity.Property(e => e.Base64Image).HasColumnType("nvarchar(max)");
                 entity.Property(e => e.TimeStamp).IsRequired();
@@ -44,7 +45,10 @@ namespace IntelligenceHub.DAL
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
                 entity.HasIndex(e => e.Name).IsUnique();
                 entity.Property(e => e.QueryType).HasMaxLength(255);
-                entity.Property(e => e.IndexingInterval).IsRequired();
+                entity.Property(e => e.IndexingInterval).IsRequired().HasConversion(
+                    v => (long)v.TotalMilliseconds,  // Convert TimeSpan to BigInt (milliseconds)
+                    v => TimeSpan.FromMilliseconds(v)  // Convert BigInt back to TimeSpan
+                );
                 entity.Property(e => e.EmbeddingModel).HasMaxLength(255);
                 entity.Property(e => e.MaxRagAttachments).HasDefaultValue(3);
                 entity.Property(e => e.ChunkOverlap).HasDefaultValue(0.1);

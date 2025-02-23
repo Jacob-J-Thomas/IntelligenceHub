@@ -13,6 +13,8 @@ using IntelligenceHub.DAL.Models;
 using System.Reflection.Metadata;
 using System.Xml.Linq;
 using static IntelligenceHub.Common.GlobalVariables;
+using System.Transactions;
+using Microsoft.EntityFrameworkCore;
 
 namespace IntelligenceHub.Business.Implementations
 {
@@ -24,8 +26,9 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IIndexRepository _ragRepository;
         private readonly IValidationHandler _validationHandler;
         private readonly IBackgroundTaskQueueHandler _backgroundTaskQueue;
+        private readonly IntelligenceHubDbContext _dbContext;
 
-        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue)
+        public RagLogic(IAGIClient agiClient, IAISearchServiceClient aISearchServiceClient, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context)
         {
             _searchClient = aISearchServiceClient;
             _aiClient = agiClient;
@@ -33,6 +36,7 @@ namespace IntelligenceHub.Business.Implementations
             _ragRepository = indexRepository;
             _validationHandler = validationHandler;
             _backgroundTaskQueue = backgroundTaskQueue;
+            _dbContext = context;
         }
 
         public async Task<IndexMetadata?> GetRagIndex(string index)
@@ -83,6 +87,7 @@ namespace IntelligenceHub.Business.Implementations
             return await _searchClient.UpsertIndexer(indexDefinition);
         }
 
+        // NOTE: Given the below code, disabling generative columns will not destroy existing data
         public async Task<bool> ConfigureIndex(IndexMetadata indexDefinition)
         {
             if (!string.IsNullOrEmpty(_validationHandler.ValidateIndexDefinition(indexDefinition))) return false;
@@ -96,23 +101,23 @@ namespace IntelligenceHub.Business.Implementations
             if (!success) return false;
 
             var newDefinition = DbMappingHandler.MapToDbIndexMetadata(indexDefinition);
+
+            // Check if we an update is required - this is done before updating the SQL, as existingDefinition reflects the current state of the corresponding SQL entry
+            var updateAllDocs = false;
+            if (!existingDefinition.GenerateContentVector && newDefinition.GenerateContentVector) updateAllDocs = true;
+            else if (!existingDefinition.GenerateTopicVector && newDefinition.GenerateTopicVector) updateAllDocs = true;
+            else if (!existingDefinition.GenerateKeywordVector && newDefinition.GenerateKeywordVector) updateAllDocs = true;
+            else if (!existingDefinition.GenerateTitleVector && newDefinition.GenerateTitleVector) updateAllDocs = true;
+
+            // Update the SQL entry
             var rows = await _metaRepository.UpdateAsync(existingDefinition, newDefinition);
 
-            // NOTE: Given the below code, disabling generative columns will not destroy existing data
-
             // Create missing generative data if required
-            if ((!existingDefinition.GenerateKeywords && indexDefinition.GenerateKeywords || !existingDefinition.GenerateTopic && indexDefinition.GenerateTopic)) _ = GenerateMissingRagFields(indexDefinition);
-
-            var updateAllDocs = false;
-            if (!existingDefinition.GenerateContentVector && indexDefinition.GenerateContentVector) updateAllDocs = true;
-            if (!existingDefinition.GenerateTopicVector && indexDefinition.GenerateTopicVector) updateAllDocs = true;
-            if (!existingDefinition.GenerateKeywordVector && indexDefinition.GenerateKeywordVector) updateAllDocs = true;
-            if (!existingDefinition.GenerateTitleVector && indexDefinition.GenerateTitleVector) updateAllDocs = true;
-
             if (updateAllDocs)
             {
-                await _ragRepository.MarkIndexForUpdateAsync(indexDefinition.Name);
-                return await _searchClient.RunIndexer(indexDefinition.Name);
+                _ = GenerateMissingRagFields(indexDefinition);
+                await _ragRepository.MarkIndexForUpdateAsync(newDefinition.Name);
+                return await _searchClient.RunIndexer(newDefinition.Name);
             }
             return true;
         }
@@ -125,11 +130,18 @@ namespace IntelligenceHub.Business.Implementations
 
             do
             {
-                // Retrieve a single page of documents
-                var pageDocs = await _ragRepository.GetAllAsync(index.Name, pageSize, currentPage);
-                hasMorePages = pageDocs.Any(); // Check if we have documents in this page
+                List<DbIndexDocument> pageDocs = new List<DbIndexDocument>();
 
-                // Queue processing for each document
+                var strategy = _dbContext.Database.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
+                {
+                    using var transaction = await _dbContext.Database.BeginTransactionAsync();
+                    pageDocs = (await _ragRepository.GetAllAsync(index.Name, pageSize, currentPage)).ToList();
+                    await transaction.CommitAsync();
+                });
+
+                hasMorePages = pageDocs.Any();
+
                 foreach (var document in pageDocs)
                 {
                     _backgroundTaskQueue.QueueBackgroundWorkItem(async token =>
@@ -138,29 +150,40 @@ namespace IntelligenceHub.Business.Implementations
                     });
                 }
                 currentPage++;
-            } while (hasMorePages); // Continue while there are more documents
+            } while (hasMorePages);
         }
+
 
         private async Task RunBackgroundDocumentUpdate(IndexMetadata index, DbIndexDocument document)
         {
             var documentDto = DbMappingHandler.MapFromDbIndexDocument(document);
-            if (index.GenerateTopic && string.IsNullOrEmpty(document.Topic)) document.Topic = await GenerateDocumentMetadata("a topic", documentDto);
-            if (index.GenerateKeywords && string.IsNullOrEmpty(document.Keywords)) document.Keywords = await GenerateDocumentMetadata("a comma separated list of keywords", documentDto);
+            if (index.GenerateTopic ?? false && string.IsNullOrEmpty(document.Topic)) document.Topic = await GenerateDocumentMetadata("a topic", documentDto);
+            if (index.GenerateKeywords ?? false && string.IsNullOrEmpty(document.Keywords)) document.Keywords = await GenerateDocumentMetadata("a comma separated list of keywords", documentDto);
 
-            // Check if document already exists
-            var existingDoc = await _ragRepository.GetDocumentAsync(index.Name, document.Title);
-            if (existingDoc != null)
+            // Use EF Core execution strategy
+            var strategy = _dbContext.Database.CreateExecutionStrategy();
+
+            await strategy.ExecuteAsync(async () =>
             {
-                document.Modified = DateTimeOffset.UtcNow;
-                await _ragRepository.UpdateAsync(existingDoc, document, index.Name);
-            }
-            else
-            {
-                document.Created = DateTimeOffset.UtcNow;
-                document.Modified = DateTimeOffset.UtcNow;
-                await _ragRepository.AddAsync(document, index.Name);
-            }
+                using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+                var existingDoc = await _ragRepository.GetDocumentAsync(index.Name, document.Title);
+                if (existingDoc != null)
+                {
+                    document.Modified = DateTimeOffset.UtcNow;
+                    await _ragRepository.UpdateAsync(existingDoc, document, index.Name);
+                }
+                else
+                {
+                    document.Created = DateTimeOffset.UtcNow;
+                    document.Modified = DateTimeOffset.UtcNow;
+                    await _ragRepository.AddAsync(document, index.Name);
+                }
+
+                await transaction.CommitAsync();
+            });
         }
+
 
 
         public async Task<bool> RunIndexUpdate(string index)
@@ -207,15 +230,15 @@ namespace IntelligenceHub.Business.Implementations
             {
                 var newDoc = new IndexDocument()
                 {
-                    Title = res.Document.title,
-                    Keywords = res.Document.keywords,
-                    Topic = res.Document.topic,
-                    Source = res.Document.source,
-                    Created = res.Document.created,
-                    Modified = res.Document.modified
+                    Title = res.Document.Title,
+                    Keywords = res.Document.Keywords,
+                    Topic = res.Document.Topic,
+                    Source = res.Document.Source,
+                    Created = res.Document.Created,
+                    Modified = res.Document.Modified
                 };
-                if (indexDefinition.QueryType == QueryType.Semantic) foreach (var caption in res.SemanticSearch.Captions) newDoc.Content += $"Excerpt: {caption.Text}\n\n";
-                else newDoc.Content = res.Document.content;
+                if (indexDefinition.QueryType == QueryType.Semantic) foreach (var caption in res.SemanticSearch.Captions) newDoc.Chunk += $"Excerpt: {caption.Text}\n\n";
+                else newDoc.Chunk = res.Document.chunk;
                 docList.Add(newDoc);
             }
             return docList;
@@ -248,10 +271,10 @@ namespace IntelligenceHub.Business.Implementations
 
             foreach (var document in documentUpsertRequest.Documents)
             {
-                var newDbDocument = DbMappingHandler.MapToDbIndexDocument(document);
-
                 if (indexData.GenerateTopic) document.Topic = await GenerateDocumentMetadata("a topic", document);
                 if (indexData.GenerateKeywords) document.Keywords = await GenerateDocumentMetadata("a comma seperated list of keywords", document);
+
+                var newDbDocument = DbMappingHandler.MapToDbIndexDocument(document);
 
                 var existingDoc = await _ragRepository.GetDocumentAsync(index, document.Title);
                 if (existingDoc != null)
@@ -296,7 +319,7 @@ namespace IntelligenceHub.Business.Implementations
             // triple backticks to delimit the data
             completion += $"\n```";
             completion += $"\ntitle: {document.Title}";
-            completion += $"\ncontent: {document.Content}";
+            completion += $"\ncontent: {document.Chunk}";
             completion += $"\n```";
 
             var completionRequest = new CompletionRequest()
@@ -306,7 +329,8 @@ namespace IntelligenceHub.Business.Implementations
             };
 
             var response = await _aiClient.PostCompletion(completionRequest); // create a seperate method for internal API completions
-            return response?.Messages.Last(m => m.Role == GlobalVariables.Role.Assistant).Content ?? string.Empty;
+            var content = response?.Messages.Last(m => m.Role == GlobalVariables.Role.Assistant).Content ?? string.Empty;
+            return content.Length > 255 ? content.Substring(0, 255) : content; // If content exceeds SQL column size, truncate.
         }
 
         #endregion
