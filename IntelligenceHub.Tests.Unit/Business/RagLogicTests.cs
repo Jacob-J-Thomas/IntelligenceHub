@@ -3,6 +3,7 @@ using global::IntelligenceHub.DAL.Models;
 using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Implementations;
 using IntelligenceHub.Client.Interfaces;
+using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Interfaces;
 using Moq;
 
@@ -17,6 +18,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         private readonly Mock<IIndexRepository> _mockRagRepository;
         private readonly Mock<IValidationHandler> _mockValidationHandler;
         private readonly Mock<IBackgroundTaskQueueHandler> _mockBackgroundTaskQueueHandler;
+        private readonly Mock<IntelligenceHubDbContext> _context;
         private readonly RagLogic _ragLogic;
 
         public RagLogicTests()
@@ -27,8 +29,9 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockRagRepository = new Mock<IIndexRepository>();
             _mockValidationHandler = new Mock<IValidationHandler>();
             _mockBackgroundTaskQueueHandler = new Mock<IBackgroundTaskQueueHandler>();
+            _context = new Mock<IntelligenceHubDbContext>();
 
-            _ragLogic = new RagLogic(_mockAiClient.Object, _mockSearchClient.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object);
+            _ragLogic = new RagLogic(_mockAiClient.Object, _mockSearchClient.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object);
         }
 
         [Fact]

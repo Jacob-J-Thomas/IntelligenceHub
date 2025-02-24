@@ -168,6 +168,9 @@ namespace IntelligenceHub.Host
                 // Set serialization for global enums utilized in DTOs
                 options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            }).AddHubOptions<ChatHub>(options =>
+            {
+                if (builder.Environment.IsDevelopment()) options.EnableDetailedErrors = true; // enable detailed errors for dev environments
             });
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
@@ -272,7 +275,7 @@ namespace IntelligenceHub.Host
 
                 app.UseCors(policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000", "https://localhost:7228", "https://intelligencehub-dev.azurewebsites.net") // Specify allowed origin explicitly
+                    policy.WithOrigins("http://localhost:3000", "https://localhost:7228", "https://localhost:44483", "https://intelligencehub-dev.azurewebsites.net") // Specify allowed origin explicitly
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials()
