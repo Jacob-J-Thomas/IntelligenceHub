@@ -1,5 +1,4 @@
 ﻿using Azure.Search.Documents.Models;
-using IntelligenceHub.API.API.DTOs.Tools;
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Business.Interfaces;

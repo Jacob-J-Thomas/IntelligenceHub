@@ -164,7 +164,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             // Arrange
             var indexName = "testIndex";
             var dbIndexMetadata = new DbIndexMetadata { Name = indexName };
-            var document = new IndexDocument { Title = "testDocument", Chunk = "testContent" };
+            var document = new IndexDocument { Title = "testDocument", Content = "testContent" };
             var upsertRequest = new RagUpsertRequest { Documents = new List<IndexDocument> { document } };
             _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
             _mockRagRepository.Setup(repo => repo.GetDocumentAsync(indexName, document.Title)).ReturnsAsync((DbIndexDocument?)null);

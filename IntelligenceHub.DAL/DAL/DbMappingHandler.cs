@@ -177,7 +177,7 @@ namespace IntelligenceHub.DAL
             {
                 Id = dbDocument.Id,
                 Title = dbDocument.Title,
-                Chunk = dbDocument.Content,
+                Content = dbDocument.Content,
                 Topic = dbDocument.Topic,
                 Keywords = dbDocument.Keywords,
                 Source = dbDocument.Source,
@@ -192,7 +192,7 @@ namespace IntelligenceHub.DAL
             {
                 Id = document.Id,
                 Title = document.Title,
-                Content = document.Chunk,
+                Content = document.Content,
                 Topic = document.Topic,
                 Keywords = document.Keywords,
                 Source = document.Source,

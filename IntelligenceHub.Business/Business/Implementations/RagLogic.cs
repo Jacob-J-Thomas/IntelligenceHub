@@ -237,8 +237,8 @@ namespace IntelligenceHub.Business.Implementations
                     Created = res.Document.Created,
                     Modified = res.Document.Modified
                 };
-                if (indexDefinition.QueryType == QueryType.Semantic) foreach (var caption in res.SemanticSearch.Captions) newDoc.Chunk += $"Excerpt: {caption.Text}\n\n";
-                else newDoc.Chunk = res.Document.chunk;
+                if (indexDefinition.QueryType == QueryType.Semantic) foreach (var caption in res.SemanticSearch.Captions) newDoc.Content += $"Excerpt: {caption.Text}\n\n";
+                else newDoc.Content = res.Document.chunk;
                 docList.Add(newDoc);
             }
             return docList;
@@ -319,7 +319,7 @@ namespace IntelligenceHub.Business.Implementations
             // triple backticks to delimit the data
             completion += $"\n```";
             completion += $"\ntitle: {document.Title}";
-            completion += $"\ncontent: {document.Chunk}";
+            completion += $"\ncontent: {document.Content}";
             completion += $"\n```";
 
             var completionRequest = new CompletionRequest()

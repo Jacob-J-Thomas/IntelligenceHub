@@ -1,5 +1,4 @@
-﻿using IntelligenceHub.API.API.DTOs;
-using IntelligenceHub.Common.Extensions;
+﻿using IntelligenceHub.Common.Extensions;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.API.DTOs.Tools

@@ -106,7 +106,6 @@ namespace IntelligenceHub.DAL.Implementations
         {
             var query = $@"UPDATE [{tableName}] SET 
                                Title = @Title, 
-                               Parent_Id = @ParentId,
                                Content = @Content, 
                                Topic = @Topic, 
                                Keywords = @Keywords, 
