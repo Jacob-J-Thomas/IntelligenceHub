@@ -451,10 +451,9 @@ namespace IntelligenceHub.Business.Implementations
                 Base64Image = finalMessage.Base64Image,
                 TimeStamp = finalMessage.TimeStamp,
                 Content = $"\n\nBelow is a list of documents, each of which is delimited with triple backticks. If relevant, " +
-                          $"please cite these documents in markdown plain in-text citation (i.e. '(Title)[Source]') when responding to the " +
-                          $"following prompt: {originalMessageContent}\n\n" + ragDataString
+                          $"and a source is present, please cite these documents in markdown plain in-text citation when " +
+                          $"responding to the following prompt: {originalMessageContent}\n\n" + ragDataString
             };
-
             return messageWithRagAppended;
         }
 

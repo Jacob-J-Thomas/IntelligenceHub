@@ -6,7 +6,8 @@ namespace IntelligenceHub.API.DTOs.RAG
     public class IndexDefinition
     {
         public string Id { get; set; }
-        public string ParentId { get; set; }
+        public string Parent_Id { get; set; }
+        public string Chunk_Id { get; set; }
         public string Title { get; set; }
         public string chunk { get; set; }
         public string Topic { get; set; }
