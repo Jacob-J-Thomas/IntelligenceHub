@@ -399,10 +399,14 @@ namespace IntelligenceHub.Business.Implementations
             // Create a copy of the original request with modified content (without altering the original)
             var modifiedRequest = new CompletionRequest
             {
+                // Only copy in relevant data to prevent unnescesary tool calls utilization, and similar issues
+                ProfileOptions = new Profile() { Name = originalRequest.ProfileOptions.Name, Model = originalRequest.ProfileOptions.Model }, 
                 Messages = new List<Message>(originalRequest.Messages)
             };
-            modifiedRequest.Messages.LastOrDefault().Content = "Please use the below data to construct an intentful natural language query that can be used to search a RAG database. " +
-                                                               "If the message does not seem to require a query to be constructed, please respond with a single .\n\n" + originalMessageContent;
+
+            var finalMessage = modifiedRequest.Messages.LastOrDefault() ?? new Message() { Role = Role.User, Content = "Please search the database for any information", TimeStamp = DateTime.UtcNow };
+            finalMessage.Content = "Please use the below data to construct an intentful natural language query that can be used to search a RAG database. " +
+                                   "If the message does not seem to require a query to be constructed, please respond with a single .\n\n" + originalMessageContent;
 
             var completionResponse = await agiClient.PostCompletion(modifiedRequest);
             var intentfulQuery = completionResponse.Messages.LastOrDefault()?.Content ?? string.Empty;
@@ -419,7 +423,7 @@ namespace IntelligenceHub.Business.Implementations
                 if (indexData.QueryType == QueryType.Semantic)
                 {
                     var semanticResult = item.SemanticSearch;
-                    ragDataString += $"\n```\n" +
+                    ragDataString += $"\n```" +
                                      $"\nTitle: {item.Document.Title}" +
                                      $"\nSource: {item.Document.Source}" +
                                      $"\nCreation Date: {item.Document.Created:yyyy-MM-ddTHH:mm:ss}" +
@@ -429,7 +433,7 @@ namespace IntelligenceHub.Business.Implementations
                 }
                 else
                 {
-                    ragDataString += $"\n```\n" +
+                    ragDataString += $"\n```" +
                                      $"\nTitle: {item.Document.Title}" +
                                      $"\nSource: {item.Document.Source}" +
                                      $"\nCreation Date: {item.Document.Created:yyyy-MM-ddTHH:mm:ss}" +
@@ -442,6 +446,10 @@ namespace IntelligenceHub.Business.Implementations
             // Construct a new message with the appended RAG data
             var messageWithRagAppended = new Message
             {
+                Role = finalMessage.Role,
+                User = finalMessage.User,
+                Base64Image = finalMessage.Base64Image,
+                TimeStamp = finalMessage.TimeStamp,
                 Content = $"\n\nBelow is a list of documents, each of which is delimited with triple backticks. If relevant, " +
                           $"please cite these documents in markdown plain in-text citation (i.e. '(Title)[Source]') when responding to the " +
                           $"following prompt: {originalMessageContent}\n\n" + ragDataString

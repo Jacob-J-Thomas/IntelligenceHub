@@ -207,9 +207,9 @@ namespace IntelligenceHub.DAL
             {
                 Name = dbIndexData.Name,
                 QueryType = dbIndexData.QueryType?.ConvertStringToQueryType() ?? QueryType.Simple,
-                ChunkOverlap = dbIndexData.ChunkOverlap ?? .1, // make this a global variable
+                ChunkOverlap = dbIndexData.ChunkOverlap ?? DefaultChunkOverlap, // make this a global variable
                 IndexingInterval = dbIndexData.IndexingInterval,
-                MaxRagAttachments = dbIndexData.MaxRagAttachments ?? 3, // make this a global variable
+                MaxRagAttachments = dbIndexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable
                 EmbeddingModel = dbIndexData.EmbeddingModel,
                 GenerateTopic = dbIndexData.GenerateTopic,
                 GenerateKeywords = dbIndexData.GenerateKeywords,
@@ -222,9 +222,9 @@ namespace IntelligenceHub.DAL
                     Name = dbIndexData.DefaultScoringProfile ?? string.Empty,
                     SearchAggregation = dbIndexData.ScoringAggregation?.ConvertStringToSearchAggregation(),
                     SearchInterpolation = dbIndexData.ScoringInterpolation?.ConvertStringToSearchInterpolation(),
-                    BoostDurationDays = dbIndexData.ScoringBoostDurationDays ?? 0,
-                    FreshnessBoost = dbIndexData.ScoringFreshnessBoost ?? 0,
-                    TagBoost = dbIndexData.ScoringTagBoost ?? 0,
+                    BoostDurationDays = dbIndexData.ScoringBoostDurationDays ?? DefaultScoringBoostDurationDays,
+                    FreshnessBoost = dbIndexData.ScoringFreshnessBoost ?? DefaultScoringFreshnessBoost,
+                    TagBoost = dbIndexData.ScoringTagBoost ?? DefaultScoringTagBoost,
                     Weights = DeserializeDbWeights(dbIndexData.ScoringWeights) ?? new Dictionary<string, double>()
                 }
             };
@@ -238,9 +238,9 @@ namespace IntelligenceHub.DAL
             {
                 Name = indexData.Name,
                 QueryType = indexData.QueryType.ToString(),
-                ChunkOverlap = chunkOverlap ?? .1,
+                ChunkOverlap = chunkOverlap ?? DefaultChunkOverlap,
                 IndexingInterval = indexData.IndexingInterval ?? TimeSpan.FromHours(23.99), // only slightly under 1 day is supported
-                MaxRagAttachments = indexData.MaxRagAttachments ?? 3, // make this a global variable,
+                MaxRagAttachments = indexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable,
                 EmbeddingModel = indexData.EmbeddingModel ?? DefaultEmbeddingModel,
                 GenerateTopic = indexData.GenerateTopic ?? false,
                 GenerateKeywords = indexData.GenerateKeywords ?? false,
@@ -251,9 +251,9 @@ namespace IntelligenceHub.DAL
                 DefaultScoringProfile = indexData.ScoringProfile?.Name,
                 ScoringAggregation = indexData.ScoringProfile?.SearchAggregation.ToString(),
                 ScoringInterpolation = indexData.ScoringProfile?.SearchInterpolation.ToString(),
-                ScoringFreshnessBoost = indexData.ScoringProfile?.FreshnessBoost ?? 0,
-                ScoringBoostDurationDays = indexData.ScoringProfile?.BoostDurationDays ?? 0,
-                ScoringTagBoost = indexData.ScoringProfile?.TagBoost ?? 0,
+                ScoringFreshnessBoost = indexData.ScoringProfile?.FreshnessBoost ?? DefaultScoringFreshnessBoost,
+                ScoringBoostDurationDays = indexData.ScoringProfile?.BoostDurationDays ?? DefaultScoringBoostDurationDays,
+                ScoringTagBoost = indexData.ScoringProfile?.TagBoost ?? DefaultScoringTagBoost,
                 ScoringWeights = indexData.ScoringProfile?.Weights?.Count > 0 ? SerializeDbWeights(indexData.ScoringProfile.Weights) : string.Empty,
             };
         }

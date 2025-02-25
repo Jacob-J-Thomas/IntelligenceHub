@@ -109,13 +109,18 @@ namespace IntelligenceHub.Business.Implementations
             else if (!existingDefinition.GenerateKeywordVector && newDefinition.GenerateKeywordVector) updateAllDocs = true;
             else if (!existingDefinition.GenerateTitleVector && newDefinition.GenerateTitleVector) updateAllDocs = true;
 
+            var generateMissingFields = false;
+            if (!existingDefinition.GenerateTopic && newDefinition.GenerateTopic) generateMissingFields = true;
+            else if (!existingDefinition.GenerateKeywords && newDefinition.GenerateKeywords) generateMissingFields = true;
+            
+
             // Update the SQL entry
             var rows = await _metaRepository.UpdateAsync(existingDefinition, newDefinition);
 
             // Create missing generative data if required
             if (updateAllDocs)
             {
-                _ = GenerateMissingRagFields(indexDefinition);
+                if (generateMissingFields) _ = GenerateMissingRagFields(indexDefinition);
                 await _ragRepository.MarkIndexForUpdateAsync(newDefinition.Name);
                 return await _searchClient.RunIndexer(newDefinition.Name);
             }
@@ -153,7 +158,6 @@ namespace IntelligenceHub.Business.Implementations
             } while (hasMorePages);
         }
 
-
         private async Task RunBackgroundDocumentUpdate(IndexMetadata index, DbIndexDocument document)
         {
             var documentDto = DbMappingHandler.MapFromDbIndexDocument(document);
@@ -183,8 +187,6 @@ namespace IntelligenceHub.Business.Implementations
                 await transaction.CommitAsync();
             });
         }
-
-
 
         public async Task<bool> RunIndexUpdate(string index)
         {

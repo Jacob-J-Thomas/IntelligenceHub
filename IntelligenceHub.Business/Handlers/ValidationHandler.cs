@@ -121,7 +121,6 @@ namespace IntelligenceHub.Business.Handlers
             // Validate Name
             if (string.IsNullOrWhiteSpace(index.Name)) return "The provided index name is invalid.";
             if (index.Name.Length > 255) return "The index name exceeds the maximum allowed length of 255 characters.";
-            if (index.QueryType == null) return "QueryType is required.";
             if (index.IndexingInterval <= TimeSpan.Zero) return "IndexingInterval must be a positive value.";
             if (index.IndexingInterval > TimeSpan.FromDays(1)) return "The indexing interval cannot exceed 1 day.";
             if (!string.IsNullOrWhiteSpace(index.EmbeddingModel) && index.EmbeddingModel.Length > 255) return "The EmbeddingModel exceeds the maximum allowed length of 255 characters.";

@@ -1,11 +1,17 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using IntelligenceHub.DAL.Models;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.DAL
 {
     public class IntelligenceHubDbContext : DbContext
     {
         public IntelligenceHubDbContext(DbContextOptions<IntelligenceHubDbContext> options) : base(options)
+        {
+        }
+
+        // parameterless constructor for testing classes
+        public IntelligenceHubDbContext() : base()
         {
         }
 
@@ -50,8 +56,8 @@ namespace IntelligenceHub.DAL
                     v => TimeSpan.FromMilliseconds(v)  // Convert BigInt back to TimeSpan
                 );
                 entity.Property(e => e.EmbeddingModel).HasMaxLength(255);
-                entity.Property(e => e.MaxRagAttachments).HasDefaultValue(3);
-                entity.Property(e => e.ChunkOverlap).HasDefaultValue(0.1);
+                entity.Property(e => e.MaxRagAttachments).HasDefaultValue(DefaultRagAttachmentNumber);
+                entity.Property(e => e.ChunkOverlap).HasDefaultValue(DefaultChunkOverlap);
                 entity.Property(e => e.GenerateTopic).IsRequired();
                 entity.Property(e => e.GenerateKeywords).IsRequired();
                 entity.Property(e => e.GenerateTitleVector).IsRequired();

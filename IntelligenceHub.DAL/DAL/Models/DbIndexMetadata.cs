@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.DAL.Models
 {
@@ -16,8 +17,8 @@ namespace IntelligenceHub.DAL.Models
         [Required]
         public TimeSpan IndexingInterval { get; set; }
         public string? EmbeddingModel { get; set; }
-        public int? MaxRagAttachments { get; set; } = 3;
-        public double? ChunkOverlap { get; set; } = 0.1;
+        public int? MaxRagAttachments { get; set; }
+        public double? ChunkOverlap { get; set; }
         public bool GenerateTopic { get; set; }
         public bool GenerateKeywords { get; set; }
         public bool GenerateTitleVector { get; set; }
