@@ -14,7 +14,6 @@ namespace IntelligenceHub.Controllers
     /// </summary>
     [Route("[controller]")]
     [ApiController]
-    [Authorize(Policy = ElevatedAuthPolicy)]
     public class MessageHistoryController : ControllerBase
     {
         private readonly IMessageHistoryLogic _messageHistoryLogic;

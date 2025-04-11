@@ -4,7 +4,6 @@
     {
         public string TestingUrl { get; set; }
         public string ProfileName { get; set; }
-        public string RagDatabase { get; set; }
         public List<string> Completions { get; set; }
     }
 }
