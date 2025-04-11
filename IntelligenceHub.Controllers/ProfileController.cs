@@ -15,7 +15,6 @@ namespace IntelligenceHub.Controllers
     /// </summary>
     [Route("[controller]")]
     [ApiController]
-    [Authorize(Policy = ElevatedAuthPolicy)]
     public class ProfileController : ControllerBase
     {
         private readonly IProfileLogic _profileLogic;

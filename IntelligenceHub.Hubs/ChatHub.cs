@@ -11,7 +11,6 @@ namespace IntelligenceHub.Hubs
     /// <summary>
     /// A SignalR hub used to stream chat completions to the client
     /// </summary>
-    [Authorize]
     public class ChatHub : Hub
     {
         private readonly ICompletionLogic _completionLogic;

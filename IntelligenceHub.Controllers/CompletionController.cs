@@ -19,7 +19,6 @@ namespace IntelligenceHub.Controllers
     /// </summary>
     [Route("[controller]")]
     [ApiController]
-    [Authorize]
     public class CompletionController : ControllerBase
     {
         private readonly ICompletionLogic _completionLogic;

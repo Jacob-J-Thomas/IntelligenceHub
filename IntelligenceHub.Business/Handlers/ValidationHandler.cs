@@ -1,5 +1,4 @@
 ﻿using IntelligenceHub.API.DTOs;
-using IntelligenceHub.API.DTOs.RAG;
 using static IntelligenceHub.Common.GlobalVariables;
 using System.Text.RegularExpressions;
 using IntelligenceHub.Common.Config;
@@ -33,10 +32,6 @@ namespace IntelligenceHub.Business.Handlers
             "float",
             "date",
             "enum",
-
-            // Don't think these would work currently, but can test. May work as string:
-            //"array",
-            //"object"
         };
 
         /// <summary>
@@ -322,161 +317,6 @@ namespace IntelligenceHub.Business.Handlers
                 return false;
             }
         }
-
-
-        #endregion
-
-        #region RAG Index Validation
-
-        /// <summary>
-        /// Validates the index definition DTO for RAG operations.
-        /// </summary>
-        /// <param name="index">The index definition.</param>
-        /// <returns>An error message string, or null if validation passes.</returns>
-        public string? ValidateIndexDefinition(IndexMetadata index)
-        {
-            // Validate Name
-            if (string.IsNullOrWhiteSpace(index.Name)) return "The provided index name is invalid.";
-
-            var includesContentSummarization = index.GenerateKeywords ?? index.GenerateTopic ?? false;
-            if (index.GenerationHost == null && includesContentSummarization) return "The GenerationProfile is required if 'GenerateKeywords' or 'GenerateTopic' are set to true.";
-            if (index.Name.Length > 128) return "The index name exceeds the maximum allowed length of 128 characters.";
-            if (index.IndexingInterval <= TimeSpan.Zero) return "IndexingInterval must be a positive value.";
-            if (index.IndexingInterval >= TimeSpan.FromDays(1)) return "The indexing interval must be less than 1 day.";
-            if (!string.IsNullOrWhiteSpace(index.EmbeddingModel) && index.EmbeddingModel.Length > 255) return "The EmbeddingModel exceeds the maximum allowed length of 255 characters.";
-            if (index.MaxRagAttachments < 0) return "MaxRagAttachments must be a non-negative integer greater than 0.";
-            if (index.MaxRagAttachments > 20) return "MaxRagAttachments cannot exceed 20.";
-            if (index.ChunkOverlap < 0 || index.ChunkOverlap > 1) return "ChunkOverlap must be between 0 and 1 (inclusive).";
-
-            if (!string.IsNullOrEmpty(index.ScoringProfile?.Name))
-            {
-                if (string.IsNullOrWhiteSpace(index.ScoringProfile.Name)) return "The ScoringProfile name is required.";
-                if (index.ScoringProfile.Name.Length > 128) return "The ScoringProfile name exceeds the maximum allowed length of 255 characters.";
-                if (index.QueryType.ToString().Length > 255) return "The QueryType exceeds the maximum allowed length of 255 characters.";
-                if (index.GenerationHost?.ToString().Length > 255) return "The GenerationHost exceeds the maximum allowed length of 255 characters.";
-                if (index.ScoringProfile.SearchAggregation == null) return "The Aggregation property provided is invalid.";
-                if (index.ScoringProfile.SearchInterpolation == null) return "The Interpolation property provided is invalid.";
-                if (index.ScoringProfile.FreshnessBoost < 0) return "FreshnessBoost must be a non-negative value.";
-                if (index.ScoringProfile.BoostDurationDays < 0) return "BoostDurationDays must be a non-negative integer.";
-                if (index.ScoringProfile.TagBoost < 0) return "TagBoost must be a non-negative value.";
-
-                // Validate Weights
-                if (index.ScoringProfile.Weights != null && index.ScoringProfile.Weights.Count > 0)
-                {
-                    foreach (var weight in index.ScoringProfile.Weights)
-                    {
-                        if (string.IsNullOrWhiteSpace(weight.Key)) return "All weight keys must be non-empty strings.";
-                        if (weight.Value < 0) return $"The weight value for key '{weight.Key}' must be a non-negative number.";
-                    }
-                }
-            }
-
-            // If all validations pass
-            return null;
-        }
-
-        /// <summary>
-        /// Validates the index name for RAG operations.
-        /// </summary>
-        /// <param name="tableName">The RAG index name that will be used to create an SQL table.</param>
-        /// <returns>A bool indicating if validation passed.</returns>
-        public bool IsValidIndexName(string tableName)
-        {
-            // Regular expression to match valid table names (alphanumeric characters and underscores only)
-
-            // change this to mitigate possibility of DOS attacks
-            var pattern = @"^[a-zA-Z_][a-zA-Z0-9_]*$";
-            var isSuccess = false;
-
-            // Check if the table name matches the pattern and is not a SQL keyword
-            if (Regex.IsMatch(tableName, pattern))
-            {
-                isSuccess = !ContainsSqlKeyword(tableName.ToUpper());
-                if (isSuccess) isSuccess = !ContainsAPIKeyword(tableName.ToUpper());
-            }
-            return isSuccess;
-        }
-
-        /// <summary>
-        /// Checks if the table name contains a SQL keyword.
-        /// </summary>
-        /// <param name="tableName">The table name to validate.</param>
-        /// <returns>A bool indicating if validation passed.</returns>
-        private static bool ContainsSqlKeyword(string tableName)
-        {
-            // List of common SQL keywords to prevent improper use
-            var sqlKeywords = new string[]
-            {
-                "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TABLE",
-                "WHERE", "FROM", "JOIN", "UNION", "ORDER", "GROUP", "HAVING"
-            };
-
-            // Check if the table name matches any SQL keyword (case-insensitive)
-            foreach (string keyword in sqlKeywords)
-            {
-                if (string.Equals(tableName, keyword, StringComparison.OrdinalIgnoreCase)) return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Checks if the table name contains an API keyword.
-        /// </summary>
-        /// <param name="tableName">The name of the table to validate.</param>
-        /// <returns>A bool indicating if validation passed.</returns>
-        private static bool ContainsAPIKeyword(string tableName)
-        {
-            // List of common SQL keywords to prevent conflicts
-            var sqlKeywords = new string[]
-            {
-                "ALL", "CONFIGURE", "DELETE"
-            };
-
-            // Check if the table name matches any SQL keyword (case-insensitive)
-            foreach (string keyword in sqlKeywords) if (string.Equals(tableName, keyword, StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
-        }
-
-        #endregion
-
-        #region Rag Document Upsert Request Validation
-
-        /// <summary>
-        /// Validates the RAG document upsert request DTO.
-        /// </summary>
-        /// <param name="request">The document upsert request to validate.</param>
-        /// <returns>An error message string, or null if validation passes.</returns>
-        public string? IsValidRagUpsertRequest(RagUpsertRequest request)
-        {
-            if (request.Documents == null || request.Documents.Count == 0) return "The request must contain at least one document.";
-            foreach (var document in request.Documents)
-            {
-                var validationResult = ValidateIndexDocument(document);
-                if (validationResult != null) return validationResult;
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Validates the document for RAG upsert requests.
-        /// </summary>
-        /// <param name="document">The document to validate.</param>
-        /// <returns>An error message string, or null if validation passes.</returns>
-        private string? ValidateIndexDocument(IndexDocument document)
-        {
-            var charLimit = 1000000; // Represents roughly 2mb of chars
-            if (string.IsNullOrWhiteSpace(document.Title)) return "Document title cannot be empty.";
-            if (string.IsNullOrWhiteSpace(document.Content)) return "Document content cannot be empty.";
-            if (document.Content.Length > charLimit) return "Document content exceeds the maximum allowed length of 1,000,000 characters.";
-            if (document.Title.Length > 255) return "Document title exceeds the maximum allowed length of 255 characters.";
-            if (document?.Topic?.Length > 255) return "Document topic exceeds the maximum allowed length of 255 characters.";
-            if (document?.Keywords?.Length > 255) return "Document keywords exceeds the maximum allowed length of 255 characters.";
-            if (document?.Source.Length > 4000) return "Document source exceeds the maximum allowed length of 4000 characters.";
-            return null;
-        }
-
         #endregion
     }
 }
