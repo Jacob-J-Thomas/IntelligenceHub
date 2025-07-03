@@ -75,7 +75,10 @@ required_env_vars = [
     "AGIClientSettings_SearchServiceCompletionServiceKey",
     "SearchServiceClientSettings_Endpoint",
     "SearchServiceClientSettings_Key",
-    "Settings_DefaultImageHost"  # token for DefaultImageGenHost
+    "Settings_DefaultImageHost",  # token for DefaultImageGenHost
+    "WeaviateClientSettings_Endpoint",
+    "WeaviateClientSettings_ApiKey",
+    "Settings_VectorDbProvider"
 ]
 
 # Check the current environment

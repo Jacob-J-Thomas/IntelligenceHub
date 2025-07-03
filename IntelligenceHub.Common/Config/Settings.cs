@@ -15,5 +15,6 @@
         public int CircuitBreakerBreakDuration { get; set; }
         public string[] ValidAGIModels { get; set; } = Array.Empty<string>();
         public string DefaultImageGenHost { get; set; } = string.Empty;
+        public VectorDbProvider VectorDbProvider { get; set; } = VectorDbProvider.Azure;
     }
 }
