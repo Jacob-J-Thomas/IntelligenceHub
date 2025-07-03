@@ -69,6 +69,15 @@
         }
 
         /// <summary>
+        /// Specifies the vector database provider.
+        /// </summary>
+        public enum VectorDbProvider
+        {
+            Azure,
+            Weaviate
+        }
+
+        /// <summary>
         /// Specifies the types of queries.
         /// </summary>
         public enum QueryType

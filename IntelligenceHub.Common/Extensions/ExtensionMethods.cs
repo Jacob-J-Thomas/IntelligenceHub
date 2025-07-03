@@ -127,5 +127,17 @@ namespace IntelligenceHub.Common.Extensions
             else if (hostString == AGIServiceHosts.Anthropic.ToString().ToLower()) return AGIServiceHosts.Anthropic;
             return AGIServiceHosts.None;
         }
+
+        /// <summary>
+        /// Converts a string to a VectorDbProvider enum value.
+        /// </summary>
+        /// <param name="provider">The provider string.</param>
+        /// <returns>The converted provider.</returns>
+        public static VectorDbProvider ConvertToVectorDbProvider(this string provider)
+        {
+            provider = provider?.ToLower();
+            if (provider == VectorDbProvider.Weaviate.ToString().ToLower()) return VectorDbProvider.Weaviate;
+            return VectorDbProvider.Azure;
+        }
     }
 }

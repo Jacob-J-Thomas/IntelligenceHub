@@ -46,6 +46,7 @@ namespace IntelligenceHub.Host
 
             var agiClientSettingsSection = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings));
             var agiClientSettings = agiClientSettingsSection.Get<AGIClientSettings>();
+            builder.Services.Configure<WeaviateClientSettings>(builder.Configuration.GetSection(nameof(WeaviateClientSettings)));
 
             builder.Services.Configure<Settings>(settingsSection);
             builder.Services.Configure<AuthSettings>(authSection);
@@ -84,7 +85,10 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton<AzureAIClient>();
             builder.Services.AddSingleton<AnthropicAIClient>();
             builder.Services.AddSingleton<IToolClient, ToolClient>();
-            builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
+            if (settings.VectorDbProvider == VectorDbProvider.Weaviate)
+                builder.Services.AddSingleton<IAISearchServiceClient, WeaviateSearchServiceClient>();
+            else
+                builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
             builder.Services.AddSingleton<IAIAuth0Client, Auth0Client>();
 
             // Repositories
