@@ -77,8 +77,7 @@ required_env_vars = [
     "SearchServiceClientSettings_Key",
     "Settings_DefaultImageHost",  # token for DefaultImageGenHost
     "WeaviateClientSettings_Endpoint",
-    "WeaviateClientSettings_ApiKey",
-    "Settings_VectorDbProvider"
+    "WeaviateClientSettings_ApiKey"
 ]
 
 # Check the current environment

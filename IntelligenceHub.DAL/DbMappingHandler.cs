@@ -288,6 +288,7 @@ namespace IntelligenceHub.DAL
                 Name = dbIndexData.Name,
                 QueryType = dbIndexData.QueryType?.ConvertStringToQueryType() ?? QueryType.Simple,
                 GenerationHost = dbIndexData.GenerationHost.ConvertToServiceHost(),
+                RagHost = dbIndexData.RagHost.ConvertToVectorDbProvider(),
                 ChunkOverlap = dbIndexData.ChunkOverlap ?? DefaultChunkOverlap, // make this a global variable
                 IndexingInterval = dbIndexData.IndexingInterval,
                 MaxRagAttachments = dbIndexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable
@@ -325,6 +326,7 @@ namespace IntelligenceHub.DAL
                 Name = indexData.Name,
                 QueryType = indexData.QueryType.ToString(),
                 GenerationHost = indexData.GenerationHost.ToString() ?? AGIServiceHosts.None.ToString(),
+                RagHost = indexData.RagHost.ToString(),
                 ChunkOverlap = chunkOverlap ?? DefaultChunkOverlap,
                 IndexingInterval = indexData.IndexingInterval ?? TimeSpan.FromHours(23.99), // only slightly under 1 day is supported
                 MaxRagAttachments = indexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable,

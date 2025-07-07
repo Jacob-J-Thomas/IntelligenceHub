@@ -339,6 +339,7 @@ namespace IntelligenceHub.Business.Handlers
             if (string.IsNullOrWhiteSpace(index.Name)) return "The provided index name is invalid.";
 
             var includesContentSummarization = index.GenerateKeywords ?? index.GenerateTopic ?? false;
+            if (!Enum.IsDefined(typeof(VectorDbProvider), index.RagHost)) return "The RagHost provided is invalid.";
             if (index.GenerationHost == null && includesContentSummarization) return "The GenerationProfile is required if 'GenerateKeywords' or 'GenerateTopic' are set to true.";
             if (index.Name.Length > 128) return "The index name exceeds the maximum allowed length of 128 characters.";
             if (index.IndexingInterval <= TimeSpan.Zero) return "IndexingInterval must be a positive value.";

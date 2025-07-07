@@ -80,15 +80,14 @@ namespace IntelligenceHub.Host
 
             // Clients and Client Factory
             builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
+            builder.Services.AddSingleton<IRagClientFactory, RagClientFactory>();
             builder.Services.AddSingleton<IAGIClient, AzureAIClient>();
             builder.Services.AddSingleton<OpenAIClient>();
             builder.Services.AddSingleton<AzureAIClient>();
             builder.Services.AddSingleton<AnthropicAIClient>();
             builder.Services.AddSingleton<IToolClient, ToolClient>();
-            if (settings.VectorDbProvider == VectorDbProvider.Weaviate)
-                builder.Services.AddSingleton<IAISearchServiceClient, WeaviateSearchServiceClient>();
-            else
-                builder.Services.AddSingleton<IAISearchServiceClient, AISearchServiceClient>();
+            builder.Services.AddSingleton<AISearchServiceClient>();
+            builder.Services.AddSingleton<WeaviateSearchServiceClient>();
             builder.Services.AddSingleton<IAIAuth0Client, Auth0Client>();
 
             // Repositories

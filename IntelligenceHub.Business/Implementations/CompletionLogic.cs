@@ -25,7 +25,7 @@ namespace IntelligenceHub.Business.Implementations
         private const string _defaultUser = "User";
 
         private readonly IAGIClientFactory _agiClientFactory;
-        private readonly IAISearchServiceClient _searchClient;
+        private readonly IRagClientFactory _ragClientFactory;
         private readonly IToolClient _ToolClient;
         private readonly IProfileRepository _profileDb;
         private readonly IToolRepository _toolDb;
@@ -44,7 +44,7 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="indexMetaRepository">DAL repository to retrieve information about existing RAG tables.</param>
         public CompletionLogic(
             IAGIClientFactory agiClientFactory,
-            IAISearchServiceClient searchClient,
+            IRagClientFactory ragClientFactory,
             IToolClient toolClient,
             IToolRepository toolRepository,
             IProfileRepository profileRepository,
@@ -56,7 +56,7 @@ namespace IntelligenceHub.Business.Implementations
             _profileDb = profileRepository;
             _messageHistoryRepository = messageHistoryRepository;
             _ragMetaRepository = indexMetaRepository;
-            _searchClient = searchClient;
+            _ragClientFactory = ragClientFactory;
             _agiClientFactory = agiClientFactory;
         }
 
@@ -510,7 +510,8 @@ namespace IntelligenceHub.Business.Implementations
             if (string.IsNullOrWhiteSpace(intentfulQuery)) return null;
 
             var indexData = DbMappingHandler.MapFromDbIndexMetadata(dbIndex);
-            var ragData = await _searchClient.SearchIndex(indexData, intentfulQuery);
+            var ragClient = _ragClientFactory.GetClient(indexData.RagHost);
+            var ragData = await ragClient.SearchIndex(indexData, intentfulQuery);
 
             var sb = new StringBuilder();
             await foreach (var item in ragData.GetResultsAsync())

@@ -17,6 +17,8 @@ namespace IntelligenceHub.DAL.Models
         [Required]
         public string GenerationHost { get; set; } = string.Empty;
         [Required]
+        public string RagHost { get; set; } = VectorDbProvider.Azure.ToString();
+        [Required]
         public TimeSpan IndexingInterval { get; set; }
         public string? EmbeddingModel { get; set; }
         public int? MaxRagAttachments { get; set; }
