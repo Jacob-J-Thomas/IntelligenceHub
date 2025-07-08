@@ -102,9 +102,9 @@ namespace IntelligenceHub.Client.Implementations
             {
                 @class = indexDefinition.Name,
                 vectorizer = model,
-                properties = new[]
+                properties = new List<SchemaProperty>
                 {
-                    new
+                    new SchemaProperty
                     {
                         name = "title",
                         dataType = new[]{"text"},
@@ -113,7 +113,7 @@ namespace IntelligenceHub.Client.Implementations
                             [model] = new { skip = !(indexDefinition.GenerateTitleVector ?? false) }
                         }
                     },
-                    new
+                    new SchemaProperty
                     {
                         name = "chunk",
                         dataType = new[]{"text"},
@@ -122,7 +122,7 @@ namespace IntelligenceHub.Client.Implementations
                             [model] = new { skip = !(indexDefinition.GenerateContentVector ?? false) }
                         }
                     },
-                    new
+                    new SchemaProperty
                     {
                         name = "topic",
                         dataType = new[]{"text"},
@@ -131,7 +131,7 @@ namespace IntelligenceHub.Client.Implementations
                             [model] = new { skip = !(indexDefinition.GenerateTopicVector ?? false) }
                         }
                     },
-                    new
+                    new SchemaProperty
                     {
                         name = "keywords",
                         dataType = new[]{"text"},
@@ -140,9 +140,9 @@ namespace IntelligenceHub.Client.Implementations
                             [model] = new { skip = !(indexDefinition.GenerateKeywordVector ?? false) }
                         }
                     },
-                    new { name = "source", dataType = new[]{"text"} },
-                    new { name = "created", dataType = new[]{"date"} },
-                    new { name = "modified", dataType = new[]{"date"} }
+                    new SchemaProperty { name = "source", dataType = new[]{"text"} },
+                    new SchemaProperty { name = "created", dataType = new[]{"date"} },
+                    new SchemaProperty { name = "modified", dataType = new[]{"date"} }
                 }
             };
             var req = CreateRequest(HttpMethod.Post, "/v1/schema", schema);
@@ -233,6 +233,14 @@ namespace IntelligenceHub.Client.Implementations
             var req = CreateRequest(HttpMethod.Delete, $"/v1/objects/{id}");
             var res = await _httpClient.SendAsync(req);
             return res.IsSuccessStatusCode;
+        }
+
+        // Move/Refactor
+        private class SchemaProperty
+        {
+            public string name { get; set; }
+            public string[] dataType { get; set; }
+            public Dictionary<string, object>? moduleConfig { get; set; }  // nullable to allow absence
         }
     }
 }
