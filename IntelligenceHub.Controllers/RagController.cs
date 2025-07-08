@@ -1,8 +1,13 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Business.Interfaces;
+using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Extensions;
+using IntelligenceHub.DAL.Interfaces;
+using IntelligenceHub.DAL;
+using IntelligenceHub.DAL.Models;
+using IntelligenceHub.Business.Handlers;
 using static IntelligenceHub.Common.GlobalVariables;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,14 +25,22 @@ namespace IntelligenceHub.Controllers
     public class RagController : ControllerBase
     {
         private readonly IRagLogic _ragLogic;
+        private readonly IIndexMetaRepository _metaRepository;
+        private readonly IIndexRepository _indexRepository;
+        private readonly WeaviateSearchServiceClient _weaviateClient;
+        private readonly IBackgroundTaskQueueHandler _taskQueue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RagController"/> class.
         /// </summary>
         /// <param name="ragLogic">The business logic for managing RAG indexes.</param>
-        public RagController(IRagLogic ragLogic)
+        public RagController(IRagLogic ragLogic, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, WeaviateSearchServiceClient weaviateClient, IBackgroundTaskQueueHandler taskQueue)
         {
             _ragLogic = ragLogic;
+            _metaRepository = metaRepository;
+            _indexRepository = indexRepository;
+            _weaviateClient = weaviateClient;
+            _taskQueue = taskQueue;
         }
 
         /// <summary>
@@ -183,6 +196,16 @@ namespace IntelligenceHub.Controllers
             try
             {
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+
+                var meta = await _metaRepository.GetByNameAsync(index);
+                if (meta == null) return NotFound($"No index with the name '{index}' was found.");
+
+                if (meta.RagHost.Equals(RagServiceHost.Weaviate.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    _taskQueue.QueueBackgroundWorkItem(async token => await SyncWeaviateIndex(index, token));
+                    return NoContent();
+                }
+
                 var response = await _ragLogic.RunIndexUpdate(index);
                 if (response.IsSuccess) return NoContent();
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -342,6 +365,37 @@ namespace IntelligenceHub.Controllers
             catch (Exception)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
+            }
+        }
+
+        private async Task SyncWeaviateIndex(string index, CancellationToken token)
+        {
+            const int batch = 100;
+            int page = 1;
+            var sqlDocs = new List<DbIndexDocument>();
+            IEnumerable<DbIndexDocument> pageDocs;
+            do
+            {
+                pageDocs = await _indexRepository.GetAllAsync(index, batch, page);
+                sqlDocs.AddRange(pageDocs);
+                page++;
+            } while (pageDocs.Any());
+
+            var weavDocs = await _weaviateClient.GetAllDocuments(index);
+            var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
+
+            foreach (var wdoc in weavDocs)
+            {
+                if (!sqlLookup.ContainsKey(wdoc.Id))
+                {
+                    await _weaviateClient.DeleteDocument(index, wdoc.Id);
+                }
+            }
+
+            foreach (var sdoc in sqlDocs)
+            {
+                var dto = DbMappingHandler.MapFromDbIndexDocument(sdoc);
+                await _weaviateClient.UpsertDocument(index, dto);
             }
         }
     }
