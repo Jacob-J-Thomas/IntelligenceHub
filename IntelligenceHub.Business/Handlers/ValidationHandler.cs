@@ -349,6 +349,7 @@ namespace IntelligenceHub.Business.Handlers
             if (index.MaxRagAttachments < 0) return "MaxRagAttachments must be a non-negative integer greater than 0.";
             if (index.MaxRagAttachments > 20) return "MaxRagAttachments cannot exceed 20.";
             if (index.ChunkOverlap < 0 || index.ChunkOverlap > 1) return "ChunkOverlap must be between 0 and 1 (inclusive).";
+            if (index.QueryType == QueryType.VectorSemanticHybrid && index.RagHost == RagServiceHost.Weaviate) return "The Weaviate client does not support the VectorSemanticHybrid query type at this time.";
 
             if (!string.IsNullOrEmpty(index.ScoringProfile?.Name))
             {

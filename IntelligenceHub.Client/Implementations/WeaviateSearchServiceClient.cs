@@ -48,7 +48,7 @@ namespace IntelligenceHub.Client.Implementations
             {
                 searchClause = $"nearText: {{ concepts: [\"{query}\"] }}";
             }
-            else if (index.QueryType == QueryType.VectorSimpleHybrid || index.QueryType == QueryType.VectorSemanticHybrid)
+            else if (index.QueryType == QueryType.VectorSimpleHybrid)
             {
                 // Hybrid search combines BM25 and vector similarity. Using a default alpha of 0.5
                 searchClause = $"hybrid: {{ query: \"{query}\", alpha: 0.5 }}";
@@ -59,9 +59,10 @@ namespace IntelligenceHub.Client.Implementations
                 searchClause = $"bm25: {{ query: \"{query}\" }}";
             }
 
+            var className = char.ToUpper(index.Name[0]) + index.Name.Substring(1); // Weaviate is case sensative
             var gql = new
             {
-                query = $"{{ Get {{ {index.Name}({searchClause}) {{ title chunk topic keywords source created modified }} }} }}"
+                query = $"{{ Get {{ {className}({searchClause}) {{ title chunk topic keywords source created modified }} }} }}"
             };
             var req = CreateRequest(HttpMethod.Post, "/v1/graphql", gql);
             var res = await _httpClient.SendAsync(req);
