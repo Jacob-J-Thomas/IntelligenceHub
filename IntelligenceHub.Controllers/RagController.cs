@@ -20,7 +20,6 @@ namespace IntelligenceHub.Controllers
     public class RagController : ControllerBase
     {
         private readonly IRagLogic _ragLogic;
-        // Controller only depends on RagLogic for operations
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RagController"/> class.
@@ -30,7 +29,6 @@ namespace IntelligenceHub.Controllers
         {
             _ragLogic = ragLogic;
         }
-
         /// <summary>
         /// This endpoint is used to get a RAG index by name.
         /// </summary>
@@ -184,7 +182,6 @@ namespace IntelligenceHub.Controllers
             try
             {
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
-
                 var response = await _ragLogic.RunIndexUpdate(index);
                 if (response.IsSuccess) return NoContent();
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -346,6 +343,5 @@ namespace IntelligenceHub.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
         }
-
     }
 }
