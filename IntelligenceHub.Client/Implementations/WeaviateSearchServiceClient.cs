@@ -163,6 +163,18 @@ namespace IntelligenceHub.Client.Implementations
         public Task<bool> CreateDatasource(string databaseName) => Task.FromResult(true);
         public Task<bool> DeleteDatasource(string indexName) => Task.FromResult(true);
 
+        private static string IntToUuid(int id)
+        {
+            return $"00000000-0000-0000-0000-{id:D12}";
+        }
+
+        private static int UuidToInt(string uuid)
+        {
+            var parts = uuid.Split('-');
+            if (parts.Length != 5) return 0;
+            return int.TryParse(parts[4], out var id) ? id : 0;
+        }
+
         public async Task<List<IndexDocument>> GetAllDocuments(string indexName)
         {
             var gql = new
@@ -180,8 +192,8 @@ namespace IntelligenceHub.Client.Implementations
             {
                 foreach (var item in resultsToken)
                 {
-                    var idStr = item["_additional"]?["id"]?.Value<string>() ?? "0";
-                    int.TryParse(idStr, out var id);
+                    var idStr = item["_additional"]?["id"]?.Value<string>() ?? string.Empty;
+                    var id = UuidToInt(idStr);
                     results.Add(new IndexDocument
                     {
                         Id = id,
@@ -200,9 +212,10 @@ namespace IntelligenceHub.Client.Implementations
 
         public async Task<bool> UpsertDocument(string indexName, IndexDocument document)
         {
+            var uuid = IntToUuid(document.Id);
             var body = new
             {
-                id = document.Id.ToString(),
+                id = uuid,
                 @class = indexName,
                 properties = new
                 {
@@ -216,7 +229,7 @@ namespace IntelligenceHub.Client.Implementations
                 }
             };
 
-            var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{document.Id}", body);
+            var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{uuid}", body);
             var res = await _httpClient.SendAsync(req);
             if (res.IsSuccessStatusCode) return true;
             if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -230,7 +243,8 @@ namespace IntelligenceHub.Client.Implementations
 
         public async Task<bool> DeleteDocument(string indexName, int id)
         {
-            var req = CreateRequest(HttpMethod.Delete, $"/v1/objects/{id}");
+            var uuid = IntToUuid(id);
+            var req = CreateRequest(HttpMethod.Delete, $"/v1/objects/{uuid}");
             var res = await _httpClient.SendAsync(req);
             return res.IsSuccessStatusCode;
         }
