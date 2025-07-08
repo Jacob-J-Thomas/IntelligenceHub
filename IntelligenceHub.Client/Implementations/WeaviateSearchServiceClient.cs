@@ -94,16 +94,52 @@ namespace IntelligenceHub.Client.Implementations
 
         public async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
         {
+            var model = string.IsNullOrWhiteSpace(indexDefinition.EmbeddingModel)
+                ? DefaultWeaviateEmbeddingModel
+                : indexDefinition.EmbeddingModel;
+
             var schema = new
             {
                 @class = indexDefinition.Name,
-                vectorizer = "none",
+                vectorizer = model,
                 properties = new[]
                 {
-                    new { name = "title", dataType = new[]{"text"} },
-                    new { name = "chunk", dataType = new[]{"text"} },
-                    new { name = "topic", dataType = new[]{"text"} },
-                    new { name = "keywords", dataType = new[]{"text"} },
+                    new
+                    {
+                        name = "title",
+                        dataType = new[]{"text"},
+                        moduleConfig = new Dictionary<string, object>
+                        {
+                            [model] = new { skip = !(indexDefinition.GenerateTitleVector ?? false) }
+                        }
+                    },
+                    new
+                    {
+                        name = "chunk",
+                        dataType = new[]{"text"},
+                        moduleConfig = new Dictionary<string, object>
+                        {
+                            [model] = new { skip = !(indexDefinition.GenerateContentVector ?? false) }
+                        }
+                    },
+                    new
+                    {
+                        name = "topic",
+                        dataType = new[]{"text"},
+                        moduleConfig = new Dictionary<string, object>
+                        {
+                            [model] = new { skip = !(indexDefinition.GenerateTopicVector ?? false) }
+                        }
+                    },
+                    new
+                    {
+                        name = "keywords",
+                        dataType = new[]{"text"},
+                        moduleConfig = new Dictionary<string, object>
+                        {
+                            [model] = new { skip = !(indexDefinition.GenerateKeywordVector ?? false) }
+                        }
+                    },
                     new { name = "source", dataType = new[]{"text"} },
                     new { name = "created", dataType = new[]{"date"} },
                     new { name = "modified", dataType = new[]{"date"} }

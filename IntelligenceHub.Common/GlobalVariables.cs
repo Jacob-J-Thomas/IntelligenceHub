@@ -245,6 +245,11 @@
         public const string DefaultEmbeddingModel = "text-embedding-3-large";
 
         /// <summary>
+        /// The default embedding model used when indexing with Weaviate.
+        /// </summary>
+        public const string DefaultWeaviateEmbeddingModel = "text2vec-openai";
+
+        /// <summary>
         /// The default model for image generation.
         /// </summary>
         public const string DefaultImageGenModel = "dall-e-3";
