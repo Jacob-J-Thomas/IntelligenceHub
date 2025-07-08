@@ -9,6 +9,7 @@ using IntelligenceHub.Common.Config;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -42,9 +43,25 @@ namespace IntelligenceHub.Client.Implementations
 
         public async Task<SearchResults<IndexDefinition>> SearchIndex(IndexMetadata index, string query)
         {
+            string searchClause;
+            if (index.QueryType == QueryType.Vector)
+            {
+                searchClause = $"nearText: {{ concepts: [\"{query}\"] }}";
+            }
+            else if (index.QueryType == QueryType.VectorSimpleHybrid || index.QueryType == QueryType.VectorSemanticHybrid)
+            {
+                // Hybrid search combines BM25 and vector similarity. Using a default alpha of 0.5
+                searchClause = $"hybrid: {{ query: \"{query}\", alpha: 0.5 }}";
+            }
+            else
+            {
+                // Default to BM25 text search for simple/full/semantic queries
+                searchClause = $"bm25: {{ query: \"{query}\" }}";
+            }
+
             var gql = new
             {
-                query = $"{{ Get {{ {index.Name}(nearText: {{ concepts: [\"{query}\"] }}) {{ title chunk topic keywords source created modified }} }} }}"
+                query = $"{{ Get {{ {index.Name}({searchClause}) {{ title chunk topic keywords source created modified }} }} }}"
             };
             var req = CreateRequest(HttpMethod.Post, "/v1/graphql", gql);
             var res = await _httpClient.SendAsync(req);

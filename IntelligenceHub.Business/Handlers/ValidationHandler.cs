@@ -352,6 +352,7 @@ namespace IntelligenceHub.Business.Handlers
 
             if (!string.IsNullOrEmpty(index.ScoringProfile?.Name))
             {
+                if (index.RagHost == RagServiceHost.Weaviate) return "Scoring profiles are not supported when using the Weaviate RagHost.";
                 if (string.IsNullOrWhiteSpace(index.ScoringProfile.Name)) return "The ScoringProfile name is required.";
                 if (index.ScoringProfile.Name.Length > 128) return "The ScoringProfile name exceeds the maximum allowed length of 255 characters.";
                 if (index.QueryType.ToString().Length > 255) return "The QueryType exceeds the maximum allowed length of 255 characters.";
