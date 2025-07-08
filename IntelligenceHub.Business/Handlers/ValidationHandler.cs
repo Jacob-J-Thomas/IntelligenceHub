@@ -346,6 +346,14 @@ namespace IntelligenceHub.Business.Handlers
             if (index.IndexingInterval <= TimeSpan.Zero) return "IndexingInterval must be a positive value.";
             if (index.IndexingInterval >= TimeSpan.FromDays(1)) return "The indexing interval must be less than 1 day.";
             if (!string.IsNullOrWhiteSpace(index.EmbeddingModel) && index.EmbeddingModel.Length > 255) return "The EmbeddingModel exceeds the maximum allowed length of 255 characters.";
+            if (!string.IsNullOrWhiteSpace(index.EmbeddingModel))
+            {
+                var lowerModel = index.EmbeddingModel.ToLower();
+                if (index.RagHost == RagServiceHost.Weaviate && !lowerModel.StartsWith("text2vec"))
+                    return "EmbeddingModel must correspond with the Weaviate RagHost (text2vec-*).";
+                if (index.RagHost == RagServiceHost.Azure && lowerModel.StartsWith("text2vec"))
+                    return "EmbeddingModel beginning with 'text2vec-' is reserved for the Weaviate RagHost.";
+            }
             if (index.MaxRagAttachments < 0) return "MaxRagAttachments must be a non-negative integer greater than 0.";
             if (index.MaxRagAttachments > 20) return "MaxRagAttachments cannot exceed 20.";
             if (index.ChunkOverlap < 0 || index.ChunkOverlap > 1) return "ChunkOverlap must be between 0 and 1 (inclusive).";
