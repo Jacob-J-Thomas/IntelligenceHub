@@ -109,16 +109,8 @@ namespace IntelligenceHub.Business.Implementations
 
             // create the index in the selected RAG service
             var ragClient = _ragClientFactory.GetClient(indexDefinition.RagHost);
-            success = await ragClient.UpsertIndex(indexDefinition);
+            success = await ragClient.CreateIndex(indexDefinition);
             if (!success) return APIResponseWrapper<bool>.Failure("Failed to add the index to the corresponding search service resource.", APIResponseStatusCodes.InternalError);
-
-            // Create a datasource for the SQL DB in Azure AI Search
-            success = await ragClient.CreateDatasource(indexDefinition.Name);
-            if (!success) return APIResponseWrapper<bool>.Failure("Failed to connect the index to the Azure AI search service resource.", APIResponseStatusCodes.InternalError);
-
-            // create the indexer to run scheduled ingestions of the datasource
-            success = await ragClient.UpsertIndexer(indexDefinition);
-            if (!success) return APIResponseWrapper<bool>.Failure("Failed to create the indexer used to ingest documents within the search service.", APIResponseStatusCodes.InternalError);
             return APIResponseWrapper<bool>.Success(true);
         }
 
@@ -183,8 +175,11 @@ namespace IntelligenceHub.Business.Implementations
                 if (generateMissingFields) _ = GenerateMissingRagFields(indexDefinition);
                 await _ragRepository.MarkIndexForUpdateAsync(newDefinition.Name);
                 var ragClient = _ragClientFactory.GetClient(indexDefinition.RagHost);
-                var indexerRepsonse = await ragClient.RunIndexer(newDefinition.Name);
-                if (!indexerRepsonse) return APIResponseWrapper<bool>.Failure("Failed to update the indexer against the search service.", APIResponseStatusCodes.InternalError);
+                if (ragClient is IAzureAISearchServiceClient azureClient)
+                {
+                    var indexerRepsonse = await azureClient.RunIndexer(newDefinition.Name);
+                    if (!indexerRepsonse) return APIResponseWrapper<bool>.Failure("Failed to update the indexer against the search service.", APIResponseStatusCodes.InternalError);
+                }
             }
             return APIResponseWrapper<bool>.Success(true);
         }
@@ -275,12 +270,6 @@ namespace IntelligenceHub.Business.Implementations
             {
                 if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.None) return APIResponseWrapper<bool>.Failure($"Failed to convert the RagHost to a valid enum.", APIResponseStatusCodes.InternalError);
                 var ragClient = _ragClientFactory.GetClient(indexMetadata.RagHost.ConvertToRagHost());
-                success = await ragClient.DeleteIndexer(indexMetadata.Name);
-                if (!success) return APIResponseWrapper<bool>.Failure("Failed to delete the indexer within the search service.", APIResponseStatusCodes.InternalError);
-
-                success = await ragClient.DeleteDatasource(indexMetadata.Name);
-                if (!success) return APIResponseWrapper<bool>.Failure("Failed to delete the datasource connection within the search service.", APIResponseStatusCodes.InternalError);
-
                 success = await ragClient.DeleteIndex(index);
                 if (!success) return APIResponseWrapper<bool>.Failure("Failed to delete the index within the search service.", APIResponseStatusCodes.InternalError);
 
@@ -345,8 +334,11 @@ namespace IntelligenceHub.Business.Implementations
             }
 
             var ragClient = _ragClientFactory.GetClient(indexMetadata.RagHost.ConvertToRagHost());
-            var success = await ragClient.RunIndexer(index);
-            if (success) return APIResponseWrapper<bool>.Success(true);
+            if (ragClient is IAzureAISearchServiceClient azureClient)
+            {
+                var success = await azureClient.RunIndexer(index);
+                if (success) return APIResponseWrapper<bool>.Success(true);
+            }
             return APIResponseWrapper<bool>.Failure($"Failed to mark the SQL index for updating.", APIResponseStatusCodes.InternalError);
         }
 

@@ -92,7 +92,7 @@ namespace IntelligenceHub.Client.Implementations
             return SearchModelFactory.SearchResults(values: results, totalCount: results.Count, facets: null, coverage: null, rawResponse: null);
         }
 
-        public async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
+        public async Task<bool> CreateIndex(IndexMetadata indexDefinition)
         {
             var model = string.IsNullOrWhiteSpace(indexDefinition.EmbeddingModel)
                 ? DefaultWeaviateEmbeddingModel
@@ -157,11 +157,6 @@ namespace IntelligenceHub.Client.Implementations
             return res.IsSuccessStatusCode;
         }
 
-        public Task<bool> UpsertIndexer(IndexMetadata index) => Task.FromResult(true);
-        public Task<bool> RunIndexer(string indexName) => Task.FromResult(true);
-        public Task<bool> DeleteIndexer(string indexName) => Task.FromResult(true);
-        public Task<bool> CreateDatasource(string databaseName) => Task.FromResult(true);
-        public Task<bool> DeleteDatasource(string indexName) => Task.FromResult(true);
 
         public async Task<List<IndexDocument>> GetAllDocuments(string indexName)
         {

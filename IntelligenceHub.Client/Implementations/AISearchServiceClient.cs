@@ -16,7 +16,7 @@ namespace IntelligenceHub.Client.Implementations
     /// <summary>
     /// A Azure AI Search Services client oriented around RAG construction and consumption.
     /// </summary>
-    public class AISearchServiceClient : IAISearchServiceClient
+    public class AISearchServiceClient : IAzureAISearchServiceClient
     {
         private readonly SearchIndexClient _indexClient;
         private readonly SearchIndexerClient _indexerClient;
@@ -155,12 +155,24 @@ namespace IntelligenceHub.Client.Implementations
             return response.Value;
         }
 
+        public async Task<bool> CreateIndex(IndexMetadata indexDefinition)
+        {
+            var success = await UpsertIndex(indexDefinition);
+            if (!success) return false;
+
+            success = await CreateDatasource(indexDefinition.Name);
+            if (!success) return false;
+
+            success = await UpsertIndexer(indexDefinition);
+            return success;
+        }
+
         /// <summary>
         /// Creates or updates a RAG index.
         /// </summary>
         /// <param name="indexDefinition">The definition of the index.</param>
         /// <returns>A boolean indicating success or failure of the operation.</returns>
-        public async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
+        private async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
         {
             var searchIndex = GetIndexDefinition(indexDefinition);
 
@@ -211,10 +223,22 @@ namespace IntelligenceHub.Client.Implementations
         /// </summary>
         /// <param name="indexName">The name of the index.</param>
         /// <returns>A boolean indicating success or failure of the operation.</returns>
-        public async Task<bool> DeleteIndex(string indexName)
+        private async Task<bool> DeleteSearchIndex(string indexName)
         {
             var response = await _indexClient.DeleteIndexAsync(indexName);
             return response.Status > 199 && response.Status < 300;
+        }
+
+        public async Task<bool> DeleteIndex(string indexName)
+        {
+            var success = await DeleteIndexer(indexName);
+            if (!success) return false;
+
+            success = await DeleteDatasource(indexName);
+            if (!success) return false;
+
+            success = await DeleteSearchIndex(indexName);
+            return success;
         }
 
         /// <summary>
@@ -222,7 +246,7 @@ namespace IntelligenceHub.Client.Implementations
         /// </summary>
         /// <param name="indexName">The name of the index.</param>
         /// <returns>A boolean indicating success or failure of the operation.</returns>
-        public async Task<bool> DeleteIndexer(string indexName)
+        private async Task<bool> DeleteIndexer(string indexName)
         {
             var skillsetDeletionResponse = await _indexerClient.DeleteSkillsetAsync(indexName.ToLower() + _skillsetSuffix );
             if (skillsetDeletionResponse == null || skillsetDeletionResponse.IsError) return false;
@@ -236,7 +260,7 @@ namespace IntelligenceHub.Client.Implementations
         /// </summary>
         /// <param name="indexName">The name of the index.</param>
         /// <returns>A boolean indicating success or failure of the operation.</returns>
-        public async Task<bool> CreateDatasource(string indexName)
+        private async Task<bool> CreateDatasource(string indexName)
         {
             try
             {
@@ -259,7 +283,7 @@ namespace IntelligenceHub.Client.Implementations
         /// </summary>
         /// <param name="indexName">The name of the index.</param>
         /// <returns>A boolean indicating success or failure of the operation.</returns>
-        public async Task<bool> DeleteDatasource(string indexName)
+        private async Task<bool> DeleteDatasource(string indexName)
         {
             var response = await _indexerClient.DeleteDataSourceConnectionAsync(indexName);
             return response.Status > 199 && response.Status < 300;
@@ -281,7 +305,7 @@ namespace IntelligenceHub.Client.Implementations
         /// </summary>
         /// <param name="index">The new definition of the index.</param>
         /// <returns>A boolean indicating success or failure of the operation.</returns>
-        public async Task<bool> UpsertIndexer(IndexMetadata index)
+        private async Task<bool> UpsertIndexer(IndexMetadata index)
         {
             // Define the indexer
             var interval = TimeSpan.FromDays(1);
