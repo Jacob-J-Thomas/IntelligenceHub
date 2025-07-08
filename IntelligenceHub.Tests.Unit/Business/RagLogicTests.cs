@@ -5,6 +5,7 @@ using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Factories;
 using IntelligenceHub.Business.Implementations;
 using IntelligenceHub.Client.Interfaces;
+using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Interfaces;
@@ -45,7 +46,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             var settings = new Settings { ValidAGIModels = new[] { "Model1", "Model2" } };
             _mockIOptions.Setup(m => m.CurrentValue).Returns(settings);
 
-            _ragLogic = new RagLogic(_mockIOptions.Object, _mockClientFactory.Object, _mockProfileRepository.Object, _mockSearchClient.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object);
+            _ragLogic = new RagLogic(_mockIOptions.Object, _mockClientFactory.Object, _mockProfileRepository.Object, _mockSearchClient.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object, null!);
         }
 
         [Fact]

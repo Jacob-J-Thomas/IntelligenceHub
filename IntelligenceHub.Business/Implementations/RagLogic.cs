@@ -3,6 +3,7 @@ using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Factories;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Client.Interfaces;
+using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
@@ -27,6 +28,7 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IValidationHandler _validationHandler;
         private readonly IBackgroundTaskQueueHandler _backgroundTaskQueue;
         private readonly IntelligenceHubDbContext _dbContext;
+        private readonly WeaviateSearchServiceClient _weaviateClient;
 
         private readonly string _defaultAzureModel;
 
@@ -42,7 +44,7 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="validationHandler">A class that can be used to validate DTO bodies passed to the API.</param>
         /// <param name="backgroundTaskQueue">A background task handler useful for performing operations without tying up resources.</param>
         /// <param name="context">DAL context from EFCore used for some more specialized scenarios.</param>
-        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context)
+        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient)
         {
             _defaultAzureModel = settings.CurrentValue.ValidAGIModels.FirstOrDefault() ?? string.Empty;
             _agiClientFactory = agiFactory;
@@ -52,6 +54,7 @@ namespace IntelligenceHub.Business.Implementations
             _validationHandler = validationHandler;
             _backgroundTaskQueue = backgroundTaskQueue;
             _dbContext = context;
+            _weaviateClient = weaviateClient;
         }
 
         /// <summary>
@@ -335,6 +338,12 @@ namespace IntelligenceHub.Business.Implementations
             var indexMetadata = await _metaRepository.GetByNameAsync(index);
             if (indexMetadata == null) return APIResponseWrapper<bool>.Failure($"No index with the name '{index}' was found.", APIResponseStatusCodes.NotFound);
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.None) return APIResponseWrapper<bool>.Failure($"Failed to convert the RagHost to a valid enum.", APIResponseStatusCodes.InternalError);
+            if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.Weaviate)
+            {
+                _backgroundTaskQueue.QueueBackgroundWorkItem(async token => await SyncWeaviateIndex(index, token));
+                return APIResponseWrapper<bool>.Success(true);
+            }
+
             var ragClient = _ragClientFactory.GetClient(indexMetadata.RagHost.ConvertToRagHost());
             var success = await ragClient.RunIndexer(index);
             if (success) return APIResponseWrapper<bool>.Success(true);
@@ -433,6 +442,37 @@ namespace IntelligenceHub.Business.Implementations
                 if (success) deletedDocuments++;
             }
             return APIResponseWrapper<int>.Success(deletedDocuments);
+        }
+
+        private async Task SyncWeaviateIndex(string index, CancellationToken token)
+        {
+            const int batch = 100;
+            int page = 1;
+            var sqlDocs = new List<DbIndexDocument>();
+            IEnumerable<DbIndexDocument> pageDocs;
+            do
+            {
+                pageDocs = await _ragRepository.GetAllAsync(index, batch, page);
+                sqlDocs.AddRange(pageDocs);
+                page++;
+            } while (pageDocs.Any());
+
+            var weavDocs = await _weaviateClient.GetAllDocuments(index);
+            var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
+
+            foreach (var wdoc in weavDocs)
+            {
+                if (!sqlLookup.ContainsKey(wdoc.Id))
+                {
+                    await _weaviateClient.DeleteDocument(index, wdoc.Id);
+                }
+            }
+
+            foreach (var sdoc in sqlDocs)
+            {
+                var dto = DbMappingHandler.MapFromDbIndexDocument(sdoc);
+                await _weaviateClient.UpsertDocument(index, dto);
+            }
         }
 
         #region Private Methods

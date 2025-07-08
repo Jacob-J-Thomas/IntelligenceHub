@@ -29,7 +29,6 @@ namespace IntelligenceHub.Controllers
         {
             _ragLogic = ragLogic;
         }
-
         /// <summary>
         /// This endpoint is used to get a RAG index by name.
         /// </summary>

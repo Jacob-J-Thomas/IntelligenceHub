@@ -108,5 +108,77 @@ namespace IntelligenceHub.Client.Implementations
         public Task<bool> DeleteIndexer(string indexName) => Task.FromResult(true);
         public Task<bool> CreateDatasource(string databaseName) => Task.FromResult(true);
         public Task<bool> DeleteDatasource(string indexName) => Task.FromResult(true);
+
+        public async Task<List<IndexDocument>> GetAllDocuments(string indexName)
+        {
+            var gql = new
+            {
+                query = $"{{ Get {{ {indexName} {{ _additional {{ id }} title chunk topic keywords source created modified }} }} }}"
+            };
+            var req = CreateRequest(HttpMethod.Post, "/v1/graphql", gql);
+            var res = await _httpClient.SendAsync(req);
+            res.EnsureSuccessStatusCode();
+            var content = await res.Content.ReadAsStringAsync();
+            var j = JObject.Parse(content);
+            var resultsToken = j["data"]?["Get"]?[indexName];
+            var results = new List<IndexDocument>();
+            if (resultsToken != null)
+            {
+                foreach (var item in resultsToken)
+                {
+                    var idStr = item["_additional"]?["id"]?.Value<string>() ?? "0";
+                    int.TryParse(idStr, out var id);
+                    results.Add(new IndexDocument
+                    {
+                        Id = id,
+                        Title = item.Value<string>("title") ?? string.Empty,
+                        Content = item.Value<string>("chunk") ?? string.Empty,
+                        Topic = item.Value<string>("topic"),
+                        Keywords = item.Value<string>("keywords"),
+                        Source = item.Value<string>("source") ?? string.Empty,
+                        Created = item.Value<DateTimeOffset?>("created") ?? DateTimeOffset.MinValue,
+                        Modified = item.Value<DateTimeOffset?>("modified") ?? DateTimeOffset.MinValue
+                    });
+                }
+            }
+            return results;
+        }
+
+        public async Task<bool> UpsertDocument(string indexName, IndexDocument document)
+        {
+            var body = new
+            {
+                id = document.Id.ToString(),
+                @class = indexName,
+                properties = new
+                {
+                    title = document.Title,
+                    chunk = document.Content,
+                    topic = document.Topic,
+                    keywords = document.Keywords,
+                    source = document.Source,
+                    created = document.Created,
+                    modified = document.Modified
+                }
+            };
+
+            var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{document.Id}", body);
+            var res = await _httpClient.SendAsync(req);
+            if (res.IsSuccessStatusCode) return true;
+            if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                req = CreateRequest(HttpMethod.Post, "/v1/objects", body);
+                res = await _httpClient.SendAsync(req);
+                return res.IsSuccessStatusCode;
+            }
+            return false;
+        }
+
+        public async Task<bool> DeleteDocument(string indexName, int id)
+        {
+            var req = CreateRequest(HttpMethod.Delete, $"/v1/objects/{id}");
+            var res = await _httpClient.SendAsync(req);
+            return res.IsSuccessStatusCode;
+        }
     }
 }
