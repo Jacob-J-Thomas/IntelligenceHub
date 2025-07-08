@@ -319,6 +319,7 @@ namespace IntelligenceHub.DAL
         /// <returns>A database index metadata entity.</returns>
         public static DbIndexMetadata MapToDbIndexMetadata(IndexMetadata indexData)
         {
+            var defaultEmbeddingModel = indexData.RagHost == RagServiceHost.Azure ? DefaultAzureSearchEmbeddingModel : DefaultWeaviateEmbeddingModel;
             if (indexData.ScoringProfile == null) indexData.ScoringProfile = new IndexScoringProfile();
             var chunkOverlap = indexData.ChunkOverlap;
             return new DbIndexMetadata()
@@ -330,7 +331,7 @@ namespace IntelligenceHub.DAL
                 ChunkOverlap = chunkOverlap ?? DefaultChunkOverlap,
                 IndexingInterval = indexData.IndexingInterval ?? TimeSpan.FromHours(23.99), // only slightly under 1 day is supported
                 MaxRagAttachments = indexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable,
-                EmbeddingModel = indexData.EmbeddingModel ?? DefaultEmbeddingModel,
+                EmbeddingModel = indexData.EmbeddingModel ?? defaultEmbeddingModel,
                 GenerateTopic = indexData.GenerateTopic ?? false,
                 GenerateKeywords = indexData.GenerateKeywords ?? false,
                 GenerateTitleVector = indexData.GenerateTitleVector ?? true,

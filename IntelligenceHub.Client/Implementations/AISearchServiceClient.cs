@@ -307,8 +307,8 @@ namespace IntelligenceHub.Client.Implementations
         {
             var chunkingLengthInChars = 1312; // (avg chars per token = 3.5) * (average recommended chunk size = 375) = 1312.5
             var ragDimensions = 3072;
-            if (string.IsNullOrEmpty(index.EmbeddingModel)) index.EmbeddingModel = DefaultEmbeddingModel;
-            if (index.EmbeddingModel?.ToLower() != DefaultEmbeddingModel.ToLower()) ragDimensions = 1536; // only text-embedding-3-large supports 3072 dimensions
+            if (string.IsNullOrEmpty(index.EmbeddingModel)) index.EmbeddingModel = DefaultAzureSearchEmbeddingModel;
+            if (index.EmbeddingModel?.ToLower() != DefaultAzureSearchEmbeddingModel.ToLower()) ragDimensions = 1536; // only text-embedding-3-large supports 3072 dimensions
 
             var skillsetName = index.Name.ToLower() + _indexerSuffix ;
             var skills = new List<SearchIndexerSkill>();
@@ -432,8 +432,8 @@ namespace IntelligenceHub.Client.Implementations
         {
             // Choose the appropriate rag dimensions for the given embedding model
             var ragDimensions = _defaultRagDimensions;
-            if (string.IsNullOrEmpty(index.EmbeddingModel)) index.EmbeddingModel = DefaultEmbeddingModel;
-            if (index.EmbeddingModel?.ToLower() != DefaultEmbeddingModel.ToLower()) ragDimensions = 1536; // only text-embedding-3-large supports 3072 dimensions
+            if (string.IsNullOrEmpty(index.EmbeddingModel)) index.EmbeddingModel = DefaultAzureSearchEmbeddingModel;
+            if (index.EmbeddingModel?.ToLower() != DefaultAzureSearchEmbeddingModel.ToLower()) ragDimensions = 1536; // only text-embedding-3-large supports 3072 dimensions
 
             var searchIndex = new SearchIndex(index.Name)
             {

@@ -242,7 +242,7 @@
         /// <summary>
         /// The default model for embeddings.
         /// </summary>
-        public const string DefaultEmbeddingModel = "text-embedding-3-large";
+        public const string DefaultAzureSearchEmbeddingModel = "text-embedding-3-large";
 
         /// <summary>
         /// The default embedding model used when indexing with Weaviate.
