@@ -17,11 +17,11 @@ namespace IntelligenceHub.Business.Factories
         }
 
         /// <inheritdoc />
-        public IAISearchServiceClient GetClient(VectorDbProvider host)
+        public IAISearchServiceClient GetClient(RagServiceHost? host)
         {
-            if (host == VectorDbProvider.Weaviate)
-                return _serviceProvider.GetRequiredService<WeaviateSearchServiceClient>();
-            return _serviceProvider.GetRequiredService<AISearchServiceClient>();
+            if (host == RagServiceHost.Weaviate) return _serviceProvider.GetRequiredService<WeaviateSearchServiceClient>();
+            else if (host == RagServiceHost.Azure) return _serviceProvider.GetRequiredService<AISearchServiceClient>();
+            throw new ArgumentException("Could not resolve the provided RagServiceHost.");
         }
     }
 }

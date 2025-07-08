@@ -46,13 +46,13 @@ namespace IntelligenceHub.Host
 
             var agiClientSettingsSection = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings));
             var agiClientSettings = agiClientSettingsSection.Get<AGIClientSettings>();
-            builder.Services.Configure<WeaviateClientSettings>(builder.Configuration.GetSection(nameof(WeaviateClientSettings)));
 
             builder.Services.Configure<Settings>(settingsSection);
             builder.Services.Configure<AuthSettings>(authSection);
             builder.Services.Configure<AppInsightSettings>(insightSettingsSection);
             builder.Services.Configure<AGIClientSettings>(agiClientSettingsSection);
-            builder.Services.Configure<SearchServiceClientSettings>(builder.Configuration.GetRequiredSection(nameof(SearchServiceClientSettings)));
+            builder.Services.Configure<AzureSearchServiceClientSettings>(builder.Configuration.GetRequiredSection(nameof(AzureSearchServiceClientSettings)));
+            builder.Services.Configure<WeaviateSearchServiceClientSettings>(builder.Configuration.GetSection(nameof(WeaviateSearchServiceClientSettings)));
 
             // Register AuthSettings as a singleton
             builder.Services.AddSingleton(authSettings);

@@ -87,14 +87,14 @@ namespace IntelligenceHub.DAL
             }
 
             var host = profileUpdate?.Host ?? existingProfile.Host.ConvertToServiceHost();
-            if (host == AGIServiceHosts.None) host = AGIServiceHosts.OpenAI;
+            if (host == AGIServiceHost.None) host = AGIServiceHost.OpenAI;
 
             var model = profileUpdate?.Model ?? existingProfile.Model ?? null;
             if (string.IsNullOrEmpty(model))
             {
-                if (host == AGIServiceHosts.Azure) model = defaultAzureModel;
-                if (host == AGIServiceHosts.Anthropic) model = DefaultAnthropicModel;
-                if (host == AGIServiceHosts.OpenAI) model = DefaultOpenAIModel;
+                if (host == AGIServiceHost.Azure) model = defaultAzureModel;
+                if (host == AGIServiceHost.Anthropic) model = DefaultAnthropicModel;
+                if (host == AGIServiceHost.OpenAI) model = DefaultOpenAIModel;
             }
 
             existingProfile.Name = profileName;
@@ -288,7 +288,7 @@ namespace IntelligenceHub.DAL
                 Name = dbIndexData.Name,
                 QueryType = dbIndexData.QueryType?.ConvertStringToQueryType() ?? QueryType.Simple,
                 GenerationHost = dbIndexData.GenerationHost.ConvertToServiceHost(),
-                RagHost = dbIndexData.RagHost.ConvertToVectorDbProvider(),
+                RagHost = dbIndexData.RagHost.ConvertToRagHost(),
                 ChunkOverlap = dbIndexData.ChunkOverlap ?? DefaultChunkOverlap, // make this a global variable
                 IndexingInterval = dbIndexData.IndexingInterval,
                 MaxRagAttachments = dbIndexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable
@@ -325,8 +325,8 @@ namespace IntelligenceHub.DAL
             {
                 Name = indexData.Name,
                 QueryType = indexData.QueryType.ToString(),
-                GenerationHost = indexData.GenerationHost.ToString() ?? AGIServiceHosts.None.ToString(),
-                RagHost = indexData.RagHost.ToString(),
+                GenerationHost = indexData.GenerationHost.ToString() ?? AGIServiceHost.None.ToString(),
+                RagHost = indexData.RagHost.ToString() ?? RagServiceHost.None.ToString(),
                 ChunkOverlap = chunkOverlap ?? DefaultChunkOverlap,
                 IndexingInterval = indexData.IndexingInterval ?? TimeSpan.FromHours(23.99), // only slightly under 1 day is supported
                 MaxRagAttachments = indexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable,

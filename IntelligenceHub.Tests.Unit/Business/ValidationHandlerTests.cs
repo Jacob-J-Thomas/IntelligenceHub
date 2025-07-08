@@ -38,7 +38,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "TestProfile",
                 Model = "gpt-4o",
-                Host = AGIServiceHosts.Azure,
+                Host = AGIServiceHost.Azure,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
                 Temperature = 1,
@@ -80,7 +80,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = null,
                 Model = "gpt-4o",
-                Host = AGIServiceHosts.Azure,
+                Host = AGIServiceHost.Azure,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
                 Temperature = 1,
@@ -118,7 +118,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "TestProfile",
                 Model = "gpt-4o",
-                Host = AGIServiceHosts.Azure,
+                Host = AGIServiceHost.Azure,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
                 Temperature = 1,
@@ -153,7 +153,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "ValidProfile",
                 Model = "gpt-4o",
-                Host = AGIServiceHosts.Azure,
+                Host = AGIServiceHost.Azure,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
                 Temperature = 1,
@@ -178,7 +178,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "all",
                 Model = "gpt-4o",
-                Host = AGIServiceHosts.Azure,
+                Host = AGIServiceHost.Azure,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
                 Temperature = 1,
@@ -207,7 +207,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "Profile1",
                 Model = "gpt-4o",
-                Host = AGIServiceHosts.Azure,
+                Host = AGIServiceHost.Azure,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
                 Temperature = 1,
@@ -232,7 +232,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "Profile1",
                 Model = null,
-                Host = AGIServiceHosts.Azure,
+                Host = AGIServiceHost.Azure,
                 FrequencyPenalty = 0,
                 PresencePenalty = 0,
                 Temperature = 1,

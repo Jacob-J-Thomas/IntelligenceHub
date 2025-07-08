@@ -63,7 +63,7 @@ namespace IntelligenceHub.Controllers
         /// </summary>
         /// <returns>An <see cref="IActionResult"/> containing a list of index metadata.</returns>
         [HttpGet]
-        [Route("Index/All")]
+        [Route("GetAll")]
         [SwaggerOperation(OperationId = "GetAllIndexesAsync")]
         [ProducesResponseType(typeof(IEnumerable<IndexMetadata>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

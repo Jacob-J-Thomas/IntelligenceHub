@@ -66,7 +66,7 @@ namespace IntelligenceHub.Client.Implementations
         /// <param name="searchClientSettings">The search service client resolved from DI.</param>
         /// <param name="agiClientSettings">The settings for the client resolved from DI.</param>
         /// <param name="settings">The application settings passed in from DI. Only required for the DB connection string.</param>
-        public AISearchServiceClient(IOptionsMonitor<SearchServiceClientSettings> searchClientSettings, IOptionsMonitor<AGIClientSettings> agiClientSettings, IOptionsMonitor<Settings> settings)
+        public AISearchServiceClient(IOptionsMonitor<AzureSearchServiceClientSettings> searchClientSettings, IOptionsMonitor<AGIClientSettings> agiClientSettings, IOptionsMonitor<Settings> settings)
         {
             var credential = new AzureKeyCredential(searchClientSettings.CurrentValue.Key);
 

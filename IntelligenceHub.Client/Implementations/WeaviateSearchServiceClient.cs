@@ -21,7 +21,7 @@ namespace IntelligenceHub.Client.Implementations
         private readonly string _endpoint;
         private readonly string _apiKey;
 
-        public WeaviateSearchServiceClient(IHttpClientFactory factory, IOptionsMonitor<WeaviateClientSettings> settings)
+        public WeaviateSearchServiceClient(IHttpClientFactory factory, IOptionsMonitor<WeaviateSearchServiceClientSettings> settings)
         {
             _httpClient = factory.CreateClient();
             _endpoint = settings.CurrentValue.Endpoint.TrimEnd('/');

@@ -11,6 +11,6 @@ namespace IntelligenceHub.Business.Factories
         /// <summary>
         /// Returns an AI search client based on the rag host.
         /// </summary>
-        IAISearchServiceClient GetClient(VectorDbProvider host);
+        IAISearchServiceClient GetClient(RagServiceHost? host);
     }
 }

@@ -9,6 +9,7 @@ using System.Drawing.Imaging;
 using Message = IntelligenceHub.API.DTOs.Message;
 using Tool = IntelligenceHub.API.DTOs.Tools.Tool;
 using Property = IntelligenceHub.API.DTOs.Tools.Property;
+using Microsoft.IdentityModel.Tokens;
 
 namespace IntelligenceHub.Business.Handlers
 {
@@ -92,14 +93,14 @@ namespace IntelligenceHub.Business.Handlers
         public string? ValidateProfileOptions(Profile profile, List<Message>? messages = null)
         {
             if (profile.Model == null) return "The model parameter is required.";
-            if (string.IsNullOrEmpty(profile.Host.ToString()) || profile.Host == AGIServiceHosts.None) return "The host parameter is required.";
+            if (string.IsNullOrEmpty(profile.Host.ToString()) || profile.Host == AGIServiceHost.None) return "The host parameter is required.";
 
             // Validate model names for each host.
             if (!string.IsNullOrEmpty(profile.Model))
             {
-                if (profile.Host == AGIServiceHosts.Azure && !_validModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Azure. Supported model names include: {_validModels.ToCommaSeparatedString()}.";
-                if (profile.Host == AGIServiceHosts.OpenAI && !ValidOpenAIModelsAndContextLimits.Keys.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by OpenAI. Supported model names include: {ValidOpenAIModelsAndContextLimits.Keys.ToCommaSeparatedString()}.";
-                if (profile.Host == AGIServiceHosts.Anthropic && !ValidAnthropicModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Anthropic. Supported model names include: {ValidAnthropicModels.ToCommaSeparatedString()}.";
+                if (profile.Host == AGIServiceHost.Azure && !_validModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Azure. Supported model names include: {_validModels.ToCommaSeparatedString()}.";
+                if (profile.Host == AGIServiceHost.OpenAI && !ValidOpenAIModelsAndContextLimits.Keys.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by OpenAI. Supported model names include: {ValidOpenAIModelsAndContextLimits.Keys.ToCommaSeparatedString()}.";
+                if (profile.Host == AGIServiceHost.Anthropic && !ValidAnthropicModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Anthropic. Supported model names include: {ValidAnthropicModels.ToCommaSeparatedString()}.";
             }
 
             // Validate common parameters.
@@ -112,7 +113,7 @@ namespace IntelligenceHub.Business.Handlers
             if (profile.ReferenceProfiles != null && profile.ReferenceProfiles.Length > 0) foreach (var reference in profile.ReferenceProfiles) if (reference.Length > 40) return "The 'ReferenceProfiles' field exceeds the maximum allowed length of 40 characters.";
 
             // Validate model-specific parameters.
-            if (profile.Host == AGIServiceHosts.OpenAI)
+            if (profile.Host == AGIServiceHost.OpenAI)
             {
                 // Look up the context limit for the specified model.
                 if (!ValidOpenAIModelsAndContextLimits.TryGetValue(profile.Model.ToLower(), out int contextLimit)) contextLimit = 4096;
@@ -125,7 +126,7 @@ namespace IntelligenceHub.Business.Handlers
                     if (promptTokens + profile.MaxTokens > contextLimit) return $"The combined token count of the prompt ({promptTokens}) and the requested max tokens ({profile.MaxTokens}) exceeds the model's capacity of {contextLimit} tokens.";
                 }
             }
-            else if (profile.Host == AGIServiceHosts.Anthropic)
+            else if (profile.Host == AGIServiceHost.Anthropic)
             {
                 // For Anthropic, use a fixed context limit.
                 int contextLimit = 4000; // Recommended limit; update if newer models allow more.
@@ -140,7 +141,7 @@ namespace IntelligenceHub.Business.Handlers
                     if (promptTokens + profile.MaxTokens > contextLimit) return $"The combined token count of the prompt ({promptTokens}) and the requested max tokens ({profile.MaxTokens}) exceeds the Anthropic model's capacity of {contextLimit} tokens.";
                 }
             }
-            else if (profile.Host == AGIServiceHosts.Azure)
+            else if (profile.Host == AGIServiceHost.Azure)
             {
                 // Azure endpoints typically do not support returning token-level log probabilities.
                 if (profile.TopLogprobs.HasValue && profile.TopLogprobs.Value != 0) return "The Azure endpoint does not support TopLogprobs. Please set TopLogprobs to 0 or leave it unset.";
@@ -339,7 +340,7 @@ namespace IntelligenceHub.Business.Handlers
             if (string.IsNullOrWhiteSpace(index.Name)) return "The provided index name is invalid.";
 
             var includesContentSummarization = index.GenerateKeywords ?? index.GenerateTopic ?? false;
-            if (!Enum.IsDefined(typeof(VectorDbProvider), index.RagHost)) return "The RagHost provided is invalid.";
+            if (index.RagHost == null || index.RagHost == RagServiceHost.None) return "A RagHost must be provided.";
             if (index.GenerationHost == null && includesContentSummarization) return "The GenerationProfile is required if 'GenerateKeywords' or 'GenerateTopic' are set to true.";
             if (index.Name.Length > 128) return "The index name exceeds the maximum allowed length of 128 characters.";
             if (index.IndexingInterval <= TimeSpan.Zero) return "IndexingInterval must be a positive value.";

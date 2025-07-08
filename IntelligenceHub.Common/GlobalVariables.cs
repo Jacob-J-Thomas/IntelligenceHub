@@ -60,7 +60,7 @@
         /// <summary>
         /// Specifies the hosts for AGI services.
         /// </summary>
-        public enum AGIServiceHosts
+        public enum AGIServiceHost
         {
             Azure,
             OpenAI,
@@ -71,10 +71,11 @@
         /// <summary>
         /// Specifies the vector database provider.
         /// </summary>
-        public enum VectorDbProvider
+        public enum RagServiceHost
         {
             Azure,
-            Weaviate
+            Weaviate,
+            None
         }
 
         /// <summary>

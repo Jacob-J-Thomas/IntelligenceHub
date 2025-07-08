@@ -6,8 +6,8 @@ namespace IntelligenceHub.API.DTOs.RAG
     {
         public string Name { get; set; }
         public QueryType QueryType { get; set; }
-        public AGIServiceHosts? GenerationHost { get; set; }
-        public VectorDbProvider RagHost { get; set; } = VectorDbProvider.Azure;
+        public AGIServiceHost? GenerationHost { get; set; }
+        public RagServiceHost? RagHost { get; set; }
         public TimeSpan? IndexingInterval { get; set; }
         public string? EmbeddingModel { get; set; }
         public int? MaxRagAttachments { get; set; }

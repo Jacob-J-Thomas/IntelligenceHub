@@ -289,7 +289,7 @@ namespace IntelligenceHub.Business.Implementations
 
             // add image gen system tool if appropriate - Anthropic does not support image gen currently
             var host = string.IsNullOrEmpty(profileOptions?.ImageHost.ToString()) ? profile.ImageHost : profileOptions?.ImageHost ?? profileOptions?.Host ?? profile.Host;
-            if (host != AGIServiceHosts.Anthropic && host != AGIServiceHosts.None) profile.Tools.Add(new ImageGenSystemTool());
+            if (host != AGIServiceHost.Anthropic && host != AGIServiceHost.None) profile.Tools.Add(new ImageGenSystemTool());
 
             // add recursive chat system tool if appropriate
             if (profileReferences != null && profileReferences.Any())
@@ -619,10 +619,10 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="messages">A list of messages representing the current conversation context.</param>
         /// <returns>A <see cref="List{Message}"> representing the current conversation context with the generated 
         /// image attached.</returns>
-        private async Task<List<Message>> GenerateImage(string imageGenArgs, AGIServiceHosts? host, List<Message> messages)
+        private async Task<List<Message>> GenerateImage(string imageGenArgs, AGIServiceHost? host, List<Message> messages)
         {
             // anthropic does not support image gen currently
-            if (host == AGIServiceHosts.Anthropic) return messages;
+            if (host == AGIServiceHost.Anthropic) return messages;
 
             var imageGenArgsJson = JsonSerializer.Deserialize<Dictionary<string, string>>(imageGenArgs);
             if (imageGenArgsJson == null || !imageGenArgsJson.ContainsKey("prompt")) return messages;
