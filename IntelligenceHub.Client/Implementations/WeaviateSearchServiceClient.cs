@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using static IntelligenceHub.Common.GlobalVariables;
+using System.Globalization;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -68,22 +69,26 @@ namespace IntelligenceHub.Client.Implementations
             var res = await _httpClient.SendAsync(req);
             res.EnsureSuccessStatusCode();
             var content = await res.Content.ReadAsStringAsync();
-            var j = JObject.Parse(content);
-            var resultsToken = j["data"]?["Get"]?[index.Name];
+            var root = JObject.Parse(content);
+            var getObj = root["data"]?["Get"];
+
+            JToken? resultsToken = getObj?[className] ?? getObj?.Children<JProperty>().FirstOrDefault(p => p.Name.Equals(index.Name, StringComparison.OrdinalIgnoreCase)) ?.Value;
+
+
             var results = new List<SearchResult<IndexDefinition>>();
-            if (resultsToken != null)
+            if (resultsToken is JArray rows)
             {
-                foreach (var item in resultsToken)
+                foreach (var row in rows)
                 {
                     var doc = new IndexDefinition
                     {
-                        title = item.Value<string>("title"),
-                        chunk = item.Value<string>("chunk"),
-                        topic = item.Value<string>("topic"),
-                        keywords = item.Value<string>("keywords"),
-                        source = item.Value<string>("source"),
-                        created = item.Value<DateTimeOffset?>("created") ?? DateTimeOffset.MinValue,
-                        modified = item.Value<DateTimeOffset?>("modified") ?? DateTimeOffset.MinValue
+                        title = row.Value<string>("title"),
+                        chunk = row.Value<string>("chunk"),
+                        topic = row.Value<string>("topic"),
+                        keywords = row.Value<string>("keywords"),
+                        source = row.Value<string>("source"),
+                        created = ParseIsoUtcDate(row, "created"),
+                        modified = ParseIsoUtcDate(row, "modified")
                     };
                     var searchResult = SearchModelFactory.SearchResult(doc, score: null, highlights: null);
                     results.Add(searchResult);
@@ -92,16 +97,41 @@ namespace IntelligenceHub.Client.Implementations
             return SearchModelFactory.SearchResults(values: results, totalCount: results.Count, facets: null, coverage: null, rawResponse: null);
         }
 
+        /// <summary>
+        /// Safely parses ISO-8601 timestamps (with or without 'Z') to UTC DateTime.
+        /// Returns DateTime.MinValue if the field is missing or malformed.
+        /// </summary>
+        private static DateTime ParseIsoUtcDate(JToken token, string field)
+        {
+            string? iso = token.Value<string>(field);
+            if (string.IsNullOrWhiteSpace(iso)) return DateTime.MinValue;
+
+            // First try DateTimeOffset (handles timezone and "Z")
+            if (DateTimeOffset.TryParse(
+                    iso,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                    out var dto))
+            {
+                return dto.UtcDateTime;
+            }
+
+            // Fallback: plain DateTime
+            return DateTime.TryParse(
+                       iso,
+                       CultureInfo.InvariantCulture,
+                       DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                       out var dt)
+                   ? dt
+                   : DateTime.MinValue;
+        }
+
         public async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
         {
-            var model = string.IsNullOrWhiteSpace(indexDefinition.EmbeddingModel)
-                ? DefaultWeaviateEmbeddingModel
-                : indexDefinition.EmbeddingModel;
-
             var schema = new
             {
                 @class = indexDefinition.Name,
-                vectorizer = model,
+                vectorizer = DefaultWeaviateEmbeddingModel,
                 properties = new List<SchemaProperty>
                 {
                     new SchemaProperty
@@ -110,7 +140,7 @@ namespace IntelligenceHub.Client.Implementations
                         dataType = new[]{"text"},
                         moduleConfig = new Dictionary<string, object>
                         {
-                            [model] = new { skip = !(indexDefinition.GenerateTitleVector ?? false) }
+                            [DefaultWeaviateEmbeddingModel] = new { skip = !(indexDefinition.GenerateTitleVector ?? false) }
                         }
                     },
                     new SchemaProperty
@@ -119,7 +149,7 @@ namespace IntelligenceHub.Client.Implementations
                         dataType = new[]{"text"},
                         moduleConfig = new Dictionary<string, object>
                         {
-                            [model] = new { skip = !(indexDefinition.GenerateContentVector ?? false) }
+                            [DefaultWeaviateEmbeddingModel] = new { skip = !(indexDefinition.GenerateContentVector ?? false) }
                         }
                     },
                     new SchemaProperty
@@ -128,7 +158,7 @@ namespace IntelligenceHub.Client.Implementations
                         dataType = new[]{"text"},
                         moduleConfig = new Dictionary<string, object>
                         {
-                            [model] = new { skip = !(indexDefinition.GenerateTopicVector ?? false) }
+                            [DefaultWeaviateEmbeddingModel] = new { skip = !(indexDefinition.GenerateTopicVector ?? false) }
                         }
                     },
                     new SchemaProperty
@@ -137,7 +167,7 @@ namespace IntelligenceHub.Client.Implementations
                         dataType = new[]{"text"},
                         moduleConfig = new Dictionary<string, object>
                         {
-                            [model] = new { skip = !(indexDefinition.GenerateKeywordVector ?? false) }
+                            [DefaultWeaviateEmbeddingModel] = new { skip = !(indexDefinition.GenerateKeywordVector ?? false) }
                         }
                     },
                     new SchemaProperty { name = "source", dataType = new[]{"text"} },
@@ -147,6 +177,9 @@ namespace IntelligenceHub.Client.Implementations
             };
             var req = CreateRequest(HttpMethod.Post, "/v1/schema", schema);
             var res = await _httpClient.SendAsync(req);
+
+            var content = await res.Content.ReadAsStringAsync();
+
             return res.IsSuccessStatusCode;
         }
 
@@ -231,14 +264,15 @@ namespace IntelligenceHub.Client.Implementations
 
             var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{uuid}", body);
             var res = await _httpClient.SendAsync(req);
+
             if (res.IsSuccessStatusCode) return true;
-            if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                req = CreateRequest(HttpMethod.Post, "/v1/objects", body);
-                res = await _httpClient.SendAsync(req);
-                return res.IsSuccessStatusCode;
-            }
-            return false;
+
+            req = CreateRequest(HttpMethod.Post, "/v1/objects", body);
+            res = await _httpClient.SendAsync(req);
+
+            var content = await res.Content.ReadAsStringAsync();
+
+            return res.IsSuccessStatusCode;
         }
 
         public async Task<bool> DeleteDocument(string indexName, int id)

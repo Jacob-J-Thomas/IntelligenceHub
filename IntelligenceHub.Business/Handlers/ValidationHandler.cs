@@ -349,10 +349,8 @@ namespace IntelligenceHub.Business.Handlers
             if (!string.IsNullOrWhiteSpace(index.EmbeddingModel))
             {
                 var lowerModel = index.EmbeddingModel.ToLower();
-                if (index.RagHost == RagServiceHost.Weaviate && !lowerModel.StartsWith("text2vec"))
-                    return "EmbeddingModel must correspond with the Weaviate RagHost (text2vec-*).";
-                if (index.RagHost == RagServiceHost.Azure && lowerModel.StartsWith("text2vec"))
-                    return "EmbeddingModel beginning with 'text2vec-' is reserved for the Weaviate RagHost.";
+                if (index.RagHost == RagServiceHost.Weaviate && index.EmbeddingModel != null && index.EmbeddingModel.ToLower() != DefaultWeaviateEmbeddingModel.ToLower()) return $"EmbeddingModel must correspond with the Weaviate RagHost ({DefaultWeaviateEmbeddingModel}).";
+                if (index.RagHost == RagServiceHost.Azure && index.EmbeddingModel != null && index.EmbeddingModel.ToLower() == DefaultWeaviateEmbeddingModel.ToLower()) return $"EmbeddingModel {DefaultWeaviateEmbeddingModel} is reserved for the Weaviate RagHost.";
             }
             if (index.MaxRagAttachments < 0) return "MaxRagAttachments must be a non-negative integer greater than 0.";
             if (index.MaxRagAttachments > 20) return "MaxRagAttachments cannot exceed 20.";

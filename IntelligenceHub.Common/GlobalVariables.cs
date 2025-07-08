@@ -247,7 +247,7 @@
         /// <summary>
         /// The default embedding model used when indexing with Weaviate.
         /// </summary>
-        public const string DefaultWeaviateEmbeddingModel = "text2vec-openai";
+        public const string DefaultWeaviateEmbeddingModel = "Snowflake/snowflake-arctic-embed-l-v2.0";
 
         /// <summary>
         /// The default model for image generation.
