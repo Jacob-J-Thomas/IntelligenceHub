@@ -81,10 +81,7 @@ namespace IntelligenceHub.DAL
         /// <returns>A database profile entity.</returns>
         public static DbProfile MapToDbProfile(string profileName, string defaultAzureModel, DbProfile? existingProfile = null, Profile? profileUpdate = null)
         {
-            if (existingProfile == null)
-            {
-                existingProfile = new DbProfile();
-            }
+            if (existingProfile == null) existingProfile = new DbProfile();
 
             var host = profileUpdate?.Host ?? existingProfile.Host.ConvertToServiceHost();
             if (host == AGIServiceHost.None) host = AGIServiceHost.OpenAI;
@@ -340,7 +337,7 @@ namespace IntelligenceHub.DAL
                 GenerateContentVector = indexData.GenerateContentVector ?? true,
                 GenerateTopicVector = indexData.GenerateTopicVector ?? false,
                 GenerateKeywordVector = indexData.GenerateKeywordVector ?? false,
-                DefaultScoringProfile = indexData.ScoringProfile?.Name,
+                DefaultScoringProfile = indexData.ScoringProfile?.Name ?? DefaultVectorScoringProfile,
                 ScoringAggregation = indexData.ScoringProfile?.SearchAggregation.ToString(),
                 ScoringInterpolation = indexData.ScoringProfile?.SearchInterpolation.ToString(),
                 ScoringFreshnessBoost = indexData.ScoringProfile?.FreshnessBoost ?? DefaultScoringFreshnessBoost,

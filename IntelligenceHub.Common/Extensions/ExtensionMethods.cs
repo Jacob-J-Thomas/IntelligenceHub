@@ -45,12 +45,12 @@ namespace IntelligenceHub.Common.Extensions
         /// <returns>The converted query type.</returns>
         public static QueryType? ConvertStringToQueryType(this string queryType)
         {
-            if (queryType == QueryType.Simple.ToString()) return QueryType.Simple;
-            else if (queryType == QueryType.Vector.ToString()) return QueryType.Vector;
-            else if (queryType == QueryType.VectorSimpleHybrid.ToString()) return QueryType.VectorSimpleHybrid;
-            else if (queryType == QueryType.VectorSemanticHybrid.ToString()) return QueryType.VectorSemanticHybrid;
-            else if (queryType == QueryType.Semantic.ToString()) return QueryType.Semantic;
-            else if (queryType == QueryType.Full.ToString()) return QueryType.Full;
+            if (queryType.ToLower() == QueryType.Simple.ToString().ToLower()) return QueryType.Simple;
+            else if (queryType.ToLower() == QueryType.Semantic.ToString().ToLower()) return QueryType.Semantic;
+            else if (queryType.ToLower() == QueryType.Full.ToString().ToLower()) return QueryType.Full;
+            else if (queryType.ToLower() == QueryType.VectorSimpleHybrid.ToString().ToLower()) return QueryType.VectorSimpleHybrid;
+            else if (queryType.ToLower() == QueryType.VectorSemanticHybrid.ToString().ToLower()) return QueryType.VectorSemanticHybrid;
+            else if (queryType.ToLower() == QueryType.Vector.ToString().ToLower()) return QueryType.Vector;
             return null;
         }
 
