@@ -289,7 +289,7 @@ namespace IntelligenceHub.DAL
                 QueryType = dbIndexData.QueryType?.ConvertStringToQueryType() ?? QueryType.Simple,
                 GenerationHost = dbIndexData.GenerationHost.ConvertToServiceHost(),
                 RagHost = dbIndexData.RagHost.ConvertToRagHost(),
-                ChunkOverlap = dbIndexData.ChunkOverlap ?? DefaultChunkOverlap, // make this a global variable
+                ChunkOverlap = dbIndexData.ChunkOverlap ?? (dbIndexData.RagHost.ConvertToRagHost() == RagServiceHost.Weaviate ? 0 : DefaultChunkOverlap),
                 IndexingInterval = dbIndexData.IndexingInterval,
                 MaxRagAttachments = dbIndexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable
                 EmbeddingModel = dbIndexData.EmbeddingModel,
@@ -320,16 +320,18 @@ namespace IntelligenceHub.DAL
         public static DbIndexMetadata MapToDbIndexMetadata(IndexMetadata indexData)
         {
             var defaultEmbeddingModel = indexData.RagHost == RagServiceHost.Azure ? DefaultAzureSearchEmbeddingModel : DefaultWeaviateEmbeddingModel;
-            if (indexData.ScoringProfile == null) indexData.ScoringProfile = new IndexScoringProfile();
-            var chunkOverlap = indexData.ChunkOverlap;
+            if (indexData.ScoringProfile == null || indexData.RagHost == RagServiceHost.Weaviate) indexData.ScoringProfile = new IndexScoringProfile();
+            var defaultChunkOverlap = indexData.RagHost == RagServiceHost.Weaviate ? 0 : DefaultChunkOverlap;
+            var defaultIndexingInterval = indexData.RagHost == RagServiceHost.Weaviate ? TimeSpan.Zero : TimeSpan.FromHours(23.99);
+            var chunkOverlap = indexData.ChunkOverlap ?? defaultChunkOverlap;
             return new DbIndexMetadata()
             {
                 Name = indexData.Name,
                 QueryType = indexData.QueryType.ToString(),
                 GenerationHost = indexData.GenerationHost.ToString() ?? AGIServiceHost.None.ToString(),
                 RagHost = indexData.RagHost.ToString() ?? RagServiceHost.None.ToString(),
-                ChunkOverlap = chunkOverlap ?? DefaultChunkOverlap,
-                IndexingInterval = indexData.IndexingInterval ?? TimeSpan.FromHours(23.99), // only slightly under 1 day is supported
+                ChunkOverlap = chunkOverlap,
+                IndexingInterval = indexData.IndexingInterval ?? defaultIndexingInterval,
                 MaxRagAttachments = indexData.MaxRagAttachments ?? DefaultRagAttachmentNumber, // make this a global variable,
                 EmbeddingModel = indexData.EmbeddingModel ?? defaultEmbeddingModel,
                 GenerateTopic = indexData.GenerateTopic ?? false,
