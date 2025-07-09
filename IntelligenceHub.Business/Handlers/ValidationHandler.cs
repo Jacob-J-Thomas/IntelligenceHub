@@ -343,8 +343,27 @@ namespace IntelligenceHub.Business.Handlers
             if (index.RagHost == null || index.RagHost == RagServiceHost.None) return "A RagHost must be provided.";
             if (index.GenerationHost == null && includesContentSummarization) return "The GenerationProfile is required if 'GenerateKeywords' or 'GenerateTopic' are set to true.";
             if (index.Name.Length > 128) return "The index name exceeds the maximum allowed length of 128 characters.";
-            if (index.IndexingInterval <= TimeSpan.Zero) return "IndexingInterval must be a positive value.";
-            if (index.IndexingInterval >= TimeSpan.FromDays(1)) return "The indexing interval must be less than 1 day.";
+
+            if (index.RagHost == RagServiceHost.Weaviate)
+            {
+                if (index.IndexingInterval != null && index.IndexingInterval != TimeSpan.Zero) return "IndexingInterval is not supported when using the Weaviate RagHost.";
+                if (index.ChunkOverlap != null && index.ChunkOverlap > 0) return "ChunkOverlap is not supported when using the Weaviate RagHost.";
+                if (index.ScoringProfile != null &&
+                    (!string.IsNullOrWhiteSpace(index.ScoringProfile.Name) ||
+                     index.ScoringProfile.SearchAggregation != null ||
+                     index.ScoringProfile.SearchInterpolation != null ||
+                     index.ScoringProfile.FreshnessBoost != 0 ||
+                     index.ScoringProfile.BoostDurationDays != 0 ||
+                     index.ScoringProfile.TagBoost != 0 ||
+                     (index.ScoringProfile.Weights != null && index.ScoringProfile.Weights.Count > 0)))
+                    return "Scoring profiles are not supported when using the Weaviate RagHost.";
+            }
+            else
+            {
+                if (index.IndexingInterval <= TimeSpan.Zero) return "IndexingInterval must be a positive value.";
+                if (index.IndexingInterval >= TimeSpan.FromDays(1)) return "The indexing interval must be less than 1 day.";
+                if (index.ChunkOverlap < 0 || index.ChunkOverlap > 1) return "ChunkOverlap must be between 0 and 1 (inclusive).";
+            }
             if (!string.IsNullOrWhiteSpace(index.EmbeddingModel) && index.EmbeddingModel.Length > 255) return "The EmbeddingModel exceeds the maximum allowed length of 255 characters.";
             if (!string.IsNullOrWhiteSpace(index.EmbeddingModel))
             {
@@ -354,12 +373,10 @@ namespace IntelligenceHub.Business.Handlers
             }
             if (index.MaxRagAttachments < 0) return "MaxRagAttachments must be a non-negative integer greater than 0.";
             if (index.MaxRagAttachments > 20) return "MaxRagAttachments cannot exceed 20.";
-            if (index.ChunkOverlap < 0 || index.ChunkOverlap > 1) return "ChunkOverlap must be between 0 and 1 (inclusive).";
             if (index.QueryType == QueryType.VectorSemanticHybrid && index.RagHost == RagServiceHost.Weaviate) return "The Weaviate client does not support the VectorSemanticHybrid query type at this time.";
 
             if (!string.IsNullOrEmpty(index.ScoringProfile?.Name))
             {
-                if (index.RagHost == RagServiceHost.Weaviate) return "Scoring profiles are not supported when using the Weaviate RagHost.";
                 if (string.IsNullOrWhiteSpace(index.ScoringProfile.Name)) return "The ScoringProfile name is required.";
                 if (index.ScoringProfile.Name.Length > 128) return "The ScoringProfile name exceeds the maximum allowed length of 255 characters.";
                 if (index.QueryType.ToString().Length > 255) return "The QueryType exceeds the maximum allowed length of 255 characters.";

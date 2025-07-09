@@ -444,6 +444,56 @@ namespace IntelligenceHub.Tests.Unit.Business
             Assert.Equal("The provided index name is invalid.", result);
         }
 
+        [Fact]
+        public void ValidateIndexDefinition_WithWeaviateAndChunkOverlap_ReturnsError()
+        {
+            var index = new IndexMetadata
+            {
+                Name = "TestIndex",
+                RagHost = RagServiceHost.Weaviate,
+                GenerationHost = AGIServiceHost.OpenAI,
+                IndexingInterval = TimeSpan.Zero,
+                ChunkOverlap = 0.1
+            };
+
+            var result = _handler.ValidateIndexDefinition(index);
+
+            Assert.Equal("ChunkOverlap is not supported when using the Weaviate RagHost.", result);
+        }
+
+        [Fact]
+        public void ValidateIndexDefinition_WithWeaviateAndIndexingInterval_ReturnsError()
+        {
+            var index = new IndexMetadata
+            {
+                Name = "TestIndex",
+                RagHost = RagServiceHost.Weaviate,
+                GenerationHost = AGIServiceHost.OpenAI,
+                IndexingInterval = TimeSpan.FromMinutes(5)
+            };
+
+            var result = _handler.ValidateIndexDefinition(index);
+
+            Assert.Equal("IndexingInterval is not supported when using the Weaviate RagHost.", result);
+        }
+
+        [Fact]
+        public void ValidateIndexDefinition_WithWeaviateAndScoringProfile_ReturnsError()
+        {
+            var index = new IndexMetadata
+            {
+                Name = "TestIndex",
+                RagHost = RagServiceHost.Weaviate,
+                GenerationHost = AGIServiceHost.OpenAI,
+                IndexingInterval = TimeSpan.Zero,
+                ScoringProfile = new IndexScoringProfile { Name = "Test" }
+            };
+
+            var result = _handler.ValidateIndexDefinition(index);
+
+            Assert.Equal("Scoring profiles are not supported when using the Weaviate RagHost.", result);
+        }
+
         #endregion
 
         #region IsValidIndexName Tests
