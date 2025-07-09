@@ -402,6 +402,7 @@ namespace IntelligenceHub.Tests.Unit.Business
                 Name = "ValidIndex",
                 IndexingInterval = TimeSpan.FromHours(1),
                 EmbeddingModel = "embedding-model",
+                RagHost = RagServiceHost.Azure,
                 MaxRagAttachments = 20,
                 ChunkOverlap = 0.5,
                 GenerateKeywords = false,

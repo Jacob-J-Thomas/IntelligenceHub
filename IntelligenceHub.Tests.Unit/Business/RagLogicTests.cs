@@ -322,17 +322,18 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexName, GenerationHost = AGIServiceHost.Azure.ToString() };
+            var dbIndexMetadata = new DbIndexMetadata { Name = indexName, RagHost = AGIServiceHost.Azure.ToString() };
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
             _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.RunIndexer(indexName)).ReturnsAsync(true);
+            _mockRagClientFactory.Setup(f => f.GetClient(RagServiceHost.Azure)).Returns(_mockSearchClient.Object);
 
             // Act
             var result = await _ragLogic.RunIndexUpdate(indexName);
 
             // Assert
-            Assert.True(result.Data);
             Assert.True(result.IsSuccess);
+            Assert.True(result.Data);
             Assert.Equal(APIResponseStatusCodes.Ok, result.StatusCode);
         }
 
@@ -561,21 +562,40 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
-            var dbIndexMetadata = new DbIndexMetadata() { Name = indexName, QueryType = QueryType.Simple.ToString(), ChunkOverlap = DefaultChunkOverlap, GenerationHost = AGIServiceHost.Azure.ToString(), EmbeddingModel = DefaultAzureSearchEmbeddingModel };
-            _mockValidationHandler.Setup(repo => repo.IsValidIndexName(indexName)).Returns(true);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
-            _mockRagRepository.Setup(repo => repo.DeleteIndexAsync(indexName)).ReturnsAsync(true);
-            _mockSearchClient.Setup(client => client.DeleteIndexer(indexName)).ReturnsAsync(true);
-            _mockSearchClient.Setup(client => client.DeleteDatasource(indexName)).ReturnsAsync(true);
-            _mockSearchClient.Setup(client => client.DeleteIndex(indexName)).ReturnsAsync(true);
-            _mockMetaRepository.Setup(repo => repo.DeleteAsync(dbIndexMetadata)).ReturnsAsync(true);
+
+            var dbIndexMetadata = new DbIndexMetadata
+            {
+                Name = indexName,
+                QueryType = QueryType.Simple.ToString(),
+                ChunkOverlap = DefaultChunkOverlap,
+                GenerationHost = AGIServiceHost.Azure.ToString(),
+                EmbeddingModel = DefaultAzureSearchEmbeddingModel,
+                RagHost = RagServiceHost.Azure.ToString()
+            };
+
+            _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
+
+            _mockMetaRepository.Setup(r => r.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
+
+            _mockRagRepository.Setup(r => r.DeleteIndexAsync(indexName)).ReturnsAsync(true);
+
+            _mockSearchClient.Setup(c => c.DeleteIndexer(indexName)).ReturnsAsync(true);
+            _mockSearchClient.Setup(c => c.DeleteDatasource(indexName)).ReturnsAsync(true);
+            _mockSearchClient.Setup(c => c.DeleteIndex(indexName)).ReturnsAsync(true);
+
+            _mockMetaRepository.Setup(r => r.DeleteAsync(dbIndexMetadata)).ReturnsAsync(true);
+
+            // Tell the factory which client to hand back
+            _mockRagClientFactory.Setup(f => f.GetClient(RagServiceHost.Azure)).Returns(_mockSearchClient.Object);
 
             // Act
             var result = await _ragLogic.DeleteIndex(indexName);
 
             // Assert
+            Assert.True(result.IsSuccess);
             Assert.True(result.Data);
         }
+
 
         [Fact]
         public async Task DeleteIndex_ShouldReturnFalse_WhenIndexNameIsInvalid()

@@ -136,6 +136,7 @@ namespace IntelligenceHub.Business.Implementations
             if (!string.IsNullOrEmpty(errorMessage)) return APIResponseWrapper<bool>.Failure(errorMessage, APIResponseStatusCodes.BadRequest);
             var existingDefinition = await _metaRepository.GetByNameAsync(indexDefinition.Name);
             if (existingDefinition == null) return APIResponseWrapper<bool>.Failure($"An index with the name '{indexDefinition.Name}' was not found.", APIResponseStatusCodes.NotFound);
+            if (indexDefinition.RagHost != null && existingDefinition.RagHost.ConvertToRagHost() != indexDefinition.RagHost) return APIResponseWrapper<bool>.Failure("The index RagHost cannot be modified after the index is created.", APIResponseStatusCodes.BadRequest);
 
             //var success = await _searchClient.UpsertIndex(indexDefinition);
             //if (!success) return APIResponseWrapper<bool>.Failure("Failed to update the index against the search service.", APIResponseStatusCodes.InternalError);
