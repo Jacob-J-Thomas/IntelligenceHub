@@ -247,7 +247,7 @@
         /// <summary>
         /// The default embedding model used when indexing with Weaviate.
         /// </summary>
-        public const string DefaultWeaviateEmbeddingModel = "Snowflake/snowflake-arctic-embed-l-v2.0";
+        public const string DefaultWeaviateEmbeddingModel = "Snowflake/snowflake-arctic-embed-l-v2.0"; // currently this value is only used in Validation and saving database defaults. The Weaviate client defaults to this value automatically, and therefore doesn't require it
 
         /// <summary>
         /// The default model for image generation.

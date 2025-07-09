@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using static IntelligenceHub.Common.GlobalVariables;
 using System.Globalization;
+using Azure.Core;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -23,6 +24,8 @@ namespace IntelligenceHub.Client.Implementations
         private readonly string _endpoint;
         private readonly string _apiKey;
 
+        private const string _defaultWeaviateVectorizerModule = "text2vec-weaviate";
+
         public WeaviateSearchServiceClient(IHttpClientFactory factory, IOptionsMonitor<WeaviateSearchServiceClientSettings> settings)
         {
             _httpClient = factory.CreateClient();
@@ -34,6 +37,9 @@ namespace IntelligenceHub.Client.Implementations
         {
             var request = new HttpRequestMessage(method, $"{_endpoint}{path}");
             if (!string.IsNullOrEmpty(_apiKey)) request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+
+            request.Headers.Add("X-Weaviate-Cluster-Url", _endpoint);
+
             if (body != null)
             {
                 var json = JsonConvert.SerializeObject(body);
@@ -72,7 +78,7 @@ namespace IntelligenceHub.Client.Implementations
             var root = JObject.Parse(content);
             var getObj = root["data"]?["Get"];
 
-            JToken? resultsToken = getObj?[className] ?? getObj?.Children<JProperty>().FirstOrDefault(p => p.Name.Equals(index.Name, StringComparison.OrdinalIgnoreCase)) ?.Value;
+            JToken? resultsToken = getObj?[className] ?? getObj?.Children<JProperty>().FirstOrDefault(p => p.Name.Equals(index.Name, StringComparison.OrdinalIgnoreCase))?.Value;
 
 
             var results = new List<SearchResult<IndexDefinition>>();
@@ -131,7 +137,14 @@ namespace IntelligenceHub.Client.Implementations
             var schema = new
             {
                 @class = indexDefinition.Name,
-                vectorizer = DefaultWeaviateEmbeddingModel,
+                vectorizer = _defaultWeaviateVectorizerModule,
+                moduleConfig = new Dictionary<string, object>
+                {
+                    [_defaultWeaviateVectorizerModule] = new
+                    {
+                        model = DefaultWeaviateEmbeddingModel
+                    }
+                },
                 properties = new List<SchemaProperty>
                 {
                     new SchemaProperty
@@ -140,7 +153,7 @@ namespace IntelligenceHub.Client.Implementations
                         dataType = new[]{"text"},
                         moduleConfig = new Dictionary<string, object>
                         {
-                            [DefaultWeaviateEmbeddingModel] = new { skip = !(indexDefinition.GenerateTitleVector ?? false) }
+                            [_defaultWeaviateVectorizerModule] = new { skip = !(indexDefinition.GenerateTitleVector ?? false) }
                         }
                     },
                     new SchemaProperty
@@ -149,7 +162,7 @@ namespace IntelligenceHub.Client.Implementations
                         dataType = new[]{"text"},
                         moduleConfig = new Dictionary<string, object>
                         {
-                            [DefaultWeaviateEmbeddingModel] = new { skip = !(indexDefinition.GenerateContentVector ?? false) }
+                            [_defaultWeaviateVectorizerModule] = new { skip = !(indexDefinition.GenerateContentVector ?? false) }
                         }
                     },
                     new SchemaProperty
@@ -158,7 +171,7 @@ namespace IntelligenceHub.Client.Implementations
                         dataType = new[]{"text"},
                         moduleConfig = new Dictionary<string, object>
                         {
-                            [DefaultWeaviateEmbeddingModel] = new { skip = !(indexDefinition.GenerateTopicVector ?? false) }
+                            [_defaultWeaviateVectorizerModule] = new { skip = !(indexDefinition.GenerateTopicVector ?? false) }
                         }
                     },
                     new SchemaProperty
@@ -167,11 +180,11 @@ namespace IntelligenceHub.Client.Implementations
                         dataType = new[]{"text"},
                         moduleConfig = new Dictionary<string, object>
                         {
-                            [DefaultWeaviateEmbeddingModel] = new { skip = !(indexDefinition.GenerateKeywordVector ?? false) }
+                            [_defaultWeaviateVectorizerModule] = new { skip = !(indexDefinition.GenerateKeywordVector ?? false) }
                         }
                     },
-                    new SchemaProperty { name = "source", dataType = new[]{"text"} },
-                    new SchemaProperty { name = "created", dataType = new[]{"date"} },
+                    new SchemaProperty { name = "source",   dataType = new[]{"text"} },
+                    new SchemaProperty { name = "created",  dataType = new[]{"date"} },
                     new SchemaProperty { name = "modified", dataType = new[]{"date"} }
                 }
             };
@@ -210,16 +223,17 @@ namespace IntelligenceHub.Client.Implementations
 
         public async Task<List<IndexDocument>> GetAllDocuments(string indexName)
         {
+            var upperCaseName = char.ToUpper(indexName[0]) + indexName.Substring(1);
             var gql = new
             {
-                query = $"{{ Get {{ {indexName} {{ _additional {{ id }} title chunk topic keywords source created modified }} }} }}"
+                query = $"{{ Get {{ {upperCaseName} {{ _additional {{ id }} title chunk topic keywords source created modified }} }} }}"
             };
             var req = CreateRequest(HttpMethod.Post, "/v1/graphql", gql);
             var res = await _httpClient.SendAsync(req);
             res.EnsureSuccessStatusCode();
             var content = await res.Content.ReadAsStringAsync();
             var j = JObject.Parse(content);
-            var resultsToken = j["data"]?["Get"]?[indexName];
+            var resultsToken = j["data"]?["Get"]?[upperCaseName];
             var results = new List<IndexDocument>();
             if (resultsToken != null)
             {
@@ -235,8 +249,8 @@ namespace IntelligenceHub.Client.Implementations
                         Topic = item.Value<string>("topic"),
                         Keywords = item.Value<string>("keywords"),
                         Source = item.Value<string>("source") ?? string.Empty,
-                        Created = item.Value<DateTimeOffset?>("created") ?? DateTimeOffset.MinValue,
-                        Modified = item.Value<DateTimeOffset?>("modified") ?? DateTimeOffset.MinValue
+                        Created = ParseIsoUtcDate(item, "created"),
+                        Modified = ParseIsoUtcDate(item, "modified")
                     });
                 }
             }
@@ -262,9 +276,9 @@ namespace IntelligenceHub.Client.Implementations
                 }
             };
 
-            var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{uuid}", body);
+            var upperCaseName = char.ToUpper(indexName[0]) + indexName.Substring(1);
+            var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{upperCaseName}/{uuid}", body);
             var res = await _httpClient.SendAsync(req);
-
             if (res.IsSuccessStatusCode) return true;
 
             req = CreateRequest(HttpMethod.Post, "/v1/objects", body);
