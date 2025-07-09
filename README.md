@@ -84,7 +84,7 @@ Optional infrastructure can be treated modularly unless otherwise noted, but you
 **Note:** The repository includes a Python script, `IntelligenceHub\infrastructure\env_setup.py`, that generates a development configuration file by populating `appsettings.Development.json` from a template. You may find it worthwhile to save the API keys and URLs associated with these resources so that you can easily enter them into the Python script later. 
 
 - **Essential Resources for Basic Completions**:
-The below resources are the bare minimum requirements to run the API and get a `200` response from the `\Completion\Chat\{profileName}` endpoint. If your application requires RAG database operations, app insight telemetry collection, or
+The below resources are the bare minimum requirements to run the API and get a `200` response from the `\Completion\Chat\{profileName}` endpoint. If your application requires RAG database operations or app insight telemetry collection, please ensure you follow the associated steps in the optional "Additional Cloud Resources" section.
   - **SQL Database (required)** – The application relies on SQL to store conversation history, completion profiles, and RAG metadata. You can use a local SQL Server instance following the [SQL Server Installation Guide](https://docs.microsoft.com/en-us/sql/database-engine/install-windows/install-sql-server?view=sql-server-ver15) (free versions are [available here](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)). Run the scripts in `\IntelligenceHub\IntelligenceHub.DAL\Scripts` after creating the database. If you plan to use Azure AI Search, your SQL database must be reachable from Azure (for example, by deploying an [Azure SQL Database](https://learn.microsoft.com/en-us/azure/azure-sql/database/single-database-create-quickstart?view=azuresql&tabs=azure-portal#prerequisites) or exposing your local server).
   - An API key from one of the supported LLM providers (e.g., OpenAI, Azure OpenAI, or Anthropic). NOTE: Technically only one of the below is required, provided you only use that host.  
     - **OpenAI**: Retrieve your API key from [OpenAI's platform](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key).  
@@ -1317,7 +1317,7 @@ The Message History API provides endpoints to retrieve conversation history, ups
 The `RagController` manages RAG indexes for Azure AI Search Services and Weaviate Cloud. This API allows you to create, configure, query, and manage RAG indexes and their documents. It enforces strict validation rules to ensure that index definitions and document contents conform to both internal requirements and service-specific limits for Azure AI Search or Weaviate.
 
 > **Weaviate Limitations**
-> - When `RagHost` is set to `Weaviate`, **ScoringProfile**, **ChunkOverlap**, and **IndexingInterval** settings are ignored. Support for these options is planned for future releases.
+> - When `RagHost` is set to `Weaviate`, **ScoringProfile**, **ChunkOverlap**, and **IndexingInterval** settings are ignored. Support for Weaviate specific options is planned for a future release.
 > - Weaviate indexes do **not** automatically refresh when new documents are added. Use the `/Rag/Index/{index}/Run` route whenever you need to update the documents.
 > - Azure indexes update automatically on the schedule defined by `IndexingInterval`, but you can still trigger an immediate update with the `/Run` route.
 
@@ -1527,7 +1527,7 @@ The `RagController` manages RAG indexes for Azure AI Search Services and Weaviat
 {
     "Name": "MyRagIndex",
     "GenerationHost": "AzureAI",
-      "RagHost": "Azure",
+    "RagHost": "Azure",
     "IndexingInterval": "00:05:00",
     "EmbeddingModel": "text-embedding-3-large | ada-text-embedding-002",
     "MaxRagAttachments": 10,
@@ -1553,7 +1553,7 @@ The `RagController` manages RAG indexes for Azure AI Search Services and Weaviat
 ```json
 {
     "Name": "MyRagIndex",
-      "RagHost": "Azure",
+    "RagHost": "Azure",
     "GenerationHost": "AzureAI",
     "IndexingInterval": "00:05:00",
     "EmbeddingModel": "text-embedding-3-large",
