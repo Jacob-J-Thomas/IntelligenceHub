@@ -15,6 +15,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         private readonly Mock<IAGIClientFactory> _mockAgiClientFactory;
         private readonly Mock<IAGIClient> _mockAIClient;
         private readonly Mock<IAISearchServiceClient> _mockSearchClient;
+        private readonly Mock<IRagClientFactory> _mockRagClientFactory;
         private readonly Mock<IToolClient> _mockToolClient;
         private readonly Mock<IProfileRepository> _mockProfileRepository;
         private readonly Mock<IToolRepository> _mockToolRepository;
@@ -27,6 +28,8 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockAgiClientFactory = new Mock<IAGIClientFactory>();
             _mockAIClient = new Mock<IAGIClient>();
             _mockSearchClient = new Mock<IAISearchServiceClient>();
+            _mockRagClientFactory = new Mock<IRagClientFactory>();
+            _mockRagClientFactory.Setup(f => f.GetClient(It.IsAny<RagServiceHost?>())).Returns(_mockSearchClient.Object);
             _mockToolClient = new Mock<IToolClient>();
             _mockProfileRepository = new Mock<IProfileRepository>();
             _mockToolRepository = new Mock<IToolRepository>();
@@ -38,7 +41,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             
             _completionLogic = new CompletionLogic(
                 _mockAgiClientFactory.Object,
-                _mockSearchClient.Object,
+                _mockRagClientFactory.Object,
                 _mockToolClient.Object,
                 _mockToolRepository.Object,
                 _mockProfileRepository.Object,
@@ -69,7 +72,7 @@ namespace IntelligenceHub.Tests.Unit.Business
 
             var completionLogic = new CompletionLogic(
                 _mockAgiClientFactory.Object,
-                _mockSearchClient.Object,
+                _mockRagClientFactory.Object,
                 _mockToolClient.Object,
                 _mockToolRepository.Object,
                 _mockProfileRepository.Object,
