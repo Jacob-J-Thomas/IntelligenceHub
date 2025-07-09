@@ -25,6 +25,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         private readonly Mock<IProfileRepository> _mockProfileRepository;
         private readonly Mock<IIndexMetaRepository> _mockMetaRepository;
         private readonly Mock<IAISearchServiceClient> _mockSearchClient;
+        private readonly Mock<IRagClientFactory> _mockRagClientFactory;
         private readonly Mock<IIndexRepository> _mockRagRepository;
         private readonly Mock<IValidationHandler> _mockValidationHandler;
         private readonly Mock<IBackgroundTaskQueueHandler> _mockBackgroundTaskQueueHandler;
@@ -37,6 +38,8 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockClientFactory = new Mock<IAGIClientFactory>();
             _mockProfileRepository = new Mock<IProfileRepository>();
             _mockSearchClient = new Mock<IAISearchServiceClient>();
+            _mockRagClientFactory = new Mock<IRagClientFactory>();
+            _mockRagClientFactory.Setup(f => f.GetClient(It.IsAny<RagServiceHost?>())).Returns(_mockSearchClient.Object);
             _mockMetaRepository = new Mock<IIndexMetaRepository>();
             _mockRagRepository = new Mock<IIndexRepository>();
             _mockValidationHandler = new Mock<IValidationHandler>();
@@ -48,7 +51,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             var settings = new Settings { ValidAGIModels = new[] { "Model1", "Model2" } };
             _mockIOptions.Setup(m => m.CurrentValue).Returns(settings);
 
-            _ragLogic = new RagLogic(_mockIOptions.Object, _mockClientFactory.Object, _mockProfileRepository.Object, _mockSearchClient.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object, null!, mockScopeFactory.Object);
+            _ragLogic = new RagLogic(_mockIOptions.Object, _mockClientFactory.Object, _mockProfileRepository.Object, _mockRagClientFactory.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object, null!, mockScopeFactory.Object);
         }
 
         [Fact]
