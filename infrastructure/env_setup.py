@@ -73,9 +73,11 @@ required_env_vars = [
     "AGIClientSettings_AnthropicServices_0_Key",
     "AGIClientSettings_SearchServiceCompletionServiceEndpoint",
     "AGIClientSettings_SearchServiceCompletionServiceKey",
-    "SearchServiceClientSettings_Endpoint",
-    "SearchServiceClientSettings_Key",
-    "Settings_DefaultImageHost"  # token for DefaultImageGenHost
+    "AzureSearchServiceClientSettings_Endpoint",
+    "AzureSearchServiceClientSettings_Key",
+    "Settings_DefaultImageHost",  # token for DefaultImageGenHost
+    "WeaviateSearchServiceClientSettings_Endpoint",
+    "WeaviateSearchServiceClientSettings_ApiKey"
 ]
 
 # Check the current environment
