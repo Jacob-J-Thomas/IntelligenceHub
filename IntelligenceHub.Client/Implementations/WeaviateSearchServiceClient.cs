@@ -24,8 +24,16 @@ namespace IntelligenceHub.Client.Implementations
         private readonly string _endpoint;
         private readonly string _apiKey;
 
+        /// <summary>
+        /// Default vectorizer module name used when creating Weaviate schemas.
+        /// </summary>
         private const string _defaultWeaviateVectorizerModule = "text2vec-weaviate";
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="WeaviateSearchServiceClient"/> class.
+        /// </summary>
+        /// <param name="factory">Factory used to create <see cref="HttpClient"/> instances.</param>
+        /// <param name="settings">Monitored settings for the Weaviate client.</param>
         public WeaviateSearchServiceClient(IHttpClientFactory factory, IOptionsMonitor<WeaviateSearchServiceClientSettings> settings)
         {
             _httpClient = factory.CreateClient();
@@ -33,6 +41,13 @@ namespace IntelligenceHub.Client.Implementations
             _apiKey = settings.CurrentValue.ApiKey;
         }
 
+        /// <summary>
+        /// Creates an HTTP request for the Weaviate API.
+        /// </summary>
+        /// <param name="method">HTTP method to use.</param>
+        /// <param name="path">Relative path of the endpoint.</param>
+        /// <param name="body">Optional request body object which will be serialized as JSON.</param>
+        /// <returns>A configured <see cref="HttpRequestMessage"/>.</returns>
         private HttpRequestMessage CreateRequest(HttpMethod method, string path, object? body = null)
         {
             var request = new HttpRequestMessage(method, $"{_endpoint}{path}");
@@ -48,6 +63,12 @@ namespace IntelligenceHub.Client.Implementations
             return request;
         }
 
+        /// <summary>
+        /// Executes a search query against the specified index.
+        /// </summary>
+        /// <param name="index">Index metadata describing the target search index.</param>
+        /// <param name="query">Text query to search for.</param>
+        /// <returns>Search results containing <see cref="IndexDefinition"/> objects.</returns>
         public async Task<SearchResults<IndexDefinition>> SearchIndex(IndexMetadata index, string query)
         {
             string searchClause;
@@ -132,6 +153,11 @@ namespace IntelligenceHub.Client.Implementations
                    : DateTime.MinValue;
         }
 
+        /// <summary>
+        /// Creates or updates an index schema in Weaviate based on the provided metadata.
+        /// </summary>
+        /// <param name="indexDefinition">Definition of the index to upsert.</param>
+        /// <returns><c>true</c> if the operation succeeded; otherwise, <c>false</c>.</returns>
         public async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
         {
             var schema = new
@@ -196,6 +222,11 @@ namespace IntelligenceHub.Client.Implementations
             return res.IsSuccessStatusCode;
         }
 
+        /// <summary>
+        /// Deletes an index schema from Weaviate.
+        /// </summary>
+        /// <param name="indexName">Name of the index to remove.</param>
+        /// <returns><c>true</c> if the deletion succeeded; otherwise, <c>false</c>.</returns>
         public async Task<bool> DeleteIndex(string indexName)
         {
             var req = CreateRequest(HttpMethod.Delete, $"/v1/schema/{indexName}");
@@ -203,17 +234,42 @@ namespace IntelligenceHub.Client.Implementations
             return res.IsSuccessStatusCode;
         }
 
+        /// <summary>
+        /// Stub implementation to satisfy the interface. Weaviate does not use indexers.
+        /// </summary>
         public Task<bool> UpsertIndexer(IndexMetadata index) => Task.FromResult(true);
+        /// <summary>
+        /// Stub implementation to satisfy the interface. Weaviate does not use indexers.
+        /// </summary>
         public Task<bool> RunIndexer(string indexName) => Task.FromResult(true);
+        /// <summary>
+        /// Stub implementation to satisfy the interface. Weaviate does not use indexers.
+        /// </summary>
         public Task<bool> DeleteIndexer(string indexName) => Task.FromResult(true);
+        /// <summary>
+        /// Stub implementation to satisfy the interface. Weaviate manages datasources automatically.
+        /// </summary>
         public Task<bool> CreateDatasource(string databaseName) => Task.FromResult(true);
+        /// <summary>
+        /// Stub implementation to satisfy the interface. Weaviate manages datasources automatically.
+        /// </summary>
         public Task<bool> DeleteDatasource(string indexName) => Task.FromResult(true);
 
+        /// <summary>
+        /// Converts an integer ID to a deterministic UUID string.
+        /// </summary>
+        /// <param name="id">Integer identifier.</param>
+        /// <returns>UUID string derived from the integer.</returns>
         private static string IntToUuid(int id)
         {
             return $"00000000-0000-0000-0000-{id:D12}";
         }
 
+        /// <summary>
+        /// Extracts the integer portion of a deterministic UUID created with <see cref="IntToUuid"/>.
+        /// </summary>
+        /// <param name="uuid">UUID string to parse.</param>
+        /// <returns>The integer ID encoded in the UUID; 0 if parsing fails.</returns>
         private static int UuidToInt(string uuid)
         {
             var parts = uuid.Split('-');
@@ -221,6 +277,11 @@ namespace IntelligenceHub.Client.Implementations
             return int.TryParse(parts[4], out var id) ? id : 0;
         }
 
+        /// <summary>
+        /// Retrieves all documents stored in the specified index.
+        /// </summary>
+        /// <param name="indexName">Name of the index.</param>
+        /// <returns>List of <see cref="IndexDocument"/> instances.</returns>
         public async Task<List<IndexDocument>> GetAllDocuments(string indexName)
         {
             var upperCaseName = char.ToUpper(indexName[0]) + indexName.Substring(1);
@@ -257,6 +318,12 @@ namespace IntelligenceHub.Client.Implementations
             return results;
         }
 
+        /// <summary>
+        /// Creates or updates a document in the specified index.
+        /// </summary>
+        /// <param name="indexName">Name of the index.</param>
+        /// <param name="document">Document to upsert.</param>
+        /// <returns><c>true</c> if the operation succeeded; otherwise, <c>false</c>.</returns>
         public async Task<bool> UpsertDocument(string indexName, IndexDocument document)
         {
             var uuid = IntToUuid(document.Id);
@@ -289,6 +356,12 @@ namespace IntelligenceHub.Client.Implementations
             return res.IsSuccessStatusCode;
         }
 
+        /// <summary>
+        /// Deletes a document from the specified index.
+        /// </summary>
+        /// <param name="indexName">Name of the index containing the document.</param>
+        /// <param name="id">Identifier of the document to remove.</param>
+        /// <returns><c>true</c> if the deletion succeeded; otherwise, <c>false</c>.</returns>
         public async Task<bool> DeleteDocument(string indexName, int id)
         {
             var uuid = IntToUuid(id);
@@ -298,6 +371,9 @@ namespace IntelligenceHub.Client.Implementations
         }
 
         // Move/Refactor
+        /// <summary>
+        /// Internal helper class representing schema properties when creating indexes.
+        /// </summary>
         private class SchemaProperty
         {
             public string name { get; set; }

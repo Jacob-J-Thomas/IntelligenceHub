@@ -27,8 +27,15 @@ using Microsoft.AspNetCore.Authentication;
 
 namespace IntelligenceHub.Host
 {
+    /// <summary>
+    /// Entry point for the IntelligenceHub web host.
+    /// </summary>
     public class Program
     {
+        /// <summary>
+        /// Bootstraps and runs the web application.
+        /// </summary>
+        /// <param name="args">Command line arguments.</param>
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
