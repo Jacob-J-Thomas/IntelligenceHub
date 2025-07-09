@@ -279,7 +279,7 @@ Use the **Create RAG Index** endpoint to define a new RAG index. For example, to
      -d '{
            "Name": "MyRagIndex",
            "GenerationHost": "AzureAI",
-             "RagHost": "Azure",
+           "RagHost": "Azure",
            "IndexingInterval": "00:05:00",
            "EmbeddingModel": "ada-text-embedding-002",
            "MaxRagAttachments": 10,
