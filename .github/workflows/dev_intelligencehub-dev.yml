@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - IntelligenceHub-dev
+name: Build and deploy ASP.Net Core app to Azure Web App - intelligencehub-dev
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 'v8.0'
+          dotnet-version: '8.x'
 
       - name: Build with dotnet
         run: dotnet build --configuration Release
@@ -38,6 +38,7 @@ jobs:
   deploy:
     runs-on: windows-latest
     needs: build
+    
     permissions:
       id-token: write #This is required for requesting the JWT
       contents: read #This is required for actions/checkout
@@ -51,15 +52,15 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_66737D949CBA4637ABEE70F90F9ABB9D }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B815A6A020F241CCA3E9F2AB2DC465D5 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_2BDB603ABC8E468CA6E57E1E0A534450 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_86B70A03C58A49A98622DBF162AEFB02 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5926EB9B7A6342CB8753BCAD6E20D78A }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_5960E2B207F84083A11F910162806629 }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'IntelligenceHub-dev'
+          app-name: 'intelligencehub-dev'
           slot-name: 'Production'
           package: .
           
