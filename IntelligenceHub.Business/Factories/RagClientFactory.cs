@@ -20,7 +20,7 @@ namespace IntelligenceHub.Business.Factories
         public IAISearchServiceClient GetClient(RagServiceHost? host)
         {
             if (host == RagServiceHost.Weaviate) return _serviceProvider.GetRequiredService<WeaviateSearchServiceClient>();
-            else if (host == RagServiceHost.Azure) return _serviceProvider.GetRequiredService<AISearchServiceClient>();
+            else if (host == RagServiceHost.Azure) return _serviceProvider.GetRequiredService<AzureAISearchServiceClient>();
             throw new ArgumentException("Could not resolve the provided RagServiceHost.");
         }
     }
