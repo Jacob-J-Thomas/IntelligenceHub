@@ -94,8 +94,8 @@ The below resources are the bare minimum requirements to run the API and get a `
 - **Additional Cloud Resources (Optional)**:
   You only need to set up these additional resources if you plan to use advanced features such as RAG operations. For basic completions, local configuration with a single LLM provider's API key is sufficient.
   - **Azure SQL Database** – Required when using Azure AI Search for RAG operations. Follow the [Azure SQL database quickstart guide](https://learn.microsoft.com/en-us/azure/azure-sql/database/single-database-create-quickstart?view=azuresql&tabs=azure-portal#prerequisites) if you need to deploy one in Azure.
-  - **Azure AI Search Services** – Required for RAG operations that use Azure Search. Follow [Azure's setup guide](https://learn.microsoft.com/en-us/azure/search/search-create-service-portal) to create a service.
-  - **Weaviate Cloud** – Alternatively, you can host indexes in Weaviate's managed cloud. See [Weaviate's documentation](https://weaviate.io/developers/weaviate/installation/weaviate-cloud) for instructions.
+  - **Azure AI Search Services** – Required for RAG operations that use Azure Search. Follow [Azure's setup guide](https://learn.microsoft.com/en-us/azure/search/search-create-service-portal) to create a service. (NOTE: Azure AI Search requires your SQL server to either be in Azure, or to be accessible from the public internet)
+  - **Weaviate Cloud** – Alternatively, you can host indexes in Weaviate's managed cloud. See [Weaviate's documentation](https://weaviate.io/developers/weaviate/installation/weaviate-cloud) for instructions. (Is compatible with any SQL database, no public internet access required)
   - **Application Insights** – Only required for telemetry and performance monitoring. For setup, follow [these instructions for setting up Application Insights for .NET Core](https://learn.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core). The application is already set up to use the service, so skip any sections that aren't related to getting a connection string.
 
 ---
@@ -1823,7 +1823,6 @@ The project relies on the following third-party packages and libraries:
 - **DotNetEnv**: [MIT License](https://github.com/tonerdo/dotnet-env/blob/master/LICENSE)
 - **Microsoft.ApplicationInsights.AspNetCore**: [MIT License](https://github.com/microsoft/ApplicationInsights-dotnet/blob/develop/LICENSE)
 - **Microsoft.AspNet.Mvc**: [Apache License 2.0](https://github.com/aspnet/AspNetWebStack/blob/main/LICENSE.txt)
-- **Microsoft.AspNetCore.Authentication.JwtBearer**: [MIT License](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt)
 - **Microsoft.AspNetCore.Mvc.Core**: [MIT License](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt)
 - **Microsoft.AspNetCore.SignalR.Common**: [MIT License](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt)
 - **Microsoft.AspNetCore.SignalR.Core**: [MIT License](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt)
