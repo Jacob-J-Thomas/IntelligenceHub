@@ -3,9 +3,8 @@ using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common;
-using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
-using Microsoft.Extensions.Options;
+using System.Text;
 using OpenAI;
 using OpenAI.Chat;
 using OpenAI.Images;
@@ -26,34 +25,35 @@ namespace IntelligenceHub.Client.Implementations
         private readonly string _dalle3 = DefaultImageGenModel;
         private readonly string _dalle2 = "dall-e-2";
 
-        private readonly ChatClient _gpt4oAIClient;
-        private readonly ChatClient _gpt4ominiAIClient;
-        private readonly ImageClient _qualityImageGenClient; // DALL-E 3 - does not current support image modifications and prompting is less reliable (as of 2/7/2025)
-        private readonly ImageClient _versatileImageGenClient; // DALL-E 2 - currently more versatile and provides more reliable image generation via prompting (as of 2/7/2025)
+        private readonly IHttpClientFactory _factory;
+        private readonly IUserCredentialProvider _credentialProvider;
 
         /// <summary>
         /// Creates a new instance of the OpenAIClient class
         /// </summary>
-        /// <param name="settings">The AGIClient settings used to configure this client.</param>
-        /// <param name="policyFactory">The client factory used to retrieve a policy.</param>
-        /// <exception cref="InvalidOperationException">Thrown if the provided settings are invalid.</exception>
-        public OpenAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
+        /// <param name="factory">Factory used to create HttpClient instances.</param>
+        /// <param name="credentialProvider">Provider used to load user credentials.</param>
+        public OpenAIClient(IHttpClientFactory factory, IUserCredentialProvider credentialProvider)
         {
-            var policyClient = policyFactory.CreateClient(ClientPolicies.OpenAIClientPolicy.ToString());
+            _factory = factory;
+            _credentialProvider = credentialProvider;
+        }
 
-            var service = settings.CurrentValue.OpenAIServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
-                ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
+        private async Task<(ChatClient gpt4o, ChatClient gpt4oMini, ImageClient dalle3, ImageClient dalle2)> BuildClientsAsync()
+        {
+            var credential = await _credentialProvider.GetCredentialAsync(ServiceTypes.AGI, AGIServiceHost.OpenAI.ToString());
+            if (credential == null) throw new InvalidOperationException("User credentials not found for OpenAI.");
+            var apiKey = Encoding.UTF8.GetString(Convert.FromBase64String(credential.ApiKey));
+            var httpClient = _factory.CreateClient();
+            httpClient.BaseAddress = new Uri(credential.Endpoint);
 
-            var credential = new ApiKeyCredential(service.Key);
-            var options = new OpenAIClientOptions()
-            {
-                Transport = new HttpClientPipelineTransport(policyClient)
-            };  
-            _gpt4oAIClient = new ChatClient(_gpt4o, credential, options);
-            _gpt4ominiAIClient = new ChatClient(_gpt4oMini, credential, options);
+            var keyCred = new ApiKeyCredential(apiKey);
+            var options = new OpenAIClientOptions() { Transport = new HttpClientPipelineTransport(httpClient) };
 
-            _qualityImageGenClient = new ImageClient(_dalle3, credential, options);
-            _versatileImageGenClient = new ImageClient(_dalle2, credential, options);
+            return (new ChatClient(_gpt4o, keyCred, options),
+                    new ChatClient(_gpt4oMini, keyCred, options),
+                    new ImageClient(_dalle3, keyCred, options),
+                    new ImageClient(_dalle2, keyCred, options));
         }
 
         /// <summary>
@@ -63,17 +63,17 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A base 64 representation of the image.</returns>
         public async Task<string?> GenerateImage(string prompt)
         {
+            var (gpt4o, gpt4oMini, quality, versatile) = await BuildClientsAsync();
+
             var options = new ImageGenerationOptions()
             {
                 ResponseFormat = GeneratedImageFormat.Bytes,
 
-                // add below to image gen system tool as arguments later potentially
                 Quality = GeneratedImageQuality.High,
                 Size = GeneratedImageSize.W1792xH1024,
-                //Style = GeneratedImageStyle.Vivid,
             };
 
-            var completion = await _qualityImageGenClient.GenerateImageAsync(prompt, options);
+            var completion = await quality.GenerateImageAsync(prompt, options);
             var base64Image = completion.Value.ImageBytes != null && completion.Value.ImageBytes.ToArray().Length > 0 ? Convert.ToBase64String(completion.Value.ImageBytes) : null;
             return base64Image;
         }
@@ -87,12 +87,13 @@ namespace IntelligenceHub.Client.Implementations
         {
             try
             {
+                var (gpt4o, gpt4oMini, quality, versatile) = await BuildClientsAsync();
                 var options = BuildCompletionOptions(completionRequest);
                 var messages = BuildCompletionMessages(completionRequest);
 
                 ChatCompletion completion;
-                if (completionRequest.ProfileOptions.Model?.ToLower() == _gpt4o) completion = await _gpt4oAIClient.CompleteChatAsync(messages, options);
-                else if (completionRequest.ProfileOptions.Model?.ToLower() == _gpt4oMini) completion = await _gpt4ominiAIClient.CompleteChatAsync(messages, options);
+                if (completionRequest.ProfileOptions.Model?.ToLower() == _gpt4o) completion = await gpt4o.CompleteChatAsync(messages, options);
+                else if (completionRequest.ProfileOptions.Model?.ToLower() == _gpt4oMini) completion = await gpt4oMini.CompleteChatAsync(messages, options);
                 else return new CompletionResponse() { FinishReason = FinishReasons.Error };
 
                 var content = string.Empty;
@@ -139,12 +140,13 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>An asyncronous collection of CompletionStreamChunks.</returns>
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
+            var (gpt4o, gpt4oMini, quality, versatile) = await BuildClientsAsync();
             var options = BuildCompletionOptions(completionRequest);
             var messages = BuildCompletionMessages(completionRequest);
 
             AsyncCollectionResult<StreamingChatCompletionUpdate> resultCollction;
-            if (completionRequest.ProfileOptions.Model?.ToLower() == _gpt4o) resultCollction = _gpt4oAIClient.CompleteChatStreamingAsync(messages);
-            else if (completionRequest.ProfileOptions.Model?.ToLower() == _gpt4oMini) resultCollction = _gpt4ominiAIClient.CompleteChatStreamingAsync(messages);
+            if (completionRequest.ProfileOptions.Model?.ToLower() == _gpt4o) resultCollction = gpt4o.CompleteChatStreamingAsync(messages);
+            else if (completionRequest.ProfileOptions.Model?.ToLower() == _gpt4oMini) resultCollction = gpt4oMini.CompleteChatStreamingAsync(messages);
             else yield break;
 
             var chunkId = 0;

@@ -300,5 +300,14 @@
         /// The default tag boost for scoring.
         /// </summary>
         public const int DefaultScoringTagBoost = 1;
+
+        /// <summary>
+        /// Service type identifiers used when retrieving user credentials.
+        /// </summary>
+        public static class ServiceTypes
+        {
+            public const string AGI = "AGI";
+            public const string RAG = "RAG";
+        }
     }
 }
