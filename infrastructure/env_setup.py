@@ -65,19 +65,7 @@ required_env_vars = [
     "AuthSettings_AdminClientId",
     "AuthSettings_AdminClientSecret",
     "AppInsightSettings_ConnectionString",
-    "AGIClientSettings_AzureOpenAIServices_0_Endpoint",
-    "AGIClientSettings_AzureOpenAIServices_0_Key",
-    "AGIClientSettings_OpenAIServices_0_Endpoint",
-    "AGIClientSettings_OpenAIServices_0_Key",
-    "AGIClientSettings_AnthropicServices_0_Endpoint",
-    "AGIClientSettings_AnthropicServices_0_Key",
-    "AGIClientSettings_SearchServiceCompletionServiceEndpoint",
-    "AGIClientSettings_SearchServiceCompletionServiceKey",
-    "AzureSearchServiceClientSettings_Endpoint",
-    "AzureSearchServiceClientSettings_Key",
     "Settings_DefaultImageHost",  # token for DefaultImageGenHost
-    "WeaviateSearchServiceClientSettings_Endpoint",
-    "WeaviateSearchServiceClientSettings_Key"
 ]
 
 # Check the current environment
@@ -131,9 +119,6 @@ for service_type in additional_services.keys():
             break
         else:
             print("Please enter 'y' for yes or 'n' for no.")
-for service_type, services in additional_services.items():
-    if services:
-        replacements[f"AGIClientSettings_{service_type}"] = services
 
 # Prompt for multiple ValidOrigins entries
 if "Settings_ValidOrigins" not in replacements:

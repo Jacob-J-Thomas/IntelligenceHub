@@ -70,10 +70,6 @@ namespace IntelligenceHub.Common.Config
         /// </summary>
         public string DefaultImageGenHost { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Gets or sets a value indicating whether user provided service credentials should override appsettings.
-        /// </summary>
-        public bool UseUserProvidedCredentials { get; set; }
     }
 }
 

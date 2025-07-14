@@ -51,17 +51,12 @@ namespace IntelligenceHub.Host
             var insightSettingsSection = builder.Configuration.GetRequiredSection(nameof(AppInsightSettings));
             var insightSettings = insightSettingsSection.Get<AppInsightSettings>();
 
-            var agiClientSettingsSection = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings));
-            var agiClientSettings = agiClientSettingsSection.Get<AGIClientSettings>();
             var stripeSettingsSection = builder.Configuration.GetSection(nameof(StripeSettings));
 
             builder.Services.Configure<Settings>(settingsSection);
             builder.Services.Configure<AuthSettings>(authSection);
             builder.Services.Configure<AppInsightSettings>(insightSettingsSection);
-            builder.Services.Configure<AGIClientSettings>(agiClientSettingsSection);
             builder.Services.Configure<StripeSettings>(stripeSettingsSection);
-            builder.Services.Configure<AzureSearchServiceClientSettings>(builder.Configuration.GetRequiredSection(nameof(AzureSearchServiceClientSettings)));
-            builder.Services.Configure<WeaviateSearchServiceClientSettings>(builder.Configuration.GetSection(nameof(WeaviateSearchServiceClientSettings)));
 
             // Register AuthSettings as a singleton
             builder.Services.AddSingleton(authSettings);
@@ -89,16 +84,19 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IBillingService, StripeBillingService>();
 
             // Clients and Client Factory
-            builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
-            builder.Services.AddSingleton<IRagClientFactory, RagClientFactory>();
-            builder.Services.AddSingleton<IAGIClient, AzureAIClient>();
-            builder.Services.AddSingleton<OpenAIClient>();
-            builder.Services.AddSingleton<AzureAIClient>();
-            builder.Services.AddSingleton<AnthropicAIClient>();
-            builder.Services.AddSingleton<IToolClient, ToolClient>();
-            builder.Services.AddSingleton<AzureAISearchServiceClient>();
-            builder.Services.AddSingleton<WeaviateSearchServiceClient>();
-            builder.Services.AddSingleton<IAIAuth0Client, Auth0Client>();
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddScoped<IUserCredentialProvider, UserCredentialProvider>();
+
+            builder.Services.AddScoped<IAGIClientFactory, AGIClientFactory>();
+            builder.Services.AddScoped<IRagClientFactory, RagClientFactory>();
+            builder.Services.AddScoped<IAGIClient, AzureAIClient>();
+            builder.Services.AddScoped<OpenAIClient>();
+            builder.Services.AddScoped<AzureAIClient>();
+            builder.Services.AddScoped<AnthropicAIClient>();
+            builder.Services.AddScoped<IToolClient, ToolClient>();
+            builder.Services.AddScoped<AzureAISearchServiceClient>();
+            builder.Services.AddScoped<WeaviateSearchServiceClient>();
+            builder.Services.AddScoped<IAIAuth0Client, Auth0Client>();
 
             // Repositories
             builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
@@ -111,12 +109,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IUserServiceCredentialRepository, UserServiceCredentialRepository>();
 
             // Handlers
-            var serviceUrls = new Dictionary<string, string[]>();
-            if (agiClientSettings?.AzureOpenAIServices != null) serviceUrls.Add(ClientPolicies.AzureAIClientPolicy.ToString(), agiClientSettings.AzureOpenAIServices.Select(service => service.Endpoint).ToArray());
-            if (agiClientSettings?.OpenAIServices != null) serviceUrls.Add(ClientPolicies.OpenAIClientPolicy.ToString(), agiClientSettings.OpenAIServices.Select(service => service.Endpoint).ToArray());
-            if (agiClientSettings?.AnthropicServices != null) serviceUrls.Add(ClientPolicies.AnthropicAIClientPolicy.ToString(), agiClientSettings.AnthropicServices.Select(service => service.Endpoint).ToArray());
-
-            builder.Services.AddSingleton(new LoadBalancingSelector(serviceUrls));
+            builder.Services.AddSingleton(new LoadBalancingSelector(new Dictionary<string, string[]>()));
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
             builder.Services.AddSingleton<IBackgroundTaskQueueHandler, BackgroundTaskQueueHandler>();
             builder.Services.AddHostedService<BackgroundWorker>();
@@ -174,10 +167,7 @@ namespace IntelligenceHub.Host
                 LoadBalancingSelector.RegisterHttpClientWithPolicy(services, policyName, serviceName, policy);
             }
 
-            // Register policies for each service type
-            RegisterClientPolicy(builder.Services, ClientPolicies.AzureAIClientPolicy.ToString(), ClientPolicies.AzureAIClientPolicy.ToString(), agiClientSettings.AzureOpenAIServices.Count);
-            RegisterClientPolicy(builder.Services, ClientPolicies.OpenAIClientPolicy.ToString(), ClientPolicies.OpenAIClientPolicy.ToString(), agiClientSettings.OpenAIServices.Count);
-            RegisterClientPolicy(builder.Services, ClientPolicies.AnthropicAIClientPolicy.ToString(), ClientPolicies.AnthropicAIClientPolicy.ToString(), agiClientSettings.AnthropicServices.Count);
+            // Register policies for each service type (no-op without configuration)
 
             #endregion
 

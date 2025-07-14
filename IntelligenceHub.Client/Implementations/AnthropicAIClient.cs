@@ -3,8 +3,7 @@ using IntelligenceHub.Client.Interfaces;
 using Anthropic.SDK;
 using Anthropic.SDK.Messaging;
 using static IntelligenceHub.Common.GlobalVariables;
-using Microsoft.Extensions.Options;
-using IntelligenceHub.Common.Config;
+using System.Text;
 using IntelligenceHub.API.DTOs.Tools;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -24,7 +23,8 @@ namespace IntelligenceHub.Client.Implementations
             end_turn
         }
 
-        private readonly AnthropicClient _anthropicClient;
+        private readonly IHttpClientFactory _factory;
+        private readonly IUserCredentialProvider _credentialProvider;
 
         /// <summary>
         /// Creates a new instance of the AnthropicAIClient.
@@ -32,15 +32,20 @@ namespace IntelligenceHub.Client.Implementations
         /// <param name="settings">The AGIClient settings used to configure this client.</param>
         /// <param name="policyFactory">The client factory used to retrieve a policy.</param>
         /// <exception cref="InvalidOperationException">Thrown if the provided settings are invalid.</exception>
-        public AnthropicAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
+        public AnthropicAIClient(IHttpClientFactory factory, IUserCredentialProvider credentialProvider)
         {
-            var policyClient = policyFactory.CreateClient(ClientPolicies.AnthropicAIClientPolicy.ToString());
+            _factory = factory;
+            _credentialProvider = credentialProvider;
+        }
 
-            var service = settings.CurrentValue.AnthropicServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
-                ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
-
-            var apiKey = service.Key;
-            _anthropicClient = new AnthropicClient(apiKey, policyClient);
+        private async Task<AnthropicClient> BuildClientAsync()
+        {
+            var credential = await _credentialProvider.GetCredentialAsync(ServiceTypes.AGI, AGIServiceHost.Anthropic.ToString());
+            if (credential == null) throw new InvalidOperationException("User credentials not found for Anthropic.");
+            var apiKey = Encoding.UTF8.GetString(Convert.FromBase64String(credential.ApiKey));
+            var httpClient = _factory.CreateClient();
+            if (!string.IsNullOrEmpty(credential.Endpoint)) httpClient.BaseAddress = new Uri(credential.Endpoint);
+            return new AnthropicClient(apiKey, httpClient);
         }
 
         /// <summary>
@@ -63,8 +68,9 @@ namespace IntelligenceHub.Client.Implementations
         {
             try
             {
+                var client = await BuildClientAsync();
                 var request = BuildCompletionParameters(completionRequest);
-                var response = await _anthropicClient.Messages.GetClaudeMessageAsync(request);
+                var response = await client.Messages.GetClaudeMessageAsync(request);
 
                 var toolCalls = ConvertResponseTools(response.ToolCalls);
 
@@ -95,8 +101,9 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>Any asyncronous collection of streaming chunks containing the completion response.</returns>
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
+            var client = await BuildClientAsync();
             var request = BuildCompletionParameters(completionRequest);
-            var response = _anthropicClient.Messages.StreamClaudeMessageAsync(request);
+            var response = client.Messages.StreamClaudeMessageAsync(request);
 
             var toolCalls = new Dictionary<string, string>();
             await foreach (var chunk in response)

@@ -7,9 +7,10 @@ using Azure.Search.Documents.Indexes.Models;
 using Azure.Search.Documents.Models;
 using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Client.Interfaces;
-using IntelligenceHub.Common.Config;
+using System.Text;
 using Microsoft.Extensions.Options;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -22,6 +23,7 @@ namespace IntelligenceHub.Client.Implementations
         private readonly SearchIndexerClient _indexerClient;
 
         private readonly string _sqlRagDbConnectionString;
+        private readonly IUserCredentialProvider _credentialProvider;
         private readonly string _openaiKey;
         private readonly string _openaiUrl;
 
@@ -63,24 +65,31 @@ namespace IntelligenceHub.Client.Implementations
         /// <summary>
         /// The default constructor for the AISearchServiceClient class.
         /// </summary>
-        /// <param name="searchClientSettings">The search service client resolved from DI.</param>
-        /// <param name="agiClientSettings">The settings for the client resolved from DI.</param>
+        /// <param name="factory">Factory used to create HttpClient instances.</param>
+        /// <param name="credentialProvider">Provider used to load user credentials.</param>
         /// <param name="settings">The application settings passed in from DI. Only required for the DB connection string.</param>
-        public AzureAISearchServiceClient(IOptionsMonitor<AzureSearchServiceClientSettings> searchClientSettings, IOptionsMonitor<AGIClientSettings> agiClientSettings, IOptionsMonitor<Settings> settings)
+        public AzureAISearchServiceClient(IUserCredentialProvider credentialProvider, IOptionsMonitor<Settings> settings)
         {
-            var credential = new AzureKeyCredential(searchClientSettings.CurrentValue.Key);
+            _credentialProvider = credentialProvider;
+            _sqlRagDbConnectionString = settings.CurrentValue.DbConnectionString;
+
+            var ragCred = _credentialProvider.GetCredentialAsync(ServiceTypes.RAG, RagServiceHost.Azure.ToString()).GetAwaiter().GetResult();
+            if (ragCred == null) throw new InvalidOperationException("User credentials not found for Azure Search.");
+            var apiKey = Encoding.UTF8.GetString(Convert.FromBase64String(ragCred.ApiKey));
+            var credential = new AzureKeyCredential(apiKey);
 
             var options = new SearchClientOptions()
             {
                 RetryPolicy = new RetryPolicy(AISearchServiceMaxRetries, DelayStrategy.CreateExponentialDelayStrategy(TimeSpan.FromSeconds(AISearchServiceInitialDelay), TimeSpan.FromSeconds(AISearchServiceMaxDelay)))
             };
 
-            _indexClient = new SearchIndexClient(new Uri(searchClientSettings.CurrentValue.Endpoint), credential, options);
-            _indexerClient = new SearchIndexerClient(new Uri(searchClientSettings.CurrentValue.Endpoint), credential, options);
+            _indexClient = new SearchIndexClient(new Uri(ragCred.Endpoint), credential, options);
+            _indexerClient = new SearchIndexerClient(new Uri(ragCred.Endpoint), credential, options);
 
-            _sqlRagDbConnectionString = settings.CurrentValue.DbConnectionString;
-            _openaiUrl = agiClientSettings.CurrentValue.SearchServiceCompletionServiceEndpoint;
-            _openaiKey = agiClientSettings.CurrentValue.SearchServiceCompletionServiceKey;
+            var agiCred = _credentialProvider.GetCredentialAsync(ServiceTypes.AGI, AGIServiceHost.Azure.ToString()).GetAwaiter().GetResult();
+            if (agiCred == null) throw new InvalidOperationException("User AGI credentials not found for Azure Search.");
+            _openaiUrl = agiCred.Endpoint;
+            _openaiKey = Encoding.UTF8.GetString(Convert.FromBase64String(agiCred.ApiKey));
         }
 
         // index operations

@@ -2,9 +2,8 @@
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Client.Interfaces;
-using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
-using Microsoft.Extensions.Options;
+using System.Text;
 using OpenAI.Chat;
 using OpenAI.Images;
 using System.ClientModel;
@@ -19,7 +18,8 @@ namespace IntelligenceHub.Client.Implementations
     /// </summary>
     public class AzureAIClient : IAGIClient
     {
-        private AzureOpenAIClient _azureOpenAIClient;
+        private readonly IHttpClientFactory _factory;
+        private readonly IUserCredentialProvider _credentialProvider;
 
         /// <summary>
         /// Initializes a new instance of the AzureAIClient class with the specified settings and policy factory.
@@ -27,20 +27,23 @@ namespace IntelligenceHub.Client.Implementations
         /// <param name="settings">The AGIClient settings used to configure this client.</param>
         /// <param name="policyFactory">The client factory used to retrieve a policy.</param>
         /// <exception cref="InvalidOperationException">Thrown if the provided settings are invalid.</exception>
-        public AzureAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
+        public AzureAIClient(IHttpClientFactory factory, IUserCredentialProvider credentialProvider)
         {
-            var policyClient = policyFactory.CreateClient(ClientPolicies.AzureAIClientPolicy.ToString());
+            _factory = factory;
+            _credentialProvider = credentialProvider;
+        }
 
-            var service = settings.CurrentValue.AzureOpenAIServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
-                ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
+        private async Task<AzureOpenAIClient> BuildClientAsync()
+        {
+            var credential = await _credentialProvider.GetCredentialAsync(ServiceTypes.AGI, AGIServiceHost.Azure.ToString());
+            if (credential == null) throw new InvalidOperationException("User credentials not found for Azure OpenAI.");
 
-            var apiKey = service.Key;
-            var credential = new ApiKeyCredential(apiKey);
-            var options = new AzureOpenAIClientOptions()
-            {
-                Transport = new HttpClientPipelineTransport(policyClient)
-            };
-            _azureOpenAIClient = new AzureOpenAIClient(policyClient.BaseAddress, credential, options);
+            var apiKey = Encoding.UTF8.GetString(Convert.FromBase64String(credential.ApiKey));
+            var httpClient = _factory.CreateClient();
+            httpClient.BaseAddress = new Uri(credential.Endpoint);
+            var keyCred = new ApiKeyCredential(apiKey);
+            var options = new AzureOpenAIClientOptions { Transport = new HttpClientPipelineTransport(httpClient) };
+            return new AzureOpenAIClient(httpClient.BaseAddress, keyCred, options);
         }
 
         /// <summary>
@@ -50,7 +53,8 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A Base64 representation of the returned image, or null if the request fails.</returns>
         public async Task<string?> GenerateImage(string prompt)
         {
-            var imageClient = _azureOpenAIClient.GetImageClient(DefaultImageGenModel);
+            var client = await BuildClientAsync();
+            var imageClient = client.GetImageClient(DefaultImageGenModel);
             if (imageClient == null) return null;
 
             var options = new ImageGenerationOptions()
@@ -77,9 +81,10 @@ namespace IntelligenceHub.Client.Implementations
         {
             try
             {
+                var client = await BuildClientAsync();
                 var options = BuildCompletionOptions(completionRequest);
                 var messages = BuildCompletionMessages(completionRequest);
-                var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
+                var chatClient = client.GetChatClient(completionRequest.ProfileOptions.Model);
 
                 var completionResult = await chatClient.CompleteChatAsync(messages, options);
 
@@ -129,9 +134,10 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>An asyncronous collection of CompletionStreamChunks.</returns>
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
+            var client = await BuildClientAsync();
             var options = BuildCompletionOptions(completionRequest);
             var messages = BuildCompletionMessages(completionRequest);
-            var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
+            var chatClient = client.GetChatClient(completionRequest.ProfileOptions.Model);
             var resultCollection = chatClient.CompleteChatStreamingAsync(messages, options);
 
             var chunkId = 0;

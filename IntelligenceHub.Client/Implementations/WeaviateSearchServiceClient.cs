@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using Azure.Search.Documents.Models;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.API.DTOs.RAG;
-using IntelligenceHub.Common.Config;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using static IntelligenceHub.Common.GlobalVariables;
@@ -20,9 +18,8 @@ namespace IntelligenceHub.Client.Implementations
     /// </summary>
     public class WeaviateSearchServiceClient : IAISearchServiceClient
     {
-        private readonly HttpClient _httpClient;
-        private readonly string _endpoint;
-        private readonly string _apiKey;
+        private readonly IHttpClientFactory _factory;
+        private readonly IUserCredentialProvider _credentialProvider;
 
         /// <summary>
         /// Default vectorizer module name used when creating Weaviate schemas.
@@ -33,12 +30,21 @@ namespace IntelligenceHub.Client.Implementations
         /// Initializes a new instance of the <see cref="WeaviateSearchServiceClient"/> class.
         /// </summary>
         /// <param name="factory">Factory used to create <see cref="HttpClient"/> instances.</param>
-        /// <param name="settings">Monitored settings for the Weaviate client.</param>
-        public WeaviateSearchServiceClient(IHttpClientFactory factory, IOptionsMonitor<WeaviateSearchServiceClientSettings> settings)
+        /// <param name="credentialProvider">Provider used to load user credentials.</param>
+        public WeaviateSearchServiceClient(IHttpClientFactory factory, IUserCredentialProvider credentialProvider)
         {
-            _httpClient = factory.CreateClient();
-            _endpoint = settings.CurrentValue.Endpoint.TrimEnd('/');
-            _apiKey = settings.CurrentValue.Key;
+            _factory = factory;
+            _credentialProvider = credentialProvider;
+        }
+
+        private async Task<(HttpClient Client, string Endpoint, string ApiKey)> GetClientAsync()
+        {
+            var credential = await _credentialProvider.GetCredentialAsync(ServiceTypes.RAG, RagServiceHost.Weaviate.ToString());
+            if (credential == null) throw new InvalidOperationException("User credentials not found for Weaviate.");
+            var apiKey = Encoding.UTF8.GetString(Convert.FromBase64String(credential.ApiKey));
+            var client = _factory.CreateClient();
+            var endpoint = credential.Endpoint.TrimEnd('/');
+            return (client, endpoint, apiKey);
         }
 
         /// <summary>
@@ -48,18 +54,20 @@ namespace IntelligenceHub.Client.Implementations
         /// <param name="path">Relative path of the endpoint.</param>
         /// <param name="body">Optional request body object which will be serialized as JSON.</param>
         /// <returns>A configured <see cref="HttpRequestMessage"/>.</returns>
-        private HttpRequestMessage CreateRequest(HttpMethod method, string path, object? body = null)
+        private async Task<HttpRequestMessage> CreateRequestAsync(HttpMethod method, string path, object? body = null)
         {
-            var request = new HttpRequestMessage(method, $"{_endpoint}{path}");
-            if (!string.IsNullOrEmpty(_apiKey)) request.Headers.Add("Authorization", $"Bearer {_apiKey}");
+            var (client, endpoint, apiKey) = await GetClientAsync();
+            var request = new HttpRequestMessage(method, $"{endpoint}{path}");
+            if (!string.IsNullOrEmpty(apiKey)) request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
-            request.Headers.Add("X-Weaviate-Cluster-Url", _endpoint);
+            request.Headers.Add("X-Weaviate-Cluster-Url", endpoint);
 
             if (body != null)
             {
                 var json = JsonConvert.SerializeObject(body);
                 request.Content = new StringContent(json, Encoding.UTF8, "application/json");
             }
+            request.Properties[nameof(HttpClient)] = client;
             return request;
         }
 
@@ -92,8 +100,9 @@ namespace IntelligenceHub.Client.Implementations
             {
                 query = $"{{ Get {{ {className}({searchClause}) {{ title chunk topic keywords source created modified }} }} }}"
             };
-            var req = CreateRequest(HttpMethod.Post, "/v1/graphql", gql);
-            var res = await _httpClient.SendAsync(req);
+            var req = await CreateRequestAsync(HttpMethod.Post, "/v1/graphql", gql);
+            var client = (HttpClient)req.Properties[nameof(HttpClient)];
+            var res = await client.SendAsync(req);
             res.EnsureSuccessStatusCode();
             var content = await res.Content.ReadAsStringAsync();
             var root = JObject.Parse(content);
@@ -214,8 +223,9 @@ namespace IntelligenceHub.Client.Implementations
                     new SchemaProperty { name = "modified", dataType = new[]{"date"} }
                 }
             };
-            var req = CreateRequest(HttpMethod.Post, "/v1/schema", schema);
-            var res = await _httpClient.SendAsync(req);
+            var req = await CreateRequestAsync(HttpMethod.Post, "/v1/schema", schema);
+            var client = (HttpClient)req.Properties[nameof(HttpClient)];
+            var res = await client.SendAsync(req);
 
             var content = await res.Content.ReadAsStringAsync();
 
@@ -229,8 +239,9 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns><c>true</c> if the deletion succeeded; otherwise, <c>false</c>.</returns>
         public async Task<bool> DeleteIndex(string indexName)
         {
-            var req = CreateRequest(HttpMethod.Delete, $"/v1/schema/{indexName}");
-            var res = await _httpClient.SendAsync(req);
+            var req = await CreateRequestAsync(HttpMethod.Delete, $"/v1/schema/{indexName}");
+            var client = (HttpClient)req.Properties[nameof(HttpClient)];
+            var res = await client.SendAsync(req);
             return res.IsSuccessStatusCode;
         }
 
@@ -289,8 +300,9 @@ namespace IntelligenceHub.Client.Implementations
             {
                 query = $"{{ Get {{ {upperCaseName} {{ _additional {{ id }} title chunk topic keywords source created modified }} }} }}"
             };
-            var req = CreateRequest(HttpMethod.Post, "/v1/graphql", gql);
-            var res = await _httpClient.SendAsync(req);
+            var req = await CreateRequestAsync(HttpMethod.Post, "/v1/graphql", gql);
+            var client = (HttpClient)req.Properties[nameof(HttpClient)];
+            var res = await client.SendAsync(req);
             res.EnsureSuccessStatusCode();
             var content = await res.Content.ReadAsStringAsync();
             var j = JObject.Parse(content);
@@ -344,12 +356,14 @@ namespace IntelligenceHub.Client.Implementations
             };
 
             var upperCaseName = char.ToUpper(indexName[0]) + indexName.Substring(1);
-            var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{upperCaseName}/{uuid}", body);
-            var res = await _httpClient.SendAsync(req);
+            var req = await CreateRequestAsync(HttpMethod.Put, $"/v1/objects/{upperCaseName}/{uuid}", body);
+            var client = (HttpClient)req.Properties[nameof(HttpClient)];
+            var res = await client.SendAsync(req);
             if (res.IsSuccessStatusCode) return true;
 
-            req = CreateRequest(HttpMethod.Post, "/v1/objects", body);
-            res = await _httpClient.SendAsync(req);
+            req = await CreateRequestAsync(HttpMethod.Post, "/v1/objects", body);
+            client = (HttpClient)req.Properties[nameof(HttpClient)];
+            res = await client.SendAsync(req);
 
             var content = await res.Content.ReadAsStringAsync();
 
@@ -365,8 +379,9 @@ namespace IntelligenceHub.Client.Implementations
         public async Task<bool> DeleteDocument(string indexName, int id)
         {
             var uuid = IntToUuid(id);
-            var req = CreateRequest(HttpMethod.Delete, $"/v1/objects/{uuid}");
-            var res = await _httpClient.SendAsync(req);
+            var req = await CreateRequestAsync(HttpMethod.Delete, $"/v1/objects/{uuid}");
+            var client = (HttpClient)req.Properties[nameof(HttpClient)];
+            var res = await client.SendAsync(req);
             return res.IsSuccessStatusCode;
         }
 
