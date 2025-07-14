@@ -16,7 +16,7 @@ namespace IntelligenceHub.Client.Implementations
     /// <summary>
     /// A Azure AI Search Services client oriented around RAG construction and consumption.
     /// </summary>
-    public class AISearchServiceClient : IAISearchServiceClient
+    public class AzureAISearchServiceClient : IAISearchServiceClient
     {
         private readonly SearchIndexClient _indexClient;
         private readonly SearchIndexerClient _indexerClient;
@@ -66,7 +66,7 @@ namespace IntelligenceHub.Client.Implementations
         /// <param name="searchClientSettings">The search service client resolved from DI.</param>
         /// <param name="agiClientSettings">The settings for the client resolved from DI.</param>
         /// <param name="settings">The application settings passed in from DI. Only required for the DB connection string.</param>
-        public AISearchServiceClient(IOptionsMonitor<AzureSearchServiceClientSettings> searchClientSettings, IOptionsMonitor<AGIClientSettings> agiClientSettings, IOptionsMonitor<Settings> settings)
+        public AzureAISearchServiceClient(IOptionsMonitor<AzureSearchServiceClientSettings> searchClientSettings, IOptionsMonitor<AGIClientSettings> agiClientSettings, IOptionsMonitor<Settings> settings)
         {
             var credential = new AzureKeyCredential(searchClientSettings.CurrentValue.Key);
 

@@ -93,7 +93,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton<AzureAIClient>();
             builder.Services.AddSingleton<AnthropicAIClient>();
             builder.Services.AddSingleton<IToolClient, ToolClient>();
-            builder.Services.AddSingleton<AISearchServiceClient>();
+            builder.Services.AddSingleton<AzureAISearchServiceClient>();
             builder.Services.AddSingleton<WeaviateSearchServiceClient>();
             builder.Services.AddSingleton<IAIAuth0Client, Auth0Client>();
 
