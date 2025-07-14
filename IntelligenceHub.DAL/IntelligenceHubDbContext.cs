@@ -33,6 +33,7 @@ namespace IntelligenceHub.DAL
         public DbSet<DbProfileTool> ProfileTools { get; set; }
         public DbSet<DbTool> Tools { get; set; }
         public DbSet<DbProperty> Properties { get; set; }
+        public DbSet<DbUserServiceCredential> UserServiceCredentials { get; set; }
 
         /// <summary>
         /// Configures the model for the Intelligence Hub database context.
@@ -181,6 +182,18 @@ namespace IntelligenceHub.DAL
                 entity.HasOne(e => e.Tool)
                     .WithMany(t => t.ProfileTools)
                     .HasForeignKey(e => e.ToolID);
+            });
+
+            modelBuilder.Entity<DbUserServiceCredential>(entity =>
+            {
+                entity.ToTable("UserServiceCredentials");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.UserId).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.ServiceType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Host).HasMaxLength(255);
+                entity.Property(e => e.Endpoint).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.ApiKey).IsRequired().HasMaxLength(255);
             });
         }
     }

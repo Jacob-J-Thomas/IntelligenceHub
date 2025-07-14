@@ -1,0 +1,8 @@
+CREATE TABLE UserServiceCredentials (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    UserId NVARCHAR(255) NOT NULL,
+    ServiceType NVARCHAR(50) NOT NULL,
+    Host NVARCHAR(255),
+    Endpoint NVARCHAR(255) NOT NULL,
+    ApiKey NVARCHAR(255) NOT NULL
+);

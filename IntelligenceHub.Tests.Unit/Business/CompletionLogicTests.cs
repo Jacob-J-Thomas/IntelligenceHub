@@ -1,6 +1,7 @@
 using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Factories;
 using IntelligenceHub.Business.Implementations;
+using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
@@ -21,6 +22,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         private readonly Mock<IToolRepository> _mockToolRepository;
         private readonly Mock<IMessageHistoryRepository> _mockMessageHistoryRepository;
         private readonly Mock<IIndexMetaRepository> _mockRagMetaRepository;
+        private readonly Mock<IBillingService> _mockBillingService;
         private readonly CompletionLogic _completionLogic;
 
         public CompletionLogicTests()
@@ -35,6 +37,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockToolRepository = new Mock<IToolRepository>();
             _mockMessageHistoryRepository = new Mock<IMessageHistoryRepository>();
             _mockRagMetaRepository = new Mock<IIndexMetaRepository>();
+            _mockBillingService = new Mock<IBillingService>();
             _mockAIClient = new Mock<IAGIClient>();
 
             _mockAgiClientFactory.Setup(factory => factory.GetClient(It.IsAny<AGIServiceHost>())).Returns(_mockAIClient.Object);
@@ -46,7 +49,8 @@ namespace IntelligenceHub.Tests.Unit.Business
                 _mockToolRepository.Object,
                 _mockProfileRepository.Object,
                 _mockMessageHistoryRepository.Object,
-                _mockRagMetaRepository.Object
+                _mockRagMetaRepository.Object,
+                _mockBillingService.Object
             );
         }
 
@@ -77,7 +81,8 @@ namespace IntelligenceHub.Tests.Unit.Business
                 _mockToolRepository.Object,
                 _mockProfileRepository.Object,
                 _mockMessageHistoryRepository.Object,
-                _mockRagMetaRepository.Object
+                _mockRagMetaRepository.Object,
+                _mockBillingService.Object
             );
 
             // Act
@@ -105,7 +110,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Messages = new List<Message> { userMessage },
                 ConversationId = Guid.NewGuid(),
-                ProfileOptions = new Profile { Name = "TestProfile", Host = AGIServiceHost.OpenAI, Model = DefaultOpenAIModel }
+                ProfileOptions = new Profile { Name = "TestProfile", Host = AGIServiceHost.OpenAI, Model = DefaultOpenAIModel, User = "testUser" }
             };
 
             var profile = new DbProfile { Name = "TestProfile", Host = AGIServiceHost.OpenAI.ToString(), Model = DefaultOpenAIModel };
@@ -128,6 +133,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             // Assert
             Assert.NotNull(result);
             Assert.Equal(completionResponse, result.Data);
+            _mockBillingService.Verify(b => b.TrackUsageAsync(It.IsAny<string>(), 1), Times.Once);
         }
 
         [Fact]

@@ -53,11 +53,13 @@ namespace IntelligenceHub.Host
 
             var agiClientSettingsSection = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings));
             var agiClientSettings = agiClientSettingsSection.Get<AGIClientSettings>();
+            var stripeSettingsSection = builder.Configuration.GetSection(nameof(StripeSettings));
 
             builder.Services.Configure<Settings>(settingsSection);
             builder.Services.Configure<AuthSettings>(authSection);
             builder.Services.Configure<AppInsightSettings>(insightSettingsSection);
             builder.Services.Configure<AGIClientSettings>(agiClientSettingsSection);
+            builder.Services.Configure<StripeSettings>(stripeSettingsSection);
             builder.Services.Configure<AzureSearchServiceClientSettings>(builder.Configuration.GetRequiredSection(nameof(AzureSearchServiceClientSettings)));
             builder.Services.Configure<WeaviateSearchServiceClientSettings>(builder.Configuration.GetSection(nameof(WeaviateSearchServiceClientSettings)));
 
@@ -84,6 +86,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IProfileLogic, ProfileLogic>();
             builder.Services.AddScoped<IRagLogic, RagLogic>();
             builder.Services.AddScoped<IAuthLogic, AuthLogic>();
+            builder.Services.AddScoped<IBillingService, StripeBillingService>();
 
             // Clients and Client Factory
             builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
@@ -105,6 +108,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IMessageHistoryRepository, MessageHistoryRepository>();
             builder.Services.AddScoped<IIndexRepository, IndexRepository>();
             builder.Services.AddScoped<IIndexMetaRepository, IndexMetaRepository>();
+            builder.Services.AddScoped<IUserServiceCredentialRepository, UserServiceCredentialRepository>();
 
             // Handlers
             var serviceUrls = new Dictionary<string, string[]>();

@@ -31,6 +31,7 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IntelligenceHubDbContext _dbContext;
         private readonly WeaviateSearchServiceClient _weaviateClient;
+        private readonly IBillingService _billingService;
 
         private readonly string _defaultAzureModel;
 
@@ -46,7 +47,7 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="validationHandler">A class that can be used to validate DTO bodies passed to the API.</param>
         /// <param name="backgroundTaskQueue">A background task handler useful for performing operations without tying up resources.</param>
         /// <param name="context">DAL context from EFCore used for some more specialized scenarios.</param>
-        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient, IServiceScopeFactory serviceScopeFactory)
+        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient, IServiceScopeFactory serviceScopeFactory, IBillingService billingService)
         {
             _defaultAzureModel = settings.CurrentValue.ValidAGIModels.FirstOrDefault() ?? string.Empty;
             _agiClientFactory = agiFactory;
@@ -58,6 +59,7 @@ namespace IntelligenceHub.Business.Implementations
             _dbContext = context;
             _weaviateClient = weaviateClient;
             _serviceScopeFactory = serviceScopeFactory;
+            _billingService = billingService;
         }
 
         /// <summary>
