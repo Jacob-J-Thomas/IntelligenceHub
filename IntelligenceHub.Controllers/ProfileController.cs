@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.Controllers.Filters;
 
 namespace IntelligenceHub.Controllers
 {
@@ -16,6 +17,7 @@ namespace IntelligenceHub.Controllers
     [Route("[controller]")]
     [ApiController]
     [Authorize(Policy = ElevatedAuthPolicy)]
+    [Billable]
     public class ProfileController : ControllerBase
     {
         private readonly IProfileLogic _profileLogic;

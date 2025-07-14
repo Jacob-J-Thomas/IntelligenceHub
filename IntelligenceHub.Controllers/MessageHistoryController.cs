@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using IntelligenceHub.Controllers.Filters;
 
 namespace IntelligenceHub.Controllers
 {
@@ -15,6 +16,7 @@ namespace IntelligenceHub.Controllers
     [Route("[controller]")]
     [ApiController]
     [Authorize(Policy = ElevatedAuthPolicy)]
+    [Billable]
     public class MessageHistoryController : ControllerBase
     {
         private readonly IMessageHistoryLogic _messageHistoryLogic;

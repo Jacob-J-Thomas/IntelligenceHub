@@ -231,10 +231,6 @@ namespace IntelligenceHub.Business.Implementations
             if (completion.FinishReason == FinishReasons.Error) return APIResponseWrapper<CompletionResponse>.Failure(completion, "An error was encountered when trying to generate a completion.", APIResponseStatusCodes.InternalError);
             if (completion.FinishReason == FinishReasons.TooManyRequests) return APIResponseWrapper<CompletionResponse>.Failure(completion, $"The Host service quota has been exceeded. Please check your API quota details for '{completionRequest.ProfileOptions.Host}'.", APIResponseStatusCodes.TooManyRequests);
 
-            if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.User))
-            {
-                await _billingService.TrackUsageAsync(completionRequest.ProfileOptions.User, 1);
-            }
 
             if (completionRequest.ConversationId is Guid id)
             {
@@ -479,10 +475,6 @@ namespace IntelligenceHub.Business.Implementations
             var completion = await agiClient.PostCompletion(completionRequest);
             if (completion.FinishReason == FinishReasons.Error) return completion;
 
-            if (!string.IsNullOrEmpty(completionRequest.ProfileOptions.User))
-            {
-                await _billingService.TrackUsageAsync(completionRequest.ProfileOptions.User, 1);
-            }
 
             if (completionRequest.ConversationId is Guid id)
             {
