@@ -7,8 +7,8 @@ This repo consists of a custom API designed to simplify consumption of OpenAI, o
 
 The ultimate goal of the project is to create a significantly simplified way of interacting with popular AI models by providing a way to save model configurations, update those configurations, ingest external data through RAG pipelines and internet queries, and seamlessly interact with a variety of media.
 
-### Instillation and set up:
-The easiest way to set up the projcet is to clone the repository into Visual Studio. After cloning the repository, please be sure to add your own API token to the "openAIKey" property in appsettings.json file. Incase you aren't experienced with Visual Studio, you may also need to open the solution file if the project folder was opened.
+### Installation and setup:
+The easiest way to set up the project is to clone the repository into Visual Studio. After cloning the repository, run the `env_setup.py` script located in the `infrastructure` folder to generate your `appsettings.Development.json` file. This script will prompt you for required configuration values or read them from environment variables. If you aren't experienced with Visual Studio, you may also need to open the solution file after opening the project folder.
 
 ### Unique Function Calling Implementation
 The default configuration for this API is able to call multiple additional functions provided the names are passed as part of the post arguments. After I have the configurations route complete, the post request will look more like a prompt and the name of the preset configuration like in this example below:
