@@ -10,6 +10,7 @@ using IntelligenceHub.Client.Interfaces;
 using System.Text;
 using Microsoft.Extensions.Options;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.Common.Config;
 
 namespace IntelligenceHub.Client.Implementations
 {
