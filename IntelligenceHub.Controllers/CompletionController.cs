@@ -10,6 +10,7 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.Controllers.Filters;
 
 
 namespace IntelligenceHub.Controllers
@@ -20,6 +21,7 @@ namespace IntelligenceHub.Controllers
     [Route("[controller]")]
     [ApiController]
     [Authorize]
+    [Billable(UsageType.Completion)]
     public class CompletionController : ControllerBase
     {
         private readonly ICompletionLogic _completionLogic;

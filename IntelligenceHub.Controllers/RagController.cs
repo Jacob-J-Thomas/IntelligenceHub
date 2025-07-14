@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using IntelligenceHub.Controllers.Filters;
 
 namespace IntelligenceHub.Controllers
 {
@@ -17,6 +18,7 @@ namespace IntelligenceHub.Controllers
     [Route("Rag")]
     [ApiController]
     [Authorize(Policy = ElevatedAuthPolicy)]
+    [Billable]
     public class RagController : ControllerBase
     {
         private readonly IRagLogic _ragLogic;

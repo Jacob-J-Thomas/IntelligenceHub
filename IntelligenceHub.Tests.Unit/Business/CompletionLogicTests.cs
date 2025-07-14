@@ -133,7 +133,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             // Assert
             Assert.NotNull(result);
             Assert.Equal(completionResponse, result.Data);
-            _mockBillingService.Verify(b => b.TrackUsageAsync(It.IsAny<string>(), 1), Times.Once);
+            _mockBillingService.Verify(b => b.TrackUsageAsync(It.IsAny<string>(), 1), Times.Never);
         }
 
         [Fact]
