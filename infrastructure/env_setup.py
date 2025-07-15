@@ -66,6 +66,7 @@ required_env_vars = [
     "AuthSettings_AdminClientSecret",
     "AppInsightSettings_ConnectionString",
     "Settings_DefaultImageHost",  # token for DefaultImageGenHost
+    "StripeSettings_ApiKey",
 ]
 
 # Check the current environment
