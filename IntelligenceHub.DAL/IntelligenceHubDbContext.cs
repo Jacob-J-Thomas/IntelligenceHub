@@ -34,6 +34,7 @@ namespace IntelligenceHub.DAL
         public DbSet<DbTool> Tools { get; set; }
         public DbSet<DbProperty> Properties { get; set; }
         public DbSet<DbUserServiceCredential> UserServiceCredentials { get; set; }
+        public DbSet<DbSubscriptionItem> UserSubscriptionItems { get; set; }
 
         /// <summary>
         /// Configures the model for the Intelligence Hub database context.
@@ -194,6 +195,16 @@ namespace IntelligenceHub.DAL
                 entity.Property(e => e.Host).HasMaxLength(255);
                 entity.Property(e => e.Endpoint).IsRequired().HasMaxLength(255);
                 entity.Property(e => e.ApiKey).IsRequired().HasMaxLength(255);
+            });
+
+            modelBuilder.Entity<DbSubscriptionItem>(entity =>
+            {
+                entity.ToTable("UserSubscriptionItems");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.UserId).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.UsageType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.SubscriptionItemId).IsRequired().HasMaxLength(255);
             });
         }
     }

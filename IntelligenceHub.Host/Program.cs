@@ -107,6 +107,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IIndexRepository, IndexRepository>();
             builder.Services.AddScoped<IIndexMetaRepository, IndexMetaRepository>();
             builder.Services.AddScoped<IUserServiceCredentialRepository, UserServiceCredentialRepository>();
+            builder.Services.AddScoped<IUserSubscriptionItemRepository, UserSubscriptionItemRepository>();
 
             // Handlers
             builder.Services.AddSingleton(new LoadBalancingSelector(new Dictionary<string, string[]>()));

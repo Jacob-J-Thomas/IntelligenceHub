@@ -1,4 +1,5 @@
 using IntelligenceHub.Business.Interfaces;
+using IntelligenceHub.DAL.Interfaces;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Security.Claims;
 
@@ -32,8 +33,13 @@ namespace IntelligenceHub.Controllers.Filters
             var userId = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId)) return;
 
-            var subscriptionItemId = $"{userId}:{_usageType.ToString().ToLower()}";
-            await billingService.TrackUsageAsync(subscriptionItemId, 1);
+            var subscriptionRepo = context.HttpContext.RequestServices.GetService(typeof(IUserSubscriptionItemRepository)) as IUserSubscriptionItemRepository;
+            if (subscriptionRepo == null) return;
+
+            var item = await subscriptionRepo.GetAsync(userId, _usageType.ToString().ToLower());
+            if (item == null) return;
+
+            await billingService.TrackUsageAsync(item.SubscriptionItemId, 1);
         }
     }
 
