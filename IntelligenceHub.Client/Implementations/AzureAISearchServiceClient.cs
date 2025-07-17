@@ -19,13 +19,13 @@ namespace IntelligenceHub.Client.Implementations
     /// </summary>
     public class AzureAISearchServiceClient : IAISearchServiceClient
     {
-        private readonly SearchIndexClient _indexClient;
-        private readonly SearchIndexerClient _indexerClient;
+        private SearchIndexClient? _indexClient;
+        private SearchIndexerClient? _indexerClient;
 
         private readonly string _sqlRagDbConnectionString;
         private readonly IUserCredentialProvider _credentialProvider;
-        private readonly string _openaiKey;
-        private readonly string _openaiUrl;
+        private string? _openaiKey;
+        private string? _openaiUrl;
 
         private readonly int _defaultRagDimensions = 3072; // move to globalvariables
         private readonly string _defaultVectorAlgConfig = "hnsw";
@@ -35,6 +35,35 @@ namespace IntelligenceHub.Client.Implementations
 
         private readonly string _indexerSuffix  = "-indexer";
         private readonly string _skillsetSuffix  = "-skillset";
+
+        private async Task EnsureInitializedAsync()
+        {
+            if (_indexClient == null || _indexerClient == null)
+            {
+                var ragCred = await _credentialProvider.GetCredentialAsync(ServiceTypes.RAG, RagServiceHost.Azure.ToString());
+                if (ragCred == null) throw new InvalidOperationException("User credentials not found for Azure Search.");
+                var apiKey = Encoding.UTF8.GetString(Convert.FromBase64String(ragCred.ApiKey));
+                var credential = new AzureKeyCredential(apiKey);
+
+                var options = new SearchClientOptions()
+                {
+                    RetryPolicy = new RetryPolicy(AISearchServiceMaxRetries,
+                        DelayStrategy.CreateExponentialDelayStrategy(TimeSpan.FromSeconds(AISearchServiceInitialDelay),
+                            TimeSpan.FromSeconds(AISearchServiceMaxDelay)))
+                };
+
+                _indexClient = new SearchIndexClient(new Uri(ragCred.Endpoint), credential, options);
+                _indexerClient = new SearchIndexerClient(new Uri(ragCred.Endpoint), credential, options);
+            }
+
+            if (string.IsNullOrEmpty(_openaiKey) || string.IsNullOrEmpty(_openaiUrl))
+            {
+                var agiCred = await _credentialProvider.GetCredentialAsync(ServiceTypes.AGI, AGIServiceHost.Azure.ToString());
+                if (agiCred == null) throw new InvalidOperationException("User AGI credentials not found for Azure Search.");
+                _openaiUrl = agiCred.Endpoint;
+                _openaiKey = Encoding.UTF8.GetString(Convert.FromBase64String(agiCred.ApiKey));
+            }
+        }
 
         // Rag indexes are created with lower case values
         private enum RagField
@@ -72,24 +101,6 @@ namespace IntelligenceHub.Client.Implementations
         {
             _credentialProvider = credentialProvider;
             _sqlRagDbConnectionString = settings.CurrentValue.DbConnectionString;
-
-            var ragCred = _credentialProvider.GetCredentialAsync(ServiceTypes.RAG, RagServiceHost.Azure.ToString()).GetAwaiter().GetResult();
-            if (ragCred == null) throw new InvalidOperationException("User credentials not found for Azure Search.");
-            var apiKey = Encoding.UTF8.GetString(Convert.FromBase64String(ragCred.ApiKey));
-            var credential = new AzureKeyCredential(apiKey);
-
-            var options = new SearchClientOptions()
-            {
-                RetryPolicy = new RetryPolicy(AISearchServiceMaxRetries, DelayStrategy.CreateExponentialDelayStrategy(TimeSpan.FromSeconds(AISearchServiceInitialDelay), TimeSpan.FromSeconds(AISearchServiceMaxDelay)))
-            };
-
-            _indexClient = new SearchIndexClient(new Uri(ragCred.Endpoint), credential, options);
-            _indexerClient = new SearchIndexerClient(new Uri(ragCred.Endpoint), credential, options);
-
-            var agiCred = _credentialProvider.GetCredentialAsync(ServiceTypes.AGI, AGIServiceHost.Azure.ToString()).GetAwaiter().GetResult();
-            if (agiCred == null) throw new InvalidOperationException("User AGI credentials not found for Azure Search.");
-            _openaiUrl = agiCred.Endpoint;
-            _openaiKey = Encoding.UTF8.GetString(Convert.FromBase64String(agiCred.ApiKey));
         }
 
         // index operations
@@ -100,8 +111,9 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A list of RAG index names.</returns>
         public async Task<List<string>> GetAllIndexNames()
         {
+            await EnsureInitializedAsync();
             var indexNames = new List<string>();
-            var responseCollection = _indexClient.GetIndexNamesAsync();
+            var responseCollection = _indexClient!.GetIndexNamesAsync();
 
             await foreach (var response in responseCollection) indexNames.Add(response);
             return indexNames;
@@ -115,7 +127,8 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>Returns the search results retrieved from the RAG index.</returns>
         public async Task<SearchResults<IndexDefinition>> SearchIndex(IndexMetadata index, string query)
         {
-            var searchClient = _indexClient.GetSearchClient(index.Name);
+            await EnsureInitializedAsync();
+            var searchClient = _indexClient!.GetSearchClient(index.Name);
 
             var queryType = SearchQueryType.Simple;
             if (index.QueryType.ToString().Equals(SearchQueryType.Full.ToString(), StringComparison.OrdinalIgnoreCase)) queryType = SearchQueryType.Full;
@@ -171,6 +184,7 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A boolean indicating success or failure of the operation.</returns>
         public async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
         {
+            await EnsureInitializedAsync();
             var searchIndex = GetIndexDefinition(indexDefinition);
 
             if (indexDefinition.ScoringProfile != null)
@@ -211,7 +225,7 @@ namespace IntelligenceHub.Client.Implementations
                 searchIndex.ScoringProfiles.Add(scoringProfile);
             }
 
-            var response = await _indexClient.CreateOrUpdateIndexAsync(searchIndex);
+            var response = await _indexClient!.CreateOrUpdateIndexAsync(searchIndex);
             return true;
         }
 
@@ -222,7 +236,8 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A boolean indicating success or failure of the operation.</returns>
         public async Task<bool> DeleteIndex(string indexName)
         {
-            var response = await _indexClient.DeleteIndexAsync(indexName);
+            await EnsureInitializedAsync();
+            var response = await _indexClient!.DeleteIndexAsync(indexName);
             return response.Status > 199 && response.Status < 300;
         }
 
@@ -233,10 +248,10 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A boolean indicating success or failure of the operation.</returns>
         public async Task<bool> DeleteIndexer(string indexName)
         {
-            var skillsetDeletionResponse = await _indexerClient.DeleteSkillsetAsync(indexName.ToLower() + _skillsetSuffix );
+            await EnsureInitializedAsync();
+            var skillsetDeletionResponse = await _indexerClient!.DeleteSkillsetAsync(indexName.ToLower() + _skillsetSuffix );
             if (skillsetDeletionResponse == null || skillsetDeletionResponse.IsError && skillsetDeletionResponse.Status != 404) return false;
-
-            var response = await _indexerClient.DeleteIndexerAsync(indexName + _indexerSuffix );
+            var response = await _indexerClient!.DeleteIndexerAsync(indexName + _indexerSuffix );
             return response.Status > 199 && response.Status < 300;
         }
 
@@ -247,6 +262,7 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A boolean indicating success or failure of the operation.</returns>
         public async Task<bool> CreateDatasource(string indexName)
         {
+            await EnsureInitializedAsync();
             // Name of the SQL view
             string viewName = $"vw_{indexName}";
 
@@ -272,7 +288,7 @@ namespace IntelligenceHub.Client.Implementations
 
             try
             {
-                await _indexerClient.CreateOrUpdateDataSourceConnectionAsync(dataSource);
+                await _indexerClient!.CreateOrUpdateDataSourceConnectionAsync(dataSource);
                 return true;
             }
             catch (RequestFailedException ex) when (ex.Status == 409)
@@ -291,7 +307,8 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A boolean indicating success or failure of the operation.</returns>
         public async Task<bool> DeleteDatasource(string indexName)
         {
-            var response = await _indexerClient.DeleteDataSourceConnectionAsync(indexName);
+            await EnsureInitializedAsync();
+            var response = await _indexerClient!.DeleteDataSourceConnectionAsync(indexName);
             return response.Status > 199 && response.Status < 300;
         }
 
@@ -302,7 +319,8 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A boolean indicating success or failure of the operation.</returns>
         public async Task<bool> RunIndexer(string indexName)
         {
-            var response = await _indexerClient.RunIndexerAsync(indexName + _indexerSuffix );
+            await EnsureInitializedAsync();
+            var response = await _indexerClient!.RunIndexerAsync(indexName + _indexerSuffix );
             return response.Status > 199 && response.Status < 300;
         }
 
@@ -313,6 +331,7 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>A boolean indicating success or failure of the operation.</returns>
         public async Task<bool> UpsertIndexer(IndexMetadata index)
         {
+            await EnsureInitializedAsync();
             // Define the indexer
             var interval = TimeSpan.FromDays(1);
             if (index.IndexingInterval.HasValue) interval = index.IndexingInterval.Value;
@@ -323,7 +342,7 @@ namespace IntelligenceHub.Client.Implementations
             indexer.FieldMappings.Add(new FieldMapping("Id") { TargetFieldName = RagField.chunk_id.ToString() });
 
             indexer.SkillsetName = await UpsertSkillset(index);
-            await _indexerClient.CreateOrUpdateIndexerAsync(indexer);
+            await _indexerClient!.CreateOrUpdateIndexerAsync(indexer);
 
             return true;
         }
@@ -335,6 +354,7 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>The name of the skillset associated with the new index.</returns>
         private async Task<string> UpsertSkillset(IndexMetadata index)
         {
+            await EnsureInitializedAsync();
             var chunkingLengthInChars = 1312; // (avg chars per token = 3.5) * (average recommended chunk size = 375) = 1312.5
             var ragDimensions = 3072;
             if (string.IsNullOrEmpty(index.EmbeddingModel)) index.EmbeddingModel = DefaultAzureSearchEmbeddingModel;
@@ -376,8 +396,8 @@ namespace IntelligenceHub.Client.Implementations
                     )
                     {
                         Context = "/document/pages/*",
-                        ResourceUri = new Uri(_openaiUrl),
-                        ApiKey = _openaiKey,
+                        ResourceUri = new Uri(_openaiUrl!),
+                        ApiKey = _openaiKey!,
                         ModelName = index.EmbeddingModel,
                         DeploymentName = index.EmbeddingModel
                     }
@@ -394,8 +414,8 @@ namespace IntelligenceHub.Client.Implementations
                     )
                     {
                         Context = "/document/pages/*",
-                        ResourceUri = new Uri(_openaiUrl),
-                        ApiKey = _openaiKey,
+                        ResourceUri = new Uri(_openaiUrl!),
+                        ApiKey = _openaiKey!,
                         ModelName = index.EmbeddingModel,
                         DeploymentName = index.EmbeddingModel
                     }
@@ -412,8 +432,8 @@ namespace IntelligenceHub.Client.Implementations
                     )
                     {
                         Context = "/document/pages/*",
-                        ResourceUri = new Uri(_openaiUrl),
-                        ApiKey = _openaiKey,
+                        ResourceUri = new Uri(_openaiUrl!),
+                        ApiKey = _openaiKey!,
                         ModelName = index.EmbeddingModel,
                         DeploymentName = index.EmbeddingModel
                     }
@@ -430,8 +450,8 @@ namespace IntelligenceHub.Client.Implementations
                     )
                     {
                         Context = "/document/pages/*",
-                        ResourceUri = new Uri(_openaiUrl),
-                        ApiKey = _openaiKey,
+                        ResourceUri = new Uri(_openaiUrl!),
+                        ApiKey = _openaiKey!,
                         ModelName = index.EmbeddingModel,
                         DeploymentName = index.EmbeddingModel
                     }
@@ -449,7 +469,7 @@ namespace IntelligenceHub.Client.Implementations
                     Parameters = new SearchIndexerIndexProjectionsParameters { ProjectionMode = IndexProjectionMode.SkipIndexingParentDocuments }
                 }
             };
-            var result = await _indexerClient.CreateOrUpdateSkillsetAsync(skillset);
+            var result = await _indexerClient!.CreateOrUpdateSkillsetAsync(skillset);
             return skillsetName;
         }
 
@@ -486,8 +506,8 @@ namespace IntelligenceHub.Client.Implementations
                         {
                             Parameters = new AzureOpenAIVectorizerParameters()
                             {
-                                ResourceUri = new Uri(_openaiUrl),
-                                ApiKey = _openaiKey,
+                                ResourceUri = new Uri(_openaiUrl!),
+                                ApiKey = _openaiKey!,
                                 ModelName = index.EmbeddingModel,
                                 DeploymentName = index.EmbeddingModel
                             }
