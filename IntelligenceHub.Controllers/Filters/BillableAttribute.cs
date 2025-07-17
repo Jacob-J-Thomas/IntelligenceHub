@@ -1,5 +1,6 @@
 using IntelligenceHub.Business.Interfaces;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace IntelligenceHub.Controllers.Filters
@@ -26,6 +27,11 @@ namespace IntelligenceHub.Controllers.Filters
             var executedContext = await next();
             if (executedContext.Exception != null) return;
 
+            var statusCode = executedContext.Result is IStatusCodeActionResult result
+                ? result.StatusCode ?? context.HttpContext.Response.StatusCode
+                : context.HttpContext.Response.StatusCode;
+            if (statusCode < 200 || statusCode >= 300) return;
+
             var billingService = context.HttpContext.RequestServices.GetService(typeof(IBillingService)) as IBillingService;
             if (billingService == null) return;
 
@@ -33,7 +39,14 @@ namespace IntelligenceHub.Controllers.Filters
             if (string.IsNullOrEmpty(userId)) return;
 
             var subscriptionItemId = $"{userId}:{_usageType.ToString().ToLower()}";
-            await billingService.TrackUsageAsync(subscriptionItemId, 1);
+            try
+            {
+                await billingService.TrackUsageAsync(subscriptionItemId, 1);
+            }
+            catch
+            {
+                // Swallow billing errors to avoid API failures
+            }
         }
     }
 
