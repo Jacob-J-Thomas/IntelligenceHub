@@ -24,6 +24,9 @@ using IntelligenceHub.Business.Factories;
 using IntelligenceHub.Host.Swagger;
 using IntelligenceHub.Business.Handlers;
 using Microsoft.AspNetCore.Authentication;
+using IntelligenceHub.Common.Interfaces;
+using IntelligenceHub.Common.Implementations;
+using IntelligenceHub.Host.Middleware;
 
 namespace IntelligenceHub.Host
 {
@@ -85,6 +88,7 @@ namespace IntelligenceHub.Host
 
             // Clients and Client Factory
             builder.Services.AddHttpContextAccessor();
+            builder.Services.AddSingleton<IUserIdAccessor, UserIdAccessor>();
             builder.Services.AddScoped<IUserCredentialProvider, UserCredentialProvider>();
 
             builder.Services.AddScoped<IAGIClientFactory, AGIClientFactory>();
@@ -329,6 +333,7 @@ namespace IntelligenceHub.Host
             app.UseMiddleware<LoggingMiddleware>();
 
             app.UseAuthentication();
+            app.UseMiddleware<UserContextMiddleware>();
             app.UseAuthorization();
 
             app.MapControllers();

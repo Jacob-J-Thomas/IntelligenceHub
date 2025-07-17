@@ -16,6 +16,7 @@ using System.Reflection;
 using System.Web.Razor.Generator;
 using IntelligenceHub.Business.Interfaces;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.Common.Interfaces;
 
 namespace IntelligenceHub.Tests.Unit.Business
 {
@@ -47,6 +48,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockValidationHandler = new Mock<IValidationHandler>();
             _mockBackgroundTaskQueueHandler = new Mock<IBackgroundTaskQueueHandler>();
             _mockBillingService = new Mock<IBillingService>();
+            var mockUserIdAccessor = new Mock<IUserIdAccessor>();
             var mockScopeFactory = new Mock<IServiceScopeFactory>();
             _mockIOptions = new Mock<IOptionsMonitor<Settings>>();
             _context = new Mock<IntelligenceHubDbContext>();
@@ -54,7 +56,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             var settings = new Settings { ValidAGIModels = new[] { "Model1", "Model2" } };
             _mockIOptions.Setup(m => m.CurrentValue).Returns(settings);
 
-            _ragLogic = new RagLogic(_mockIOptions.Object, _mockClientFactory.Object, _mockProfileRepository.Object, _mockRagClientFactory.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object, null!, mockScopeFactory.Object, _mockBillingService.Object);
+            _ragLogic = new RagLogic(_mockIOptions.Object, _mockClientFactory.Object, _mockProfileRepository.Object, _mockRagClientFactory.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object, null!, mockScopeFactory.Object, _mockBillingService.Object, mockUserIdAccessor.Object);
         }
 
         [Fact]

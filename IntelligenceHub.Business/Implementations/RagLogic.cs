@@ -8,6 +8,7 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.DAL;
+using IntelligenceHub.Common.Interfaces;
 using Microsoft.Extensions.Options;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Common.Extensions;
@@ -32,6 +33,7 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IntelligenceHubDbContext _dbContext;
         private readonly WeaviateSearchServiceClient _weaviateClient;
         private readonly IBillingService _billingService;
+        private readonly IUserIdAccessor _userIdAccessor;
 
         private readonly string _defaultAzureModel;
 
@@ -47,7 +49,7 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="validationHandler">A class that can be used to validate DTO bodies passed to the API.</param>
         /// <param name="backgroundTaskQueue">A background task handler useful for performing operations without tying up resources.</param>
         /// <param name="context">DAL context from EFCore used for some more specialized scenarios.</param>
-        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient, IServiceScopeFactory serviceScopeFactory, IBillingService billingService)
+        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient, IServiceScopeFactory serviceScopeFactory, IBillingService billingService, IUserIdAccessor userIdAccessor)
         {
             _defaultAzureModel = settings.CurrentValue.ValidAGIModels.FirstOrDefault() ?? string.Empty;
             _agiClientFactory = agiFactory;
@@ -60,6 +62,7 @@ namespace IntelligenceHub.Business.Implementations
             _weaviateClient = weaviateClient;
             _serviceScopeFactory = serviceScopeFactory;
             _billingService = billingService;
+            _userIdAccessor = userIdAccessor;
         }
 
         /// <summary>
@@ -222,9 +225,18 @@ namespace IntelligenceHub.Business.Implementations
 
                 foreach (var document in pageDocs)
                 {
+                    var currentUser = _userIdAccessor.UserId;
                     _backgroundTaskQueue.QueueBackgroundWorkItem(async token =>
                     {
-                        await RunBackgroundDocumentUpdate(index, document);
+                        _userIdAccessor.UserId = currentUser;
+                        try
+                        {
+                            await RunBackgroundDocumentUpdate(index, document);
+                        }
+                        finally
+                        {
+                            _userIdAccessor.UserId = null;
+                        }
                     });
                 }
                 currentPage++;
@@ -346,12 +358,21 @@ namespace IntelligenceHub.Business.Implementations
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.None) return APIResponseWrapper<bool>.Failure($"Failed to convert the RagHost to a valid enum.", APIResponseStatusCodes.InternalError);
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.Weaviate)
             {
+                var currentUser = _userIdAccessor.UserId;
                 _backgroundTaskQueue.QueueBackgroundWorkItem(async token =>
                 {
-                    using var scope = _serviceScopeFactory.CreateScope();
-                    var repo = scope.ServiceProvider.GetRequiredService<IIndexRepository>();
-                    var client = scope.ServiceProvider.GetRequiredService<WeaviateSearchServiceClient>();
-                    await SyncWeaviateIndex(index, repo, client, token);
+                    _userIdAccessor.UserId = currentUser;
+                    try
+                    {
+                        using var scope = _serviceScopeFactory.CreateScope();
+                        var repo = scope.ServiceProvider.GetRequiredService<IIndexRepository>();
+                        var client = scope.ServiceProvider.GetRequiredService<WeaviateSearchServiceClient>();
+                        await SyncWeaviateIndex(index, repo, client, token);
+                    }
+                    finally
+                    {
+                        _userIdAccessor.UserId = null;
+                    }
                 });
                 return APIResponseWrapper<bool>.Success(true);
             }
