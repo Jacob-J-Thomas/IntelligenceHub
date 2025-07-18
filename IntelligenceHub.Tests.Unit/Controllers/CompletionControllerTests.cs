@@ -4,7 +4,6 @@ using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Controllers;
-using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -13,6 +12,7 @@ using IntelligenceHub.DAL.Models;
 using System.Security.Claims;
 using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.Tests.Unit.Controllers
 {

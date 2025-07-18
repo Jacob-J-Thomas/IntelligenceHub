@@ -1,4 +1,5 @@
 ﻿using IntelligenceHub.DAL.Interfaces;
+using IntelligenceHub.DAL.Tenant;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 

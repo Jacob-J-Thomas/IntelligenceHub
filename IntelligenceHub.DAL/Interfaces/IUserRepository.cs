@@ -5,7 +5,7 @@ namespace IntelligenceHub.DAL.Interfaces
     /// <summary>
     /// Repository for user related operations.
     /// </summary>
-    public interface IUserRepository : IGenericRepository<DbUser>
+    public interface IUserRepository 
     {
         /// <summary>
         /// Retrieves a user entity by the Auth0 subject identifier.

@@ -3,12 +3,12 @@ using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Extensions;
-using IntelligenceHub.Common.Tenant;
 using static IntelligenceHub.Common.GlobalVariables;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.Controllers
 {

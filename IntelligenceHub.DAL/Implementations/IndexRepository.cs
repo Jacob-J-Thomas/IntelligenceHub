@@ -1,9 +1,8 @@
 ﻿using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
-using IntelligenceHub.Common.Tenant;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.DAL.Implementations
 {

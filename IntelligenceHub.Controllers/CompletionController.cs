@@ -2,7 +2,7 @@ using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
-using IntelligenceHub.Common.Tenant;
+using IntelligenceHub.DAL.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +11,6 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
-using IntelligenceHub.Business.Interfaces;
 
 
 namespace IntelligenceHub.Controllers
@@ -33,8 +32,7 @@ namespace IntelligenceHub.Controllers
         /// </summary>
         /// <param name="completionLogic">The business logic for completions.</param>
         /// <param name="validationHandler">A class that validates incoming API request payloads.</param>
-        public CompletionController(ICompletionLogic completionLogic, IProfileLogic profileLogic, IValidationHandler validationHandler, IUserLogic userLogic, ITenantProvider tenantProvider)
-            : base(userLogic, tenantProvider)
+        public CompletionController(ICompletionLogic completionLogic, IProfileLogic profileLogic, IValidationHandler validationHandler, IUserLogic userLogic, ITenantProvider tenantProvider) : base(userLogic, tenantProvider)
         {
             _completionLogic = completionLogic;
             _profileLogic = profileLogic;

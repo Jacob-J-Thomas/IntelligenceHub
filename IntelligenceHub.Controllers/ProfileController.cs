@@ -1,14 +1,12 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
-using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
-using IntelligenceHub.Business.Interfaces;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.Controllers
 {

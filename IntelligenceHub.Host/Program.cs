@@ -7,7 +7,6 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Implementations;
 using IntelligenceHub.DAL.Interfaces;
-using IntelligenceHub.Common.Tenant;
 using IntelligenceHub.Host.Config;
 using IntelligenceHub.Host.Logging;
 using IntelligenceHub.Host.Policies;
@@ -25,6 +24,7 @@ using IntelligenceHub.Business.Factories;
 using IntelligenceHub.Host.Swagger;
 using IntelligenceHub.Business.Handlers;
 using Microsoft.AspNetCore.Authentication;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.Host
 {

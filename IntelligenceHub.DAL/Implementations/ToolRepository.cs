@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
+using IntelligenceHub.DAL.Tenant;
 using Microsoft.EntityFrameworkCore;
 
 namespace IntelligenceHub.DAL.Implementations

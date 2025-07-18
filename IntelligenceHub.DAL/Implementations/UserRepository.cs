@@ -5,16 +5,19 @@ using Microsoft.EntityFrameworkCore;
 namespace IntelligenceHub.DAL.Implementations
 {
     /// <summary>
-    /// Repository for user table operations.
+    /// Repository for user table operations. NOTE: Unlike all other constructors, this repository does not extend IGenericRepository.
     /// </summary>
-    public class UserRepository : GenericRepository<DbUser>, IUserRepository
+    public class UserRepository : IUserRepository
     {
+        protected readonly DbSet<DbUser> _dbSet;
+
         /// <summary>
         /// Initializes a new instance of <see cref="UserRepository"/>.
         /// </summary>
         /// <param name="context">Database context.</param>
-        public UserRepository(IntelligenceHubDbContext context) : base(context)
+        public UserRepository(IntelligenceHubDbContext context)
         {
+            _dbSet = context.Set<DbUser>();
         }
 
         /// <inheritdoc/>

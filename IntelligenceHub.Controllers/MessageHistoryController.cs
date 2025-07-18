@@ -1,12 +1,12 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Common;
-using IntelligenceHub.Common.Tenant;
 using static IntelligenceHub.Common.GlobalVariables;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using IntelligenceHub.Business.Interfaces;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.Controllers
 {
@@ -20,8 +20,7 @@ namespace IntelligenceHub.Controllers
     {
         private readonly IMessageHistoryLogic _messageHistoryLogic;
 
-        public MessageHistoryController(IMessageHistoryLogic messageHistoryLogic, IUserLogic userLogic, ITenantProvider tenantProvider)
-            : base(userLogic, tenantProvider)
+        public MessageHistoryController(IMessageHistoryLogic messageHistoryLogic, IUserLogic userLogic, ITenantProvider tenantProvider) : base(userLogic, tenantProvider)
         {
             _messageHistoryLogic = messageHistoryLogic;
         }

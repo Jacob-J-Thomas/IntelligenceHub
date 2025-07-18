@@ -1,9 +1,9 @@
 using IntelligenceHub.Business.Interfaces;
-using IntelligenceHub.Common.Tenant;
 using IntelligenceHub.API.DTOs;
-using IntelligenceHub.Common;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.Controllers
 {

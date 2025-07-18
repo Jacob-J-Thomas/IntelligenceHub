@@ -1,11 +1,11 @@
-using System.Threading;
+﻿using IntelligenceHub.DAL.Models;
 
-namespace IntelligenceHub.Common.Tenant
+namespace IntelligenceHub.DAL.Tenant
 {
     public class TenantProvider : ITenantProvider
     {
         private static readonly AsyncLocal<Guid?> _currentTenant = new();
-        private static readonly AsyncLocal<DAL.Models.DbUser?> _currentUser = new();
+        private static readonly AsyncLocal<DbUser?> _currentUser = new();
 
         public Guid? TenantId
         {
@@ -13,7 +13,7 @@ namespace IntelligenceHub.Common.Tenant
             set => _currentTenant.Value = value;
         }
 
-        public DAL.Models.DbUser? User
+        public DbUser? User
         {
             get => _currentUser.Value;
             set => _currentUser.Value = value;
