@@ -2,13 +2,13 @@
 using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Controllers;
-using IntelligenceHub.Common.Tenant;
 using IntelligenceHub.DAL.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Moq;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.Tests.Unit.Controllers
 {
