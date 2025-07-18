@@ -44,7 +44,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (count < 1) return BadRequest("Count must be greater than 0.");
                 if (page < 1) return BadRequest("Page must be greater than 0.");
                 var response = await _messageHistoryLogic.GetConversationHistory(id, count, page);
@@ -79,7 +80,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 // Validate the messages list
                 if (messages == null || !messages.Any()) return BadRequest("Messages must be included in the request.");
 
@@ -111,7 +113,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 var response = await _messageHistoryLogic.DeleteConversation(id);
                 if (response.IsSuccess) return NoContent();
                 return NotFound(response.ErrorMessage);
@@ -138,7 +141,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 var response = await _messageHistoryLogic.DeleteMessage(conversationId, messageId);
                 if (response.IsSuccess) return NoContent();
                 else return NotFound(response.ErrorMessage);

@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Newtonsoft.Json;
+using IntelligenceHub.DAL.Models;
+using System.Security.Claims;
 using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -35,8 +37,14 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _mockTenantProvider = new Mock<ITenantProvider>();
             _mockHttpContext = new Mock<HttpContext>();
 
+            var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
+            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
+            _mockHttpContext.Setup(c => c.User).Returns(claims);
+
             // Initialize the controller with mocked dependencies
             _controller = new CompletionController(_mockCompletionLogic.Object, _mockProfileLogic.Object,  _mockValidationLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
+            _controller.ControllerContext.HttpContext = _mockHttpContext.Object;
         }
 
         #region Standard Completion

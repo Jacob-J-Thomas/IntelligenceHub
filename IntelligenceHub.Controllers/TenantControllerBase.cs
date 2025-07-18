@@ -1,5 +1,7 @@
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common.Tenant;
+using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Common;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -20,20 +22,26 @@ namespace IntelligenceHub.Controllers
         }
 
         /// <summary>
-        /// Retrieves the tenant identifier for the current user.
+        /// Retrieves the current user and ensures their tenant context is set.
         /// </summary>
-        protected async Task<Guid?> GetTenantIdAsync()
+        protected async Task<APIResponseWrapper<Guid>> SetUserTenantContextAsync()
         {
             var sub = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub")?.Value;
             if (string.IsNullOrEmpty(sub))
-                return null;
+            {
+                return APIResponseWrapper<Guid>.Failure("The user's tenant couldn't be resolved.", APIResponseStatusCodes.InternalError);
+            }
 
             var user = await _userLogic.GetUserBySubAsync(sub);
-            if (user?.TenantId != null)
+            if (user == null)
             {
-                _tenantProvider.TenantId = user.TenantId;
+                return APIResponseWrapper<Guid>.Failure("The user's tenant couldn't be resolved.", APIResponseStatusCodes.InternalError);
             }
-            return user?.TenantId;
+
+            _tenantProvider.TenantId = user.TenantId;
+            _tenantProvider.User = user;
+
+            return APIResponseWrapper<Guid>.Success(user.TenantId);
         }
     }
 }

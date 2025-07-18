@@ -59,7 +59,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
                 if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name; 
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
@@ -95,7 +96,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
                 if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name;
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);

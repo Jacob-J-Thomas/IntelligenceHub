@@ -1,5 +1,6 @@
 ﻿CREATE TABLE IndexMetadata (
     Id INT IDENTITY(1,1) PRIMARY KEY,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
     [Name] NVARCHAR(128) UNIQUE NOT NULL ,
     QueryType NVARCHAR(255),
     GenerationHost NVARCHAR(255),

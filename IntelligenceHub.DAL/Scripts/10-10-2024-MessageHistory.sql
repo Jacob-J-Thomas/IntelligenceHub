@@ -1,5 +1,6 @@
 ﻿CREATE TABLE MessageHistory (
     Id INT IDENTITY(1,1) PRIMARY KEY,
+    TenantId UNIQUEIDENTIFIER NOT NULL,
     ConversationId UNIQUEIDENTIFIER,
     [Role] NVARCHAR(255) NOT NULL,
     [User] NVARCHAR(255),
