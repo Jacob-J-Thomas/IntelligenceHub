@@ -1,5 +1,6 @@
 ﻿using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -15,8 +16,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// Constructor for the IndexRepository class.
         /// </summary>
         /// <param name="context">The database context used to map to the SQL database.</param>
-        public IndexRepository(IntelligenceHubDbContext context) : base(context)
+        private readonly ITenantProvider _tenantProvider;
+        public IndexRepository(IntelligenceHubDbContext context, ITenantProvider tenantProvider) : base(context, tenantProvider)
         {
+            _tenantProvider = tenantProvider;
         }
 
         /// <summary>

@@ -6,7 +6,7 @@ namespace IntelligenceHub.DAL.Models
     /// <summary>
     /// Entity model representing a document stored in a RAG index.
     /// </summary>
-    public class DbIndexDocument
+    public class DbIndexDocument : IntelligenceHub.DAL.Interfaces.ITenantEntity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -14,6 +14,11 @@ namespace IntelligenceHub.DAL.Models
         /// Primary key for the document.
         /// </summary>
         public int Id { get; set; }
+        [Required]
+        /// <summary>
+        /// Tenant identifier for the owning organization.
+        /// </summary>
+        public Guid TenantId { get; set; }
         [Required]
         /// <summary>
         /// Gets or sets the title of the document.

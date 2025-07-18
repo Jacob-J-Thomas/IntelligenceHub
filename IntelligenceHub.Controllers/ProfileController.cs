@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +26,7 @@ namespace IntelligenceHub.Controllers
         /// Initializes a new instance of the <see cref="ProfileController"/> class.
         /// </summary>
         /// <param name="profileLogic">The agent profiles business logic.</param>
-        public ProfileController(IProfileLogic profileLogic, IUserLogic userLogic) : base(userLogic)
+        public ProfileController(IProfileLogic profileLogic, IUserLogic userLogic, ITenantProvider tenantProvider) : base(userLogic, tenantProvider)
         {
             _profileLogic = profileLogic;
         }
@@ -46,7 +47,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrWhiteSpace(name)) return BadRequest("Invalid route data. Please check your input.");
                 var response = await _profileLogic.GetProfile(name);
                 if (!response.IsSuccess) return NotFound(response.ErrorMessage);
@@ -76,7 +78,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (page < 1) return BadRequest("The page must be greater than 0.");
                 if (count < 1) return BadRequest("The count must be greater than 0.");
                 var result = await _profileLogic.GetAllProfiles(page, count);
@@ -103,7 +106,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 var updateResponse = await _profileLogic.CreateOrUpdateProfile(profileDto);
                 if (!updateResponse.IsSuccess)
                 {
@@ -138,7 +142,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: '{name}'.");
                 if (tools is null || tools.Count < 1) return BadRequest($"Invalid request. The 'Tools' property cannot be null or empty: '{tools}'.");
                 var response = await _profileLogic.AddProfileToTools(name, tools);
@@ -172,7 +177,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: '{name}'.");
                 if (tools is null || tools.Count < 1) return BadRequest($"Invalid request. The 'Tools' property cannot be null or empty: '{tools}'.");
                 var response = await _profileLogic.DeleteProfileAssociations(name, tools);
@@ -202,7 +208,8 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
-                await GetTenantIdAsync();
+                var tenantResult = await SetUserTenantContextAsync();
+                if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrWhiteSpace(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: {name}.");
                 var response = await _profileLogic.DeleteProfile(name);
 

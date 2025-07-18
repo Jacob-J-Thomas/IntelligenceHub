@@ -14,8 +14,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// Constructor for the ToolRepository class.
         /// </summary>
         /// <param name="context">The database context used to map to the SQL database.</param>
-        public ToolRepository(IntelligenceHubDbContext context) : base(context)
+        private readonly ITenantProvider _tenantProvider;
+        public ToolRepository(IntelligenceHubDbContext context, ITenantProvider tenantProvider) : base(context, tenantProvider)
         {
+            _tenantProvider = tenantProvider;
         }
 
         /// <summary>
@@ -25,7 +27,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The tool, or null if none is found.</returns>
         public async Task<DbTool?> GetByNameAsync(string name)
         {
-            return await _dbSet.FirstOrDefaultAsync(t => t.Name == name);
+            return await _dbSet.FirstOrDefaultAsync(t => t.Name == name && t.TenantId == _tenantProvider.TenantId);
         }
 
         /// <summary>
@@ -35,7 +37,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The tool, or null if none is found.</returns>
         public async Task<DbTool?> GetByIdAsync(int id)
         {
-            return await _context.Tools.FirstOrDefaultAsync(t => t.Id == id);
+            return await _context.Tools.FirstOrDefaultAsync(t => t.Id == id && t.TenantId == _tenantProvider.TenantId);
         }
 
         /// <summary>
@@ -48,7 +50,7 @@ namespace IntelligenceHub.DAL.Implementations
             var profileTools = await _context.ProfileTools
                 .Include(pt => pt.Tool)
                 .Include(pt => pt.Profile)
-                .Where(pt => pt.Profile.Name == name)
+                .Where(pt => pt.Profile.Name == name && pt.TenantId == _tenantProvider.TenantId)
                 .Select(pt => pt.Tool.Name)
                 .ToListAsync();
 
@@ -65,7 +67,7 @@ namespace IntelligenceHub.DAL.Implementations
             var toolProfiles = await _context.ProfileTools
                 .Include(pt => pt.Tool)
                 .Include(pt => pt.Profile)
-                .Where(pt => pt.Tool.Name == name)
+                .Where(pt => pt.Tool.Name == name && pt.TenantId == _tenantProvider.TenantId)
                 .Select(pt => pt.Profile.Name)
                 .ToListAsync();
 

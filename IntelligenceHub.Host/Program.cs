@@ -7,6 +7,7 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Implementations;
 using IntelligenceHub.DAL.Interfaces;
+using IntelligenceHub.Common.Tenant;
 using IntelligenceHub.Host.Config;
 using IntelligenceHub.Host.Logging;
 using IntelligenceHub.Host.Policies;
@@ -97,6 +98,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton<AzureAISearchServiceClient>();
             builder.Services.AddSingleton<WeaviateSearchServiceClient>();
             builder.Services.AddSingleton<IAIAuth0Client, Auth0Client>();
+            builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 
             // Repositories
             builder.Services.AddScoped<IProfileRepository, ProfileRepository>();

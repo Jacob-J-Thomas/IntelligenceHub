@@ -9,7 +9,7 @@ namespace IntelligenceHub.DAL.Models
     /// Entity model representing metadata for a RAG index stored in the database.
     /// </summary>
     [Table("IndexMetadata")]
-    public class DbIndexMetadata
+    public class DbIndexMetadata : IntelligenceHub.DAL.Interfaces.ITenantEntity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -17,6 +17,11 @@ namespace IntelligenceHub.DAL.Models
         /// Primary key for the index metadata record.
         /// </summary>
         public int Id { get; set; }
+        [Required]
+        /// <summary>
+        /// Tenant identifier for the owning organization.
+        /// </summary>
+        public Guid TenantId { get; set; }
         [Required]
         /// <summary>
         /// Gets or sets the name of the index.

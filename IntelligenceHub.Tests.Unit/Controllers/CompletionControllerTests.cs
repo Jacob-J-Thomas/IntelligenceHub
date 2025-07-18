@@ -4,10 +4,13 @@ using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Controllers;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Newtonsoft.Json;
+using IntelligenceHub.DAL.Models;
+using System.Security.Claims;
 using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -21,6 +24,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         private readonly Mock<IValidationHandler> _mockValidationLogic;
         private readonly Mock<IProfileLogic> _mockProfileLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
+        private readonly Mock<ITenantProvider> _mockTenantProvider;
         private readonly Mock<HttpContext> _mockHttpContext;
 
         public CompletionControllerTests()
@@ -30,10 +34,17 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _mockValidationLogic = new Mock<IValidationHandler>();
             _mockProfileLogic = new Mock<IProfileLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
+            _mockTenantProvider = new Mock<ITenantProvider>();
             _mockHttpContext = new Mock<HttpContext>();
 
+            var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
+            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
+            _mockHttpContext.Setup(c => c.User).Returns(claims);
+
             // Initialize the controller with mocked dependencies
-            _controller = new CompletionController(_mockCompletionLogic.Object, _mockProfileLogic.Object,  _mockValidationLogic.Object, _mockUserLogic.Object);
+            _controller = new CompletionController(_mockCompletionLogic.Object, _mockProfileLogic.Object,  _mockValidationLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
+            _controller.ControllerContext.HttpContext = _mockHttpContext.Object;
         }
 
         #region Standard Completion

@@ -17,8 +17,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// Constructor for the ProfileToolsAssociativeRepository class.
         /// </summary>
         /// <param name="context">The database context used to map to the SQL database.</param>
-        public ProfileToolsAssociativeRepository(IntelligenceHubDbContext context) : base(context)
+        private readonly ITenantProvider _tenantProvider;
+        public ProfileToolsAssociativeRepository(IntelligenceHubDbContext context, ITenantProvider tenantProvider) : base(context, tenantProvider)
         {
+            _tenantProvider = tenantProvider;
         }
 
         /// <summary>
@@ -29,7 +31,7 @@ namespace IntelligenceHub.DAL.Implementations
         public async Task<List<DbProfileTool>> GetToolAssociationsAsync(int profileId)
         {
             return await _context.ProfileTools
-                .Where(pt => pt.ProfileID == profileId)
+                .Where(pt => pt.ProfileID == profileId && pt.TenantId == _tenantProvider.TenantId)
                 .ToListAsync();
         }
 
@@ -41,7 +43,7 @@ namespace IntelligenceHub.DAL.Implementations
         public async Task<List<DbProfileTool>> GetProfileAssociationsAsync(int toolId)
         {
             return await _context.ProfileTools
-                .Where(pt => pt.ToolID == toolId)
+                .Where(pt => pt.ToolID == toolId && pt.TenantId == _tenantProvider.TenantId)
                 .ToListAsync();
         }
 
@@ -53,7 +55,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> AddAssociationsByProfileIdAsync(int profileId, List<int> toolIds)
         {
-            var profile = await _context.Profiles.FindAsync(profileId);
+            var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Id == profileId && p.TenantId == _tenantProvider.TenantId);
 
             if (profile == null)
             {
@@ -62,13 +64,14 @@ namespace IntelligenceHub.DAL.Implementations
 
             foreach (var toolId in toolIds)
             {
-                if (!await _context.ProfileTools.AnyAsync(pt => pt.ProfileID == profileId && pt.ToolID == toolId))
+                if (!await _context.ProfileTools.AnyAsync(pt => pt.ProfileID == profileId && pt.ToolID == toolId && pt.TenantId == _tenantProvider.TenantId))
                 {
                     _context.ProfileTools.Add(new DbProfileTool
                     {
                         ProfileID = profileId,
                         ToolID = toolId,
-                        Profile = profile
+                        Profile = profile,
+                        TenantId = _tenantProvider.TenantId.Value
                     });
                 }
             }
@@ -86,10 +89,10 @@ namespace IntelligenceHub.DAL.Implementations
         {
             foreach (var name in profileNames)
             {
-                var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Name == name);
-                if (profile != null && !await _context.ProfileTools.AnyAsync(pt => pt.ProfileID == profile.Id && pt.ToolID == toolId))
+                var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Name == name && p.TenantId == _tenantProvider.TenantId);
+                if (profile != null && !await _context.ProfileTools.AnyAsync(pt => pt.ProfileID == profile.Id && pt.ToolID == toolId && pt.TenantId == _tenantProvider.TenantId))
                 {
-                    _context.ProfileTools.Add(new DbProfileTool { ProfileID = profile.Id, ToolID = toolId });
+                    _context.ProfileTools.Add(new DbProfileTool { ProfileID = profile.Id, ToolID = toolId, TenantId = _tenantProvider.TenantId.Value });
                 }
             }
             await _context.SaveChangesAsync();
@@ -104,10 +107,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteToolAssociationAsync(int toolId, string profileName)
         {
-            var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Name == profileName);
+            var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Name == profileName && p.TenantId == _tenantProvider.TenantId);
             if (profile != null)
             {
-                var association = await _context.ProfileTools.FirstOrDefaultAsync(pt => pt.ToolID == toolId && pt.ProfileID == profile.Id);
+                var association = await _context.ProfileTools.FirstOrDefaultAsync(pt => pt.ToolID == toolId && pt.ProfileID == profile.Id && pt.TenantId == _tenantProvider.TenantId);
                 if (association != null)
                 {
                     _context.ProfileTools.Remove(association);
@@ -125,10 +128,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteProfileAssociationAsync(int profileId, string toolName)
         {
-            var tool = await _context.Tools.FirstOrDefaultAsync(t => t.Name == toolName);
+            var tool = await _context.Tools.FirstOrDefaultAsync(t => t.Name == toolName && t.TenantId == _tenantProvider.TenantId);
             if (tool != null)
             {
-                var association = await _context.ProfileTools.FirstOrDefaultAsync(pt => pt.ProfileID == profileId && pt.ToolID == tool.Id);
+                var association = await _context.ProfileTools.FirstOrDefaultAsync(pt => pt.ProfileID == profileId && pt.ToolID == tool.Id && pt.TenantId == _tenantProvider.TenantId);
                 if (association != null)
                 {
                     _context.ProfileTools.Remove(association);
@@ -145,7 +148,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteAllProfileAssociationsAsync(int profileId)
         {
-            var associations = _context.ProfileTools.Where(pt => pt.ProfileID == profileId);
+            var associations = _context.ProfileTools.Where(pt => pt.ProfileID == profileId && pt.TenantId == _tenantProvider.TenantId);
             _context.ProfileTools.RemoveRange(associations);
             return await _context.SaveChangesAsync() > 0;
         }
@@ -157,7 +160,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteAllToolAssociationsAsync(int toolId)
         {
-            var associations = _context.ProfileTools.Where(pt => pt.ToolID == toolId);
+            var associations = _context.ProfileTools.Where(pt => pt.ToolID == toolId && pt.TenantId == _tenantProvider.TenantId);
             _context.ProfileTools.RemoveRange(associations);
             return await _context.SaveChangesAsync() > 0;
         }

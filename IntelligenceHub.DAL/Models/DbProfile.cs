@@ -9,7 +9,7 @@ namespace IntelligenceHub.DAL.Models
     /// Entity model representing an agent profile stored in the database.
     /// </summary>
     [Table("Profiles")]
-    public class DbProfile
+    public class DbProfile : IntelligenceHub.DAL.Interfaces.ITenantEntity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -17,6 +17,11 @@ namespace IntelligenceHub.DAL.Models
         /// Primary key for the profile.
         /// </summary>
         public int Id { get; set; }
+        [Required]
+        /// <summary>
+        /// Tenant identifier for the owning organization.
+        /// </summary>
+        public Guid TenantId { get; set; }
         [Required]
         /// <summary>
         /// Name of the profile.

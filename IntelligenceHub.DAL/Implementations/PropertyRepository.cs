@@ -16,8 +16,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// Constructor for the PropertyRepository class.
         /// </summary>
         /// <param name="context">The database context used to map to the SQL database.</param>
-        public PropertyRepository(IntelligenceHubDbContext context) : base(context)
+        private readonly ITenantProvider _tenantProvider;
+        public PropertyRepository(IntelligenceHubDbContext context, ITenantProvider tenantProvider) : base(context, tenantProvider)
         {
+            _tenantProvider = tenantProvider;
         }
 
         /// <summary>
@@ -28,7 +30,7 @@ namespace IntelligenceHub.DAL.Implementations
         public async Task<IEnumerable<DbProperty>> GetToolProperties(int toolId)
         {
             return await _context.Properties
-                .Where(p => p.ToolId == toolId)
+                .Where(p => p.ToolId == toolId && p.TenantId == _tenantProvider.TenantId)
                 .ToListAsync();
         }
     }
