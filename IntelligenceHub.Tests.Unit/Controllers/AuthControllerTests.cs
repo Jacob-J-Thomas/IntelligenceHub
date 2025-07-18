@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.API.Controllers;
 using IntelligenceHub.API.DTOs.Auth;
 using IntelligenceHub.Business.Interfaces;
+using IntelligenceHub.DAL.Models;
 using IntelligenceHub.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,12 +17,14 @@ namespace IntelligenceHub.Tests.Unit.Controllers
     public class AuthControllerTests
     {
         private readonly Mock<IAuthLogic> _authLogicMock;
+        private readonly Mock<IUserLogic> _userLogicMock;
         private readonly AuthController _authController;
 
         public AuthControllerTests()
         {
             _authLogicMock = new Mock<IAuthLogic>();
-            _authController = new AuthController(_authLogicMock.Object);
+            _userLogicMock = new Mock<IUserLogic>();
+            _authController = new AuthController(_authLogicMock.Object, _userLogicMock.Object);
         }
 
         [Fact]
@@ -112,6 +115,51 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             var internalServerErrorResult = Assert.IsType<ObjectResult>(result);
             Assert.Equal(StatusCodes.Status500InternalServerError, internalServerErrorResult.StatusCode);
             Assert.Equal(GlobalVariables.DefaultExceptionMessage, internalServerErrorResult.Value);
+        }
+
+        [Fact]
+        public async Task GetTokenByApiKey_ReturnsOkResult_WithToken()
+        {
+            // Arrange
+            var tokenResponse = new Auth0Response { AccessToken = "token", ExpiresIn = 3600, TokenType = "Bearer" };
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync("valid-key")).ReturnsAsync(new DbUser());
+            _authLogicMock.Setup(x => x.GetDefaultAuthToken()).ReturnsAsync(tokenResponse);
+
+            // Act
+            var result = await _authController.GetTokenByApiKey("valid-key");
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(StatusCodes.Status200OK, okResult.StatusCode);
+            Assert.Equal(tokenResponse, okResult.Value);
+        }
+
+        [Fact]
+        public async Task GetTokenByApiKey_ReturnsUnauthorized_WhenUserNotFound()
+        {
+            // Arrange
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync("bad-key")).ReturnsAsync((DbUser)null);
+
+            // Act
+            var result = await _authController.GetTokenByApiKey("bad-key");
+
+            // Assert
+            Assert.IsType<UnauthorizedResult>(result);
+        }
+
+        [Fact]
+        public async Task GetTokenByApiKey_ReturnsInternalServerError_OnException()
+        {
+            // Arrange
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(It.IsAny<string>())).ThrowsAsync(new Exception());
+
+            // Act
+            var result = await _authController.GetTokenByApiKey("key");
+
+            // Assert
+            var errorResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status500InternalServerError, errorResult.StatusCode);
+            Assert.Equal(GlobalVariables.DefaultExceptionMessage, errorResult.Value);
         }
     }
 }

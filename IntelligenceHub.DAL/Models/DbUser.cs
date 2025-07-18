@@ -25,5 +25,12 @@ namespace IntelligenceHub.DAL.Models
         /// </summary>
         [Required]
         public Guid TenantId { get; set; }
+
+        /// <summary>
+        /// API token used for authentication requests.
+        /// </summary>
+        [Required]
+        [MaxLength(255)]
+        public string ApiToken { get; set; } = string.Empty;
     }
 }

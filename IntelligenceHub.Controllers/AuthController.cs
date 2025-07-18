@@ -21,14 +21,16 @@ namespace IntelligenceHub.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthLogic _authLogic;
+        private readonly IUserLogic _userLogic;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthController"/> class.
         /// </summary>
         /// <param name="authLogic">The authentication logic.</param>
-        public AuthController(IAuthLogic authLogic)
+        public AuthController(IAuthLogic authLogic, IUserLogic userLogic)
         {
             _authLogic = authLogic;
+            _userLogic = userLogic;
         }
 
         /// <summary>
@@ -75,7 +77,34 @@ namespace IntelligenceHub.API.Controllers
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
-            
+        }
+
+        /// <summary>
+        /// Retrieves an authentication token using an API key issued to the user.
+        /// </summary>
+        /// <param name="apiKey">API key provided in the request header.</param>
+        /// <returns>The authentication token if the API key is valid.</returns>
+        [HttpPost("token")]
+        [AllowAnonymous]
+        [SwaggerOperation(OperationId = "GetTokenByApiKey")]
+        [ProducesResponseType(typeof(Auth0Response), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetTokenByApiKey([FromHeader(Name = "X-Api-Key")] string apiKey)
+        {
+            try
+            {
+                var user = await _userLogic.GetUserByApiTokenAsync(apiKey);
+                if (user == null) return Unauthorized();
+
+                var tokenResponse = await _authLogic.GetDefaultAuthToken();
+                if (tokenResponse == null) return Unauthorized();
+                return Ok(tokenResponse);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
+            }
         }
     }
 }

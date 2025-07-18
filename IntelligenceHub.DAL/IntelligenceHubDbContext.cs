@@ -192,6 +192,8 @@ namespace IntelligenceHub.DAL
                 entity.Property(e => e.Sub).IsRequired().HasMaxLength(255);
                 entity.HasIndex(e => e.Sub).IsUnique();
                 entity.Property(e => e.TenantId).IsRequired();
+                entity.Property(e => e.ApiToken).IsRequired().HasMaxLength(255);
+                entity.HasIndex(e => e.ApiToken).IsUnique();
             });
         }
     }

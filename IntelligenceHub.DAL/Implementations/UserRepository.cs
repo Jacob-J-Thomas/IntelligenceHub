@@ -22,5 +22,11 @@ namespace IntelligenceHub.DAL.Implementations
         {
             return await _dbSet.FirstOrDefaultAsync(u => u.Sub == sub);
         }
+
+        /// <inheritdoc/>
+        public async Task<DbUser?> GetByApiTokenAsync(string apiToken)
+        {
+            return await _dbSet.FirstOrDefaultAsync(u => u.ApiToken == apiToken);
+        }
     }
 }

@@ -21,5 +21,12 @@ namespace IntelligenceHub.Business.Implementations
         {
             return await _userRepository.GetBySubAsync(sub);
         }
+
+
+        /// <inheritdoc/>
+        public async Task<DbUser?> GetUserByApiTokenAsync(string apiToken)
+        {
+            return await _userRepository.GetByApiTokenAsync(apiToken);
+        }
     }
 }
