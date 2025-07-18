@@ -25,6 +25,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         private readonly Mock<IProfileLogic> _mockProfileLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
         private readonly Mock<ITenantProvider> _mockTenantProvider;
+        private readonly Mock<IUsageService> _mockUsageService;
         private readonly Mock<HttpContext> _mockHttpContext;
 
         public CompletionControllerTests()
@@ -35,7 +36,11 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _mockProfileLogic = new Mock<IProfileLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
             _mockTenantProvider = new Mock<ITenantProvider>();
+            _mockUsageService = new Mock<IUsageService>();
             _mockHttpContext = new Mock<HttpContext>();
+
+            _mockUsageService.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>()))
+                              .ReturnsAsync(APIResponseWrapper<bool>.Success(true));
 
             var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
             _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
@@ -43,7 +48,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _mockHttpContext.Setup(c => c.User).Returns(claims);
 
             // Initialize the controller with mocked dependencies
-            _controller = new CompletionController(_mockCompletionLogic.Object, _mockProfileLogic.Object,  _mockValidationLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
+            _controller = new CompletionController(_mockCompletionLogic.Object, _mockProfileLogic.Object,  _mockValidationLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object, _mockUsageService.Object);
             _controller.ControllerContext.HttpContext = _mockHttpContext.Object;
         }
 
@@ -130,6 +135,23 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             var objectResult = Assert.IsType<ObjectResult>(result);
             Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
             Assert.Equal(GlobalVariables.DefaultExceptionMessage, objectResult.Value);
+        }
+
+        [Fact]
+        public async Task CompletionStandard_Returns429_WhenUsageLimitExceeded()
+        {
+            // Arrange
+            var name = "testProfile";
+            var completionRequest = new CompletionRequest { ProfileOptions = new Profile { Name = name } };
+            _mockUsageService.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>()))
+                              .ReturnsAsync(APIResponseWrapper<bool>.Failure("limit", APIResponseStatusCodes.TooManyRequests));
+
+            // Act
+            var result = await _controller.CompletionStandard(name, completionRequest);
+
+            // Assert
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status429TooManyRequests, obj.StatusCode);
         }
         #endregion
 

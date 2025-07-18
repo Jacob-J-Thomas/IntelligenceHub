@@ -194,6 +194,9 @@ namespace IntelligenceHub.DAL
                 entity.Property(e => e.TenantId).IsRequired();
                 entity.Property(e => e.ApiToken).IsRequired().HasMaxLength(255);
                 entity.HasIndex(e => e.ApiToken).IsUnique();
+                entity.Property(e => e.AccessLevel).IsRequired().HasMaxLength(50).HasDefaultValue(AccessLevel.Free.ToString());
+                entity.Property(e => e.RequestsThisMonth).HasDefaultValue(0);
+                entity.Property(e => e.RequestMonthStart).IsRequired().HasDefaultValueSql("GETDATE()");
             });
         }
     }

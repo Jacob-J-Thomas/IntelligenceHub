@@ -13,7 +13,7 @@ namespace IntelligenceHub.Controllers
     public abstract class TenantControllerBase : ControllerBase
     {
         private readonly IUserLogic _userLogic;
-        private readonly ITenantProvider _tenantProvider;
+        protected readonly ITenantProvider _tenantProvider;
 
         protected TenantControllerBase(IUserLogic userLogic, ITenantProvider tenantProvider)
         {

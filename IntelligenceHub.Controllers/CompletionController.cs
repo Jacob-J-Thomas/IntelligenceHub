@@ -26,17 +26,19 @@ namespace IntelligenceHub.Controllers
         private readonly ICompletionLogic _completionLogic;
         private readonly IProfileLogic _profileLogic;
         private readonly IValidationHandler _validationLogic;
+        private readonly IUsageService _usageService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CompletionController"/> class.
         /// </summary>
         /// <param name="completionLogic">The business logic for completions.</param>
         /// <param name="validationHandler">A class that validates incoming API request payloads.</param>
-        public CompletionController(ICompletionLogic completionLogic, IProfileLogic profileLogic, IValidationHandler validationHandler, IUserLogic userLogic, ITenantProvider tenantProvider) : base(userLogic, tenantProvider)
+        public CompletionController(ICompletionLogic completionLogic, IProfileLogic profileLogic, IValidationHandler validationHandler, IUserLogic userLogic, ITenantProvider tenantProvider, IUsageService usageService) : base(userLogic, tenantProvider)
         {
             _completionLogic = completionLogic;
             _profileLogic = profileLogic;
             _validationLogic = validationHandler;
+            _usageService = usageService;
         }
 
         /// <summary>
@@ -59,6 +61,8 @@ namespace IntelligenceHub.Controllers
             {
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
+                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(_tenantProvider.User!);
+                if (!usageResult.IsSuccess) return StatusCode(StatusCodes.Status429TooManyRequests, usageResult.ErrorMessage);
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
                 if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name; 
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
@@ -96,6 +100,8 @@ namespace IntelligenceHub.Controllers
             {
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
+                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(_tenantProvider.User!);
+                if (!usageResult.IsSuccess) return StatusCode(StatusCodes.Status429TooManyRequests, usageResult.ErrorMessage);
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
                 if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name;
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);

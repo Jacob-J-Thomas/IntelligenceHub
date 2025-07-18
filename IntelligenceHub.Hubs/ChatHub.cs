@@ -2,6 +2,7 @@
 using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
+using IntelligenceHub.DAL.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
@@ -17,16 +18,22 @@ namespace IntelligenceHub.Hubs
     {
         private readonly ICompletionLogic _completionLogic;
         private readonly IValidationHandler _validationLogic;
+        private readonly IUserLogic _userLogic;
+        private readonly ITenantProvider _tenantProvider;
+        private readonly IUsageService _usageService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChatHub"/> class.
         /// </summary>
         /// <param name="completionLogic">The completion logic used to process the request</param>
         /// <param name="validationHandler">The validation logic used to ensure the request body is valid</param>
-        public ChatHub(ICompletionLogic completionLogic, IValidationHandler validationHandler)
+        public ChatHub(ICompletionLogic completionLogic, IValidationHandler validationHandler, IUserLogic userLogic, ITenantProvider tenantProvider, IUsageService usageService)
         {
             _completionLogic = completionLogic;
             _validationLogic = validationHandler;
+            _userLogic = userLogic;
+            _tenantProvider = tenantProvider;
+            _usageService = usageService;
         }
 
         /// <summary>
@@ -38,6 +45,31 @@ namespace IntelligenceHub.Hubs
         {
             try
             {
+                var sub = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+                          Context.User?.FindFirst("sub")?.Value;
+                if (string.IsNullOrEmpty(sub))
+                {
+                    await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {500}. Error message: {DefaultExceptionMessage}");
+                    return;
+                }
+
+                var user = await _userLogic.GetUserBySubAsync(sub);
+                if (user == null)
+                {
+                    await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {500}. Error message: {DefaultExceptionMessage}");
+                    return;
+                }
+
+                _tenantProvider.TenantId = user.TenantId;
+                _tenantProvider.User = user;
+
+                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(user);
+                if (!usageResult.IsSuccess)
+                {
+                    await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {APIResponseStatusCodes.TooManyRequests}. Error message: {usageResult.ErrorMessage}");
+                    return;
+                }
+
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (!string.IsNullOrEmpty(errorMessage))
                 {

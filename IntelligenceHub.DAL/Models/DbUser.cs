@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -32,5 +33,22 @@ namespace IntelligenceHub.DAL.Models
         [Required]
         [MaxLength(255)]
         public string ApiToken { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The user's subscription access level.
+        /// </summary>
+        [Required]
+        [MaxLength(50)]
+        public string AccessLevel { get; set; } = IntelligenceHub.Common.GlobalVariables.AccessLevel.Free.ToString();
+
+        /// <summary>
+        /// The number of completion requests made in the current month.
+        /// </summary>
+        public int RequestsThisMonth { get; set; }
+
+        /// <summary>
+        /// The start date of the request counting period.
+        /// </summary>
+        public DateTime RequestMonthStart { get; set; } = DateTime.UtcNow;
     }
 }

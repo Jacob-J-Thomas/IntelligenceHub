@@ -138,6 +138,15 @@
         }
 
         /// <summary>
+        /// Specifies the access level of a user.
+        /// </summary>
+        public enum AccessLevel
+        {
+            Free,
+            Paid,
+        }
+
+        /// <summary>
         /// The default model for Anthropic.
         /// </summary>
         public const string DefaultAnthropicModel = "claude-3-7-sonnet-20250219";
