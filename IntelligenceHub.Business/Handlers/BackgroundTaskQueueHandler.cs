@@ -1,40 +1,30 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+using Azure.Storage.Queues;
 using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
-namespace IntelligenceHub.Business.Handlers
+namespace IntelligenceHub.Business.Handlers;
+
+/// <summary>
+/// Implementation of <see cref="IBackgroundTaskQueueHandler"/> that sends messages
+/// to an Azure Storage queue. These messages are processed by an Azure Function.
+/// </summary>
+public class BackgroundTaskQueueHandler : IBackgroundTaskQueueHandler
 {
-    /// <summary>
-    /// A handler for managing background tasks.
-    /// </summary>
-    public class BackgroundTaskQueueHandler : IBackgroundTaskQueueHandler
+    private readonly QueueClient _queueClient;
+
+    public BackgroundTaskQueueHandler(IConfiguration configuration)
     {
-        private readonly ConcurrentQueue<Func<CancellationToken, Task>> _workItems = new();
-        private readonly SemaphoreSlim _signal = new(0);
+        var connection = configuration["QueueConnectionString"];
+        _queueClient = new QueueClient(connection, "background-tasks");
+        _queueClient.CreateIfNotExists();
+    }
 
-        /// <summary>
-        /// Queues a background work item.
-        /// </summary>
-        /// <param name="workItem">The work item to queue.</param>
-        public void QueueBackgroundWorkItem(Func<CancellationToken, Task> workItem)
-        {
-            _workItems.Enqueue(workItem);
-            _signal.Release();
-        }
-
-        /// <summary>
-        /// Dequeues a background work item.
-        /// </summary>
-        /// <param name="cancellationToken">The cancellation token associated with the work item.</param>
-        /// <returns>A task that represents the dequeue operation.</returns>
-        public async Task<Func<CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
-        {
-            await _signal.WaitAsync(cancellationToken);
-            _workItems.TryDequeue(out var workItem);
-            return workItem!;
-        }
+    /// <inheritdoc/>
+    public async Task QueueBackgroundWorkItemAsync(BackgroundTaskMessage message, CancellationToken cancellationToken = default)
+    {
+        var payload = JsonSerializer.Serialize(message);
+        var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload));
+        await _queueClient.SendMessageAsync(base64, cancellationToken);
     }
 }

@@ -117,7 +117,6 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton(new LoadBalancingSelector(serviceUrls));
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
             builder.Services.AddSingleton<IBackgroundTaskQueueHandler, BackgroundTaskQueueHandler>();
-            builder.Services.AddHostedService<BackgroundWorker>();
 
             #endregion
 

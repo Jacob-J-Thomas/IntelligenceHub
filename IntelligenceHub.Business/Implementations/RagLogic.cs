@@ -220,9 +220,11 @@ namespace IntelligenceHub.Business.Implementations
 
                 foreach (var document in pageDocs)
                 {
-                    _backgroundTaskQueue.QueueBackgroundWorkItem(async token =>
+                    await _backgroundTaskQueue.QueueBackgroundWorkItemAsync(new BackgroundTaskMessage
                     {
-                        await RunBackgroundDocumentUpdate(index, document);
+                        TaskType = "DocumentUpdate",
+                        IndexName = index.Name,
+                        Document = document
                     });
                 }
                 currentPage++;
@@ -344,12 +346,10 @@ namespace IntelligenceHub.Business.Implementations
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.None) return APIResponseWrapper<bool>.Failure($"Failed to convert the RagHost to a valid enum.", APIResponseStatusCodes.InternalError);
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.Weaviate)
             {
-                _backgroundTaskQueue.QueueBackgroundWorkItem(async token =>
+                await _backgroundTaskQueue.QueueBackgroundWorkItemAsync(new BackgroundTaskMessage
                 {
-                    using var scope = _serviceScopeFactory.CreateScope();
-                    var repo = scope.ServiceProvider.GetRequiredService<IIndexRepository>();
-                    var client = scope.ServiceProvider.GetRequiredService<WeaviateSearchServiceClient>();
-                    await SyncWeaviateIndex(index, repo, client, token);
+                    TaskType = "SyncWeaviate",
+                    IndexName = index
                 });
                 return APIResponseWrapper<bool>.Success(true);
             }
