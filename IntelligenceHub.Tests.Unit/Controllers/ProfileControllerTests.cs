@@ -14,12 +14,14 @@ namespace IntelligenceHub.Tests.Unit.Controllers
     public class ProfileControllerTests
     {
         private readonly Mock<IProfileLogic> _mockProfileLogic;
+        private readonly Mock<IUserLogic> _mockUserLogic;
         private readonly ProfileController _controller;
 
         public ProfileControllerTests()
         {
             _mockProfileLogic = new Mock<IProfileLogic>();
-            _controller = new ProfileController(_mockProfileLogic.Object);
+            _mockUserLogic = new Mock<IUserLogic>();
+            _controller = new ProfileController(_mockProfileLogic.Object, _mockUserLogic.Object);
         }
 
         [Fact]

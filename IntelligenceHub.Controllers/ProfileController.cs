@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.Annotations;
+using IntelligenceHub.Business.Interfaces;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Controllers
@@ -16,7 +17,7 @@ namespace IntelligenceHub.Controllers
     [Route("[controller]")]
     [ApiController]
     [Authorize(Policy = ElevatedAuthPolicy)]
-    public class ProfileController : ControllerBase
+    public class ProfileController : TenantControllerBase
     {
         private readonly IProfileLogic _profileLogic;
 
@@ -24,7 +25,7 @@ namespace IntelligenceHub.Controllers
         /// Initializes a new instance of the <see cref="ProfileController"/> class.
         /// </summary>
         /// <param name="profileLogic">The agent profiles business logic.</param>
-        public ProfileController(IProfileLogic profileLogic)
+        public ProfileController(IProfileLogic profileLogic, IUserLogic userLogic) : base(userLogic)
         {
             _profileLogic = profileLogic;
         }
@@ -45,6 +46,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrWhiteSpace(name)) return BadRequest("Invalid route data. Please check your input.");
                 var response = await _profileLogic.GetProfile(name);
                 if (!response.IsSuccess) return NotFound(response.ErrorMessage);
@@ -74,6 +76,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (page < 1) return BadRequest("The page must be greater than 0.");
                 if (count < 1) return BadRequest("The count must be greater than 0.");
                 var result = await _profileLogic.GetAllProfiles(page, count);
@@ -100,6 +103,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 var updateResponse = await _profileLogic.CreateOrUpdateProfile(profileDto);
                 if (!updateResponse.IsSuccess)
                 {
@@ -134,6 +138,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: '{name}'.");
                 if (tools is null || tools.Count < 1) return BadRequest($"Invalid request. The 'Tools' property cannot be null or empty: '{tools}'.");
                 var response = await _profileLogic.AddProfileToTools(name, tools);
@@ -167,6 +172,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: '{name}'.");
                 if (tools is null || tools.Count < 1) return BadRequest($"Invalid request. The 'Tools' property cannot be null or empty: '{tools}'.");
                 var response = await _profileLogic.DeleteProfileAssociations(name, tools);
@@ -196,6 +202,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrWhiteSpace(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: {name}.");
                 var response = await _profileLogic.DeleteProfile(name);
 

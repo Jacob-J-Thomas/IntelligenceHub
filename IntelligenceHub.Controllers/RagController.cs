@@ -17,7 +17,7 @@ namespace IntelligenceHub.Controllers
     [Route("Rag")]
     [ApiController]
     [Authorize(Policy = ElevatedAuthPolicy)]
-    public class RagController : ControllerBase
+    public class RagController : TenantControllerBase
     {
         private readonly IRagLogic _ragLogic;
 
@@ -25,7 +25,7 @@ namespace IntelligenceHub.Controllers
         /// Initializes a new instance of the <see cref="RagController"/> class.
         /// </summary>
         /// <param name="ragLogic">The business logic for managing RAG indexes.</param>
-        public RagController(IRagLogic ragLogic)
+        public RagController(IRagLogic ragLogic, IUserLogic userLogic) : base(userLogic)
         {
             _ragLogic = ragLogic;
         }
@@ -45,6 +45,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
                 var response = await _ragLogic.GetRagIndex(index);
                 if (response.IsSuccess) return Ok(response.Data);
@@ -70,6 +71,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 var response = await _ragLogic.GetAllIndexesAsync();
                 return Ok(response.Data ?? new List<IndexMetadata>());
             }
@@ -94,6 +96,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (indexDefinition is null) return BadRequest("The request body is malformed.");
                 var response = await _ragLogic.CreateIndex(indexDefinition);
                 if (response.IsSuccess) return Ok(indexDefinition);
@@ -123,6 +126,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (indexDefinition is null) return BadRequest("The request body is malformed.");
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);
                 if (response.IsSuccess) return Ok(indexDefinition);
@@ -153,6 +157,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(query)) return BadRequest("The required route parameter, 'query', is null or empty.");
                 var response = await _ragLogic.QueryIndex(index, query);
                 if (response.IsSuccess) return Ok(response.Data);
@@ -181,6 +186,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
                 var response = await _ragLogic.RunIndexUpdate(index);
                 if (response.IsSuccess) return NoContent();
@@ -210,6 +216,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
                 var response = await _ragLogic.DeleteIndex(index);
                 if (response.IsSuccess) return NoContent();
@@ -240,6 +247,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (page < 1) return BadRequest("Page must be 1 or greater");
                 if (count < 1) return BadRequest("Count must be 1 or greater");
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
@@ -271,6 +279,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 var response = await _ragLogic.GetDocument(index, document);
                 if (response.IsSuccess) return Ok(response.Data);
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -299,6 +308,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (documentUpsertRequest == null || documentUpsertRequest.Documents.Count < 1) return BadRequest("The request body is malformed or contains less than 1 document.");
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'.");
                 foreach (var doc in documentUpsertRequest.Documents) if (doc.Title.Contains('/') || doc.Title.Contains('\\')) return BadRequest($"Document titles cannot contain slashes. Document: {doc.Title}");
@@ -331,6 +341,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 var documents = commaDelimitedDocNames.ToStringArray();
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'.");
                 if (documents.Length < 1) return BadRequest("No document names were provided in the request route.");
