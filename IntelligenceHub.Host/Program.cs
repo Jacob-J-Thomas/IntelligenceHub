@@ -296,6 +296,17 @@ namespace IntelligenceHub.Host
 
             #region Build App
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("DefaultCors", policy =>
+                {
+                    policy.SetIsOriginAllowed(_ => true)
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
+
             var app = builder.Build();
 
             app.UseRouting();
@@ -306,14 +317,6 @@ namespace IntelligenceHub.Host
                 app.UseSwagger();
                 app.UseSwaggerUI();
 
-                app.UseCors(policy =>
-                {
-                    policy.AllowAnyMethod()
-                          .AllowAnyHeader()
-                          .AllowCredentials()
-                          .WithOrigins(settings.ValidOrigins);
-                });
-
                 // Serve static files in development environment
                 app.UseStaticFiles();
                 app.UseDefaultFiles(new DefaultFilesOptions
@@ -321,18 +324,10 @@ namespace IntelligenceHub.Host
                     DefaultFileNames = new List<string> { "index.html" }
                 });
             }
-            else
-            {
-                app.UseCors(policy =>
-                {
-                    policy.AllowAnyMethod()
-                          .AllowAnyHeader()
-                          .AllowCredentials()
-                          .WithOrigins(settings.ValidOrigins);
-                });
-            }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("DefaultCors");
 
             app.UseMiddleware<LoggingMiddleware>();
 
@@ -340,7 +335,7 @@ namespace IntelligenceHub.Host
             app.UseAuthorization();
 
             app.MapControllers();
-            app.MapHub<ChatHub>("/chatstream").RequireCors();
+            app.MapHub<ChatHub>("/chatstream").RequireCors("DefaultCors");
 
             app.Run();
             #endregion
