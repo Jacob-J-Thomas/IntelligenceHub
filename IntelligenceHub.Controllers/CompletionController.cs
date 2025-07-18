@@ -10,6 +10,7 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.Net;
 using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.Business.Interfaces;
 
 
 namespace IntelligenceHub.Controllers
@@ -20,7 +21,7 @@ namespace IntelligenceHub.Controllers
     [Route("[controller]")]
     [ApiController]
     [Authorize]
-    public class CompletionController : ControllerBase
+    public class CompletionController : TenantControllerBase
     {
         private readonly ICompletionLogic _completionLogic;
         private readonly IProfileLogic _profileLogic;
@@ -31,7 +32,8 @@ namespace IntelligenceHub.Controllers
         /// </summary>
         /// <param name="completionLogic">The business logic for completions.</param>
         /// <param name="validationHandler">A class that validates incoming API request payloads.</param>
-        public CompletionController(ICompletionLogic completionLogic, IProfileLogic profileLogic, IValidationHandler validationHandler)
+        public CompletionController(ICompletionLogic completionLogic, IProfileLogic profileLogic, IValidationHandler validationHandler, IUserLogic userLogic)
+            : base(userLogic)
         {
             _completionLogic = completionLogic;
             _profileLogic = profileLogic;
@@ -56,6 +58,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
                 if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name; 
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
@@ -91,6 +94,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
                 if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name;
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);

@@ -33,6 +33,7 @@ namespace IntelligenceHub.DAL
         public DbSet<DbProfileTool> ProfileTools { get; set; }
         public DbSet<DbTool> Tools { get; set; }
         public DbSet<DbProperty> Properties { get; set; }
+        public DbSet<DbUser> Users { get; set; }
 
         /// <summary>
         /// Configures the model for the Intelligence Hub database context.
@@ -181,6 +182,16 @@ namespace IntelligenceHub.DAL
                 entity.HasOne(e => e.Tool)
                     .WithMany(t => t.ProfileTools)
                     .HasForeignKey(e => e.ToolID);
+            });
+
+            modelBuilder.Entity<DbUser>(entity =>
+            {
+                entity.ToTable("Users");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.Sub).IsRequired().HasMaxLength(255);
+                entity.HasIndex(e => e.Sub).IsUnique();
+                entity.Property(e => e.TenantId).IsRequired();
             });
         }
     }

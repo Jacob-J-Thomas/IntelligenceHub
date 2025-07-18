@@ -10,13 +10,15 @@ namespace IntelligenceHub.Tests.Unit.Controllers
     public class MessageHistoryControllerTests
     {
         private readonly Mock<IMessageHistoryLogic> _mockMessageHistoryLogic;
+        private readonly Mock<IUserLogic> _mockUserLogic;
         private readonly MessageHistoryController _controller;
 
         public MessageHistoryControllerTests()
         {
             // Mock the MessageHistoryLogic
             _mockMessageHistoryLogic = new Mock<IMessageHistoryLogic>();
-            _controller = new MessageHistoryController(_mockMessageHistoryLogic.Object);
+            _mockUserLogic = new Mock<IUserLogic>();
+            _controller = new MessageHistoryController(_mockMessageHistoryLogic.Object, _mockUserLogic.Object);
         }
 
         #region GetConversation Tests

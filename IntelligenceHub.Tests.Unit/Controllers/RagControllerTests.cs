@@ -11,12 +11,14 @@ namespace IntelligenceHub.Tests.Unit.Controllers
     public class RagControllerTests
     {
         private readonly Mock<IRagLogic> _mockRagLogic;
+        private readonly Mock<IUserLogic> _mockUserLogic;
         private readonly RagController _controller;
 
         public RagControllerTests()
         {
             _mockRagLogic = new Mock<IRagLogic>();
-            _controller = new RagController(_mockRagLogic.Object);
+            _mockUserLogic = new Mock<IUserLogic>();
+            _controller = new RagController(_mockRagLogic.Object, _mockUserLogic.Object);
         }
 
         [Fact]

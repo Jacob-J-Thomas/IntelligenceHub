@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using IntelligenceHub.Business.Interfaces;
 
 namespace IntelligenceHub.Controllers
 {
@@ -15,7 +16,7 @@ namespace IntelligenceHub.Controllers
     [Route("[controller]")]
     [ApiController]
     [Authorize(Policy = ElevatedAuthPolicy)]
-    public class ToolController : ControllerBase
+    public class ToolController : TenantControllerBase
     {
         private readonly IProfileLogic _profileLogic;
 
@@ -23,7 +24,7 @@ namespace IntelligenceHub.Controllers
         /// Initializes a new instance of the <see cref="ToolController"/> class.
         /// </summary>
         /// <param name="profileLogic">The profile logic.</param>
-        public ToolController(IProfileLogic profileLogic)
+        public ToolController(IProfileLogic profileLogic, IUserLogic userLogic) : base(userLogic)
         {
             _profileLogic = profileLogic;
         }
@@ -44,6 +45,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
                 var response = await _profileLogic.GetTool(name);
 
@@ -72,6 +74,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (page < 1) return BadRequest("The page must be greater than 0.");
                 if (count < 1) return BadRequest("The count must be greater than 0.");
                 var tools = await _profileLogic.GetAllTools(page, count);
@@ -98,6 +101,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
                 var response = await _profileLogic.GetToolProfileAssociations(name);
                 if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -124,6 +128,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 var response = await _profileLogic.CreateOrUpdateTools(toolList);
                 if (!response.IsSuccess) return BadRequest(response.ErrorMessage);
                 else return Ok(toolList);
@@ -151,6 +156,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
                 if (profiles == null || profiles.Count < 1) return BadRequest("Invalid request. 'Profiles' property cannot be null or empty.");
                 var response = await _profileLogic.AddToolToProfiles(name, profiles);
@@ -186,6 +192,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
                 if (profiles == null || profiles.Count < 1) return BadRequest("Invalid request. 'Profiles' property cannot be null or empty.");
                 var response = await _profileLogic.DeleteToolAssociations(name, profiles);
@@ -214,6 +221,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
                 var response = await _profileLogic.DeleteTool(name);
                 if (response.IsSuccess) return NoContent();

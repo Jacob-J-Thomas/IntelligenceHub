@@ -84,6 +84,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IProfileLogic, ProfileLogic>();
             builder.Services.AddScoped<IRagLogic, RagLogic>();
             builder.Services.AddScoped<IAuthLogic, AuthLogic>();
+            builder.Services.AddScoped<IUserLogic, UserLogic>();
 
             // Clients and Client Factory
             builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
@@ -105,6 +106,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IMessageHistoryRepository, MessageHistoryRepository>();
             builder.Services.AddScoped<IIndexRepository, IndexRepository>();
             builder.Services.AddScoped<IIndexMetaRepository, IndexMetaRepository>();
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
 
             // Handlers
             var serviceUrls = new Dictionary<string, string[]>();

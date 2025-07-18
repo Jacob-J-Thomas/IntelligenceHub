@@ -14,12 +14,14 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         private readonly ToolController _controller;
         private readonly Mock<IProfileLogic> _profileLogicMock;
         private readonly Mock<ILogger<ToolController>> _loggerMock;
+        private readonly Mock<IUserLogic> _userLogicMock;
 
         public ToolControllerTests()
         {
             _profileLogicMock = new Mock<IProfileLogic>();
             _loggerMock = new Mock<ILogger<ToolController>>();
-            _controller = new ToolController(_profileLogicMock.Object);
+            _userLogicMock = new Mock<IUserLogic>();
+            _controller = new ToolController(_profileLogicMock.Object, _userLogicMock.Object);
         }
 
         #region GetTool Tests

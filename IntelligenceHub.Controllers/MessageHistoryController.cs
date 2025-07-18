@@ -1,11 +1,11 @@
 ﻿using IntelligenceHub.API.DTOs;
-using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
 using static IntelligenceHub.Common.GlobalVariables;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using IntelligenceHub.Business.Interfaces;
 
 namespace IntelligenceHub.Controllers
 {
@@ -15,15 +15,12 @@ namespace IntelligenceHub.Controllers
     [Route("[controller]")]
     [ApiController]
     [Authorize(Policy = ElevatedAuthPolicy)]
-    public class MessageHistoryController : ControllerBase
+    public class MessageHistoryController : TenantControllerBase
     {
         private readonly IMessageHistoryLogic _messageHistoryLogic;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageHistoryController"/> class.
-        /// </summary>
-        /// <param name="messageHistoryLogic">The message history business logic.</param>
-        public MessageHistoryController(IMessageHistoryLogic messageHistoryLogic)
+        public MessageHistoryController(IMessageHistoryLogic messageHistoryLogic, IUserLogic userLogic)
+            : base(userLogic)
         {
             _messageHistoryLogic = messageHistoryLogic;
         }
@@ -46,6 +43,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 if (count < 1) return BadRequest("Count must be greater than 0.");
                 if (page < 1) return BadRequest("Page must be greater than 0.");
                 var response = await _messageHistoryLogic.GetConversationHistory(id, count, page);
@@ -80,6 +78,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 // Validate the messages list
                 if (messages == null || !messages.Any()) return BadRequest("Messages must be included in the request.");
 
@@ -111,6 +110,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 var response = await _messageHistoryLogic.DeleteConversation(id);
                 if (response.IsSuccess) return NoContent();
                 return NotFound(response.ErrorMessage);
@@ -137,6 +137,7 @@ namespace IntelligenceHub.Controllers
         {
             try
             {
+                await GetTenantIdAsync();
                 var response = await _messageHistoryLogic.DeleteMessage(conversationId, messageId);
                 if (response.IsSuccess) return NoContent();
                 else return NotFound(response.ErrorMessage);
