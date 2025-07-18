@@ -9,6 +9,7 @@ namespace IntelligenceHub.DAL.Implementations
     /// </summary>
     public class UserRepository : IUserRepository
     {
+        private readonly IntelligenceHubDbContext _context;
         protected readonly DbSet<DbUser> _dbSet;
 
         /// <summary>
@@ -17,6 +18,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <param name="context">Database context.</param>
         public UserRepository(IntelligenceHubDbContext context)
         {
+            _context = context;
             _dbSet = context.Set<DbUser>();
         }
 
@@ -30,6 +32,16 @@ namespace IntelligenceHub.DAL.Implementations
         public async Task<DbUser?> GetByApiTokenAsync(string apiToken)
         {
             return await _dbSet.FirstOrDefaultAsync(u => u.ApiToken == apiToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<DbUser> UpdateAsync(DbUser user)
+        {
+            _dbSet.Attach(user);
+            _context.Entry(user).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            await _context.Entry(user).ReloadAsync();
+            return user;
         }
     }
 }

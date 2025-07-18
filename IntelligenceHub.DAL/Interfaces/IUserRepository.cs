@@ -20,5 +20,10 @@ namespace IntelligenceHub.DAL.Interfaces
         /// <param name="apiToken">API token issued to the user.</param>
         /// <returns>The user if found; otherwise null.</returns>
         Task<DbUser?> GetByApiTokenAsync(string apiToken);
+
+        /// <summary>
+        /// Updates a user entity.
+        /// </summary>
+        Task<DbUser> UpdateAsync(DbUser user);
     }
 }
