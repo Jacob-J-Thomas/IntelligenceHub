@@ -47,7 +47,7 @@ namespace IntelligenceHub.Tests.Unit.Business
                 TopLogprobs = 0,
                 ResponseFormat = "text",
                 ReferenceProfiles = new string[] { "ref1" },
-                Tools = new List<API.DTOs.Tools.Tool>()
+                Tools = new List<IntelligenceHub.API.DTOs.Tools.Tool>()
             };
 
             // Note: Based on ValidateMessageList, we assume that a valid request
@@ -257,19 +257,19 @@ namespace IntelligenceHub.Tests.Unit.Business
         public void ValidateTool_WithValidTool_ReturnsNull()
         {
             // Arrange - Construct a valid tool DTO.
-            var tool = new API.DTOs.Tools.Tool
+            var tool = new IntelligenceHub.API.DTOs.Tools.Tool
             {
-                Function = new API.DTOs.Tools.Function
+                Function = new IntelligenceHub.API.DTOs.Tools.Function
                 {
                     Name = "TestTool",
                     Description = "A test tool",
-                    Parameters = new API.DTOs.Tools.Parameters
+                    Parameters = new IntelligenceHub.API.DTOs.Tools.Parameters
                     {
                         required = new string[] { "prop1" },
-                        properties = new Dictionary<string, API.DTOs.Tools.Property>
+                        properties = new Dictionary<string, IntelligenceHub.API.DTOs.Tools.Property>
                         {
                             {
-                                "prop1", new API.DTOs.Tools.Property
+                                "prop1", new IntelligenceHub.API.DTOs.Tools.Property
                                 {
                                     type = "string",
                                     description = "A required property"
@@ -294,16 +294,16 @@ namespace IntelligenceHub.Tests.Unit.Business
         public void ValidateTool_MissingFunctionName_ReturnsError()
         {
             // Arrange - Tool with null function name.
-            var tool = new API.DTOs.Tools.Tool
+            var tool = new IntelligenceHub.API.DTOs.Tools.Tool
             {
-                Function = new API.DTOs.Tools.Function
+                Function = new IntelligenceHub.API.DTOs.Tools.Function
                 {
                     Name = null,
                     Description = "A test tool",
-                    Parameters = new API.DTOs.Tools.Parameters
+                    Parameters = new IntelligenceHub.API.DTOs.Tools.Parameters
                     {
                         required = new string[] { },
-                        properties = new Dictionary<string, API.DTOs.Tools.Property>()
+                        properties = new Dictionary<string, IntelligenceHub.API.DTOs.Tools.Property>()
                     }
                 }
             };
