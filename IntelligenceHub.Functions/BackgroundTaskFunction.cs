@@ -55,9 +55,7 @@ public class BackgroundTaskFunction
             services.GetRequiredService<IIndexRepository>(),
             services.GetRequiredService<IValidationHandler>(),
             new NoOpBackgroundTaskQueueHandler(),
-            services.GetRequiredService<IntelligenceHubDbContext>(),
-            services.GetRequiredService<WeaviateSearchServiceClient>(),
-            _scopeFactory);
+            services.GetRequiredService<IntelligenceHubDbContext>());
 
         switch (message.TaskType)
         {
@@ -75,11 +73,45 @@ public class BackgroundTaskFunction
                 }
                 break;
             case "SyncWeaviate":
-                await ragLogic.SyncWeaviateIndexAsync(message.IndexName);
+                await SyncWeaviateIndexAsync(
+                    message.IndexName,
+                    services.GetRequiredService<IIndexRepository>(),
+                    services.GetRequiredService<WeaviateSearchServiceClient>());
                 break;
             default:
                 logger.LogWarning($"Unknown task type '{message.TaskType}'");
                 break;
+        }
+    }
+
+    private static async Task SyncWeaviateIndexAsync(string index, IIndexRepository repository, WeaviateSearchServiceClient client)
+    {
+        const int batch = 100;
+        int page = 1;
+        var sqlDocs = new List<DAL.Models.DbIndexDocument>();
+        IEnumerable<DAL.Models.DbIndexDocument> pageDocs;
+        do
+        {
+            pageDocs = await repository.GetAllAsync(index, batch, page);
+            sqlDocs.AddRange(pageDocs);
+            page++;
+        } while (pageDocs.Any());
+
+        var weavDocs = await client.GetAllDocuments(index);
+        var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
+
+        foreach (var wdoc in weavDocs)
+        {
+            if (!sqlLookup.ContainsKey(wdoc.Id))
+            {
+                await client.DeleteDocument(index, wdoc.Id);
+            }
+        }
+
+        foreach (var sdoc in sqlDocs)
+        {
+            var dto = DAL.DbMappingHandler.MapFromDbIndexDocument(sdoc);
+            await client.UpsertDocument(index, dto);
         }
     }
 }

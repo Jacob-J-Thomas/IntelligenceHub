@@ -3,7 +3,6 @@ using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Factories;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Client.Interfaces;
-using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
@@ -12,7 +11,6 @@ using Microsoft.Extensions.Options;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Common.Extensions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using IntelligenceHub.Business.Handlers;
 
 namespace IntelligenceHub.Business.Implementations
@@ -28,9 +26,7 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IIndexRepository _ragRepository;
         private readonly IValidationHandler _validationHandler;
         private readonly IBackgroundTaskQueueHandler _backgroundTaskQueue;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IntelligenceHubDbContext _dbContext;
-        private readonly WeaviateSearchServiceClient _weaviateClient;
 
         private readonly string _defaultAzureModel;
 
@@ -46,7 +42,7 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="validationHandler">A class that can be used to validate DTO bodies passed to the API.</param>
         /// <param name="backgroundTaskQueue">A background task handler useful for performing operations without tying up resources.</param>
         /// <param name="context">DAL context from EFCore used for some more specialized scenarios.</param>
-        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient, IServiceScopeFactory serviceScopeFactory)
+        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context)
         {
             _defaultAzureModel = settings.CurrentValue.ValidAGIModels.FirstOrDefault() ?? string.Empty;
             _agiClientFactory = agiFactory;
@@ -56,8 +52,6 @@ namespace IntelligenceHub.Business.Implementations
             _validationHandler = validationHandler;
             _backgroundTaskQueue = backgroundTaskQueue;
             _dbContext = context;
-            _weaviateClient = weaviateClient;
-            _serviceScopeFactory = serviceScopeFactory;
         }
 
         /// <summary>
@@ -454,46 +448,6 @@ namespace IntelligenceHub.Business.Implementations
             return APIResponseWrapper<int>.Success(deletedDocuments);
         }
 
-        /// <summary>
-        /// Synchronizes documents in a Weaviate index with the SQL source.
-        /// </summary>
-        /// <param name="index">The index name.</param>
-        /// <param name="token">Cancellation token.</param>
-        public Task SyncWeaviateIndexAsync(string index, CancellationToken token = default)
-        {
-            return SyncWeaviateIndex(index, _ragRepository, _weaviateClient, token);
-        }
-
-        private static async Task SyncWeaviateIndex(string index, IIndexRepository repository, WeaviateSearchServiceClient weaviateClient, CancellationToken token)
-        {
-            const int batch = 100;
-            int page = 1;
-            var sqlDocs = new List<DbIndexDocument>();
-            IEnumerable<DbIndexDocument> pageDocs;
-            do
-            {
-                pageDocs = await repository.GetAllAsync(index, batch, page);
-                sqlDocs.AddRange(pageDocs);
-                page++;
-            } while (pageDocs.Any());
-
-            var weavDocs = await weaviateClient.GetAllDocuments(index);
-            var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
-
-            foreach (var wdoc in weavDocs)
-            {
-                if (!sqlLookup.ContainsKey(wdoc.Id))
-                {
-                    await weaviateClient.DeleteDocument(index, wdoc.Id);
-                }
-            }
-
-            foreach (var sdoc in sqlDocs)
-            {
-                var dto = DbMappingHandler.MapFromDbIndexDocument(sdoc);
-                await weaviateClient.UpsertDocument(index, dto);
-            }
-        }
 
         #region Private Methods
 
