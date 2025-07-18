@@ -7,6 +7,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Common.Tenant;
+using IntelligenceHub.DAL.Models;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Tests.Unit.Controllers
@@ -15,13 +19,24 @@ namespace IntelligenceHub.Tests.Unit.Controllers
     {
         private readonly Mock<IProfileLogic> _mockProfileLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
+        private readonly Mock<ITenantProvider> _mockTenantProvider;
         private readonly ProfileController _controller;
+        private readonly Mock<HttpContext> _mockHttpContext;
 
         public ProfileControllerTests()
         {
             _mockProfileLogic = new Mock<IProfileLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
-            _controller = new ProfileController(_mockProfileLogic.Object, _mockUserLogic.Object);
+            _mockTenantProvider = new Mock<ITenantProvider>();
+            _mockHttpContext = new Mock<HttpContext>();
+
+            var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
+            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
+            _mockHttpContext.Setup(c => c.User).Returns(claims);
+
+            _controller = new ProfileController(_mockProfileLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
+            _controller.ControllerContext.HttpContext = _mockHttpContext.Object;
         }
 
         [Fact]

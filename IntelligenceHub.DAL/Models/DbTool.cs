@@ -8,7 +8,7 @@ namespace IntelligenceHub.DAL.Models
     /// Entity model representing a tool definition in the database.
     /// </summary>
     [Table("Tools")]
-    public class DbTool
+    public class DbTool : IntelligenceHub.DAL.Interfaces.ITenantEntity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -16,6 +16,11 @@ namespace IntelligenceHub.DAL.Models
         /// Primary key for the tool definition.
         /// </summary>
         public int Id { get; set; }
+        [Required]
+        /// <summary>
+        /// Tenant identifier for the owning organization.
+        /// </summary>
+        public Guid TenantId { get; set; }
         [Required]
         /// <summary>
         /// Name of the tool.

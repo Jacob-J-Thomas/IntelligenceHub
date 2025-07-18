@@ -7,7 +7,7 @@ namespace IntelligenceHub.DAL.Models
     /// Entity model representing a tool property in the database.
     /// </summary>
     [Table("Properties")]
-    public class DbProperty
+    public class DbProperty : IntelligenceHub.DAL.Interfaces.ITenantEntity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -15,6 +15,11 @@ namespace IntelligenceHub.DAL.Models
         /// Primary key for the property.
         /// </summary>
         public int Id { get; set; }
+        [Required]
+        /// <summary>
+        /// Tenant identifier for the owning organization.
+        /// </summary>
+        public Guid TenantId { get; set; }
         /// <summary>
         /// Name of the property.
         /// </summary>

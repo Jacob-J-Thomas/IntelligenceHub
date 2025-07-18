@@ -1,7 +1,11 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Controllers;
+using IntelligenceHub.Common.Tenant;
+using IntelligenceHub.DAL.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 using Moq;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -11,14 +15,25 @@ namespace IntelligenceHub.Tests.Unit.Controllers
     {
         private readonly Mock<IMessageHistoryLogic> _mockMessageHistoryLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
+        private readonly Mock<ITenantProvider> _mockTenantProvider;
         private readonly MessageHistoryController _controller;
+        private readonly Mock<HttpContext> _mockHttpContext;
 
         public MessageHistoryControllerTests()
         {
             // Mock the MessageHistoryLogic
             _mockMessageHistoryLogic = new Mock<IMessageHistoryLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
-            _controller = new MessageHistoryController(_mockMessageHistoryLogic.Object, _mockUserLogic.Object);
+            _mockTenantProvider = new Mock<ITenantProvider>();
+            _mockHttpContext = new Mock<HttpContext>();
+
+            var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
+            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
+            _mockHttpContext.Setup(c => c.User).Returns(claims);
+
+            _controller = new MessageHistoryController(_mockMessageHistoryLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
+            _controller.ControllerContext.HttpContext = _mockHttpContext.Object;
         }
 
         #region GetConversation Tests

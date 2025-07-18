@@ -12,14 +12,16 @@ namespace IntelligenceHub.DAL.Implementations
     {
         protected readonly IntelligenceHubDbContext _context;
         protected readonly DbSet<T> _dbSet;
+        private readonly ITenantProvider _tenantProvider;
 
         /// <summary>
         /// Constructor for the GenericRepository class.
         /// </summary>
         /// <param name="context">The database context used to map to the SQL database.</param>
-        public GenericRepository(IntelligenceHubDbContext context)
+        public GenericRepository(IntelligenceHubDbContext context, ITenantProvider tenantProvider)
         {
             _context = context;
+            _tenantProvider = tenantProvider;
             _dbSet = _context.Set<T>();
         }
 
@@ -35,6 +37,10 @@ namespace IntelligenceHub.DAL.Implementations
         public async Task<IEnumerable<T>> GetAllAsync(int? count = null, int? page = null)
         {
             var query = _dbSet.AsQueryable();
+            if (_tenantProvider.TenantId.HasValue && typeof(ITenantEntity).IsAssignableFrom(typeof(T)))
+            {
+                query = query.Where(e => EF.Property<Guid>(e, "TenantId") == _tenantProvider.TenantId.Value);
+            }
             if (count.HasValue && page.HasValue && count > 0 && page > 0)
             {
                 query = query.Skip((page.Value - 1) * count.Value).Take(count.Value);
@@ -49,6 +55,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The successfully added entity.</returns>
         public async Task<T> AddAsync(T entity)
         {
+            if (entity is ITenantEntity tenantEntity && _tenantProvider.TenantId.HasValue)
+            {
+                tenantEntity.TenantId = _tenantProvider.TenantId.Value;
+            }
             await _dbSet.AddAsync(entity);
             await _context.SaveChangesAsync();
             await _context.Entry(entity).ReloadAsync();
@@ -62,6 +72,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The updated entity.</returns>
         public async Task<T> UpdateAsync(T entity)
         {
+            if (entity is ITenantEntity tenantEntity && _tenantProvider.TenantId.HasValue)
+            {
+                tenantEntity.TenantId = _tenantProvider.TenantId.Value;
+            }
             _dbSet.Attach(entity);
             _context.Entry(entity).State = EntityState.Modified;
             await _context.SaveChangesAsync();

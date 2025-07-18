@@ -6,7 +6,7 @@ namespace IntelligenceHub.DAL.Models
     /// Join entity linking profiles and tools.
     /// </summary>
     [Table("ProfileTools")]
-    public class DbProfileTool
+    public class DbProfileTool : IntelligenceHub.DAL.Interfaces.ITenantEntity
     {
         /// <summary>
         /// Foreign key referencing the profile.
@@ -16,6 +16,8 @@ namespace IntelligenceHub.DAL.Models
         /// Navigation property to the related profile.
         /// </summary>
         public DbProfile Profile { get; set; }
+        [System.ComponentModel.DataAnnotations.Required]
+        public Guid TenantId { get; set; }
         /// <summary>
         /// Foreign key referencing the tool.
         /// </summary>
