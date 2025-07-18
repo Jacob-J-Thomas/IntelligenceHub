@@ -86,6 +86,8 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<IRagLogic, RagLogic>();
             builder.Services.AddScoped<IAuthLogic, AuthLogic>();
             builder.Services.AddScoped<IUserLogic, UserLogic>();
+            builder.Services.AddMemoryCache();
+            builder.Services.AddSingleton<IRateLimitService, RateLimitService>();
             builder.Services.AddScoped<IUsageService, UsageService>();
 
             // Clients and Client Factory

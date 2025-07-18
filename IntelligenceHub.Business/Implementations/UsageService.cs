@@ -13,18 +13,26 @@ namespace IntelligenceHub.Business.Implementations
     /// </summary>
     public class UsageService : IUsageService
     {
-        private const int FreeTierLimit = 100;
         private readonly IUserRepository _userRepository;
+        private readonly IRateLimitService _rateLimitService;
 
-        public UsageService(IUserRepository userRepository)
+        public UsageService(IUserRepository userRepository, IRateLimitService rateLimitService)
         {
             _userRepository = userRepository;
+            _rateLimitService = rateLimitService;
         }
 
         /// <inheritdoc/>
         public async Task<APIResponseWrapper<bool>> ValidateAndIncrementUsageAsync(DbUser user)
         {
-            if (user.AccessLevel.Equals(AccessLevel.Paid.ToString(), StringComparison.OrdinalIgnoreCase))
+            var isPaid = user.AccessLevel.Equals(AccessLevel.Paid.ToString(), StringComparison.OrdinalIgnoreCase);
+
+            if (!_rateLimitService.IsRequestAllowed(user.Id.ToString(), isPaid))
+            {
+                return APIResponseWrapper<bool>.Failure("Rate limit exceeded.", APIResponseStatusCodes.TooManyRequests);
+            }
+
+            if (isPaid)
             {
                 return APIResponseWrapper<bool>.Success(true);
             }
@@ -36,7 +44,7 @@ namespace IntelligenceHub.Business.Implementations
                 user.RequestsThisMonth = 0;
             }
 
-            if (user.RequestsThisMonth >= FreeTierLimit)
+            if (user.RequestsThisMonth >= FreeTierMonthlyLimit)
             {
                 return APIResponseWrapper<bool>.Failure("The monthly free tier quota has been exceeded.", APIResponseStatusCodes.TooManyRequests);
             }

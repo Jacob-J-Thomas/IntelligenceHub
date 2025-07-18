@@ -309,5 +309,30 @@
         /// The default tag boost for scoring.
         /// </summary>
         public const int DefaultScoringTagBoost = 1;
+
+        /// <summary>
+        /// The maximum number of requests allowed per window for free users.
+        /// </summary>
+        public const int FreeUserRateLimitRequests = 10;
+
+        /// <summary>
+        /// The window size in seconds for free user rate limiting.
+        /// </summary>
+        public const int FreeUserRateLimitWindowSeconds = 60;
+
+        /// <summary>
+        /// The maximum number of requests allowed per window for paid users.
+        /// </summary>
+        public const int PaidUserRateLimitRequests = 60;
+
+        /// <summary>
+        /// The window size in seconds for paid user rate limiting.
+        /// </summary>
+        public const int PaidUserRateLimitWindowSeconds = 60;
+
+        /// <summary>
+        /// The monthly request limit for free tier users.
+        /// </summary>
+        public const int FreeTierMonthlyLimit = 100;
     }
 }
