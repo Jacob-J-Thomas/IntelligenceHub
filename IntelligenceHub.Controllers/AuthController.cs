@@ -1,14 +1,11 @@
 ﻿using IntelligenceHub.API.DTOs.Auth;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Threading.Tasks;
-using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.API.Controllers
 {
@@ -17,7 +14,6 @@ namespace IntelligenceHub.API.Controllers
     /// </summary>
     [ApiController]
     [Route("auth")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + ",BasicAuthentication", Policy = ElevatedAuthPolicy)]
     public class AuthController : ControllerBase
     {
         private readonly IAuthLogic _authLogic;
@@ -38,19 +34,22 @@ namespace IntelligenceHub.API.Controllers
         /// </summary>
         /// <returns>An <see cref="IActionResult"/> containing the admin authentication token.</returns>
         [HttpGet("admintoken")]
+        [AllowAnonymous]
         [SwaggerOperation(OperationId = "GetElevatedAuthToken")]
         [ProducesResponseType(typeof(Auth0Response), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetAdminToken()
+        public async Task<IActionResult> GetAdminToken([FromHeader(Name = "X-Api-Key")] string apiKey)
         {
             try
             {
-                var tokenResponse = await _authLogic.GetAdminAuthToken();
-                if (tokenResponse == null) return Unauthorized();
-                return Ok(tokenResponse);
+                var user = await _userLogic.GetUserByApiTokenAsync(apiKey);
+                if (user is null) return Unauthorized();
+
+                var token = await _authLogic.GetAdminAuthToken();
+                return token is null ? Unauthorized() : Ok(token);
             }
-            catch (Exception)
+            catch
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
@@ -61,47 +60,22 @@ namespace IntelligenceHub.API.Controllers
         /// </summary>
         /// <returns>An <see cref="IActionResult"/> containing the default authentication token.</returns>
         [HttpGet("defaulttoken")]
+        [AllowAnonymous]
         [SwaggerOperation(OperationId = "GetDefaultAuthToken")]
         [ProducesResponseType(typeof(Auth0Response), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetDefaultToken()
-        {
-            try
-            {
-                var tokenResponse = await _authLogic.GetDefaultAuthToken();
-                if (tokenResponse == null) return Unauthorized();
-                return Ok(tokenResponse);
-            }
-            catch (Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
-            }
-        }
-
-        /// <summary>
-        /// Retrieves an authentication token using an API key issued to the user.
-        /// </summary>
-        /// <param name="apiKey">API key provided in the request header.</param>
-        /// <returns>The authentication token if the API key is valid.</returns>
-        [HttpPost("token")]
-        [AllowAnonymous]
-        [SwaggerOperation(OperationId = "GetTokenByApiKey")]
-        [ProducesResponseType(typeof(Auth0Response), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetTokenByApiKey([FromHeader(Name = "X-Api-Key")] string apiKey)
+        public async Task<IActionResult> GetDefaultToken([FromHeader(Name = "X-Api-Key")] string apiKey)
         {
             try
             {
                 var user = await _userLogic.GetUserByApiTokenAsync(apiKey);
-                if (user == null) return Unauthorized();
+                if (user is null) return Unauthorized();
 
-                var tokenResponse = await _authLogic.GetDefaultAuthToken();
-                if (tokenResponse == null) return Unauthorized();
-                return Ok(tokenResponse);
+                var token = await _authLogic.GetDefaultAuthToken();
+                return token is null ? Unauthorized() : Ok(token);
             }
-            catch (Exception)
+            catch
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, GlobalVariables.DefaultExceptionMessage);
             }
