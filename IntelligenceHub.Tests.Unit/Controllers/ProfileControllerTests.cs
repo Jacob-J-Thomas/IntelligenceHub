@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.API.DTOs;
+using IntelligenceHub.Common.Tenant;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Tests.Unit.Controllers
@@ -15,13 +16,15 @@ namespace IntelligenceHub.Tests.Unit.Controllers
     {
         private readonly Mock<IProfileLogic> _mockProfileLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
+        private readonly Mock<ITenantProvider> _mockTenantProvider;
         private readonly ProfileController _controller;
 
         public ProfileControllerTests()
         {
             _mockProfileLogic = new Mock<IProfileLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
-            _controller = new ProfileController(_mockProfileLogic.Object, _mockUserLogic.Object);
+            _mockTenantProvider = new Mock<ITenantProvider>();
+            _controller = new ProfileController(_mockProfileLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
         }
 
         [Fact]

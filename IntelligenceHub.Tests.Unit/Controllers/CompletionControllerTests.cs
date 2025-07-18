@@ -4,6 +4,7 @@ using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Controllers;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -21,6 +22,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         private readonly Mock<IValidationHandler> _mockValidationLogic;
         private readonly Mock<IProfileLogic> _mockProfileLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
+        private readonly Mock<ITenantProvider> _mockTenantProvider;
         private readonly Mock<HttpContext> _mockHttpContext;
 
         public CompletionControllerTests()
@@ -30,10 +32,11 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _mockValidationLogic = new Mock<IValidationHandler>();
             _mockProfileLogic = new Mock<IProfileLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
+            _mockTenantProvider = new Mock<ITenantProvider>();
             _mockHttpContext = new Mock<HttpContext>();
 
             // Initialize the controller with mocked dependencies
-            _controller = new CompletionController(_mockCompletionLogic.Object, _mockProfileLogic.Object,  _mockValidationLogic.Object, _mockUserLogic.Object);
+            _controller = new CompletionController(_mockCompletionLogic.Object, _mockProfileLogic.Object,  _mockValidationLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
         }
 
         #region Standard Completion

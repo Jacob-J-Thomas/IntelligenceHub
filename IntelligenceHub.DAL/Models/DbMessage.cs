@@ -7,7 +7,7 @@ namespace IntelligenceHub.DAL.Models
     /// Entity model representing a message stored in the database.
     /// </summary>
     [Table("MessageHistory")]
-    public class DbMessage
+    public class DbMessage : IntelligenceHub.DAL.Interfaces.ITenantEntity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -15,6 +15,11 @@ namespace IntelligenceHub.DAL.Models
         /// Primary key for the message entry.
         /// </summary>
         public int Id { get; set; }
+        /// <summary>
+        /// Tenant identifier for the owning organization.
+        /// </summary>
+        [Required]
+        public Guid TenantId { get; set; }
         [Required]
         /// <summary>
         /// Conversation identifier to which this message belongs.

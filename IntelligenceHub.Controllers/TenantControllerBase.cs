@@ -1,4 +1,5 @@
 using IntelligenceHub.Business.Interfaces;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -10,10 +11,12 @@ namespace IntelligenceHub.Controllers
     public abstract class TenantControllerBase : ControllerBase
     {
         private readonly IUserLogic _userLogic;
+        private readonly ITenantProvider _tenantProvider;
 
-        protected TenantControllerBase(IUserLogic userLogic)
+        protected TenantControllerBase(IUserLogic userLogic, ITenantProvider tenantProvider)
         {
             _userLogic = userLogic;
+            _tenantProvider = tenantProvider;
         }
 
         /// <summary>
@@ -26,6 +29,10 @@ namespace IntelligenceHub.Controllers
                 return null;
 
             var user = await _userLogic.GetUserBySubAsync(sub);
+            if (user?.TenantId != null)
+            {
+                _tenantProvider.TenantId = user.TenantId;
+            }
             return user?.TenantId;
         }
     }

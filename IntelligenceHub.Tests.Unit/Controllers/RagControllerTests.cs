@@ -2,6 +2,7 @@
 using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Controllers;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using static IntelligenceHub.Common.GlobalVariables;
@@ -13,12 +14,14 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         private readonly Mock<IRagLogic> _mockRagLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
         private readonly RagController _controller;
+        private readonly Mock<ITenantProvider> _tenantProvider;
 
         public RagControllerTests()
         {
             _mockRagLogic = new Mock<IRagLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
-            _controller = new RagController(_mockRagLogic.Object, _mockUserLogic.Object);
+            _tenantProvider = new Mock<ITenantProvider>();
+            _controller = new RagController(_mockRagLogic.Object, _mockUserLogic.Object, _tenantProvider.Object);
         }
 
         [Fact]

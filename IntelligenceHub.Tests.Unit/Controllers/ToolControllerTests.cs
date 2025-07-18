@@ -2,6 +2,7 @@
 using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Controllers;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -15,13 +16,15 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         private readonly Mock<IProfileLogic> _profileLogicMock;
         private readonly Mock<ILogger<ToolController>> _loggerMock;
         private readonly Mock<IUserLogic> _userLogicMock;
+        private readonly Mock<ITenantProvider> _tenantProvider;
 
         public ToolControllerTests()
         {
             _profileLogicMock = new Mock<IProfileLogic>();
             _loggerMock = new Mock<ILogger<ToolController>>();
             _userLogicMock = new Mock<IUserLogic>();
-            _controller = new ToolController(_profileLogicMock.Object, _userLogicMock.Object);
+            _tenantProvider = new Mock<ITenantProvider>();
+            _controller = new ToolController(_profileLogicMock.Object, _userLogicMock.Object, _tenantProvider.Object);
         }
 
         #region GetTool Tests

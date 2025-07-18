@@ -3,6 +3,7 @@ using IntelligenceHub.API.DTOs.RAG;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
 using IntelligenceHub.Common.Extensions;
+using IntelligenceHub.Common.Tenant;
 using static IntelligenceHub.Common.GlobalVariables;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -25,7 +26,7 @@ namespace IntelligenceHub.Controllers
         /// Initializes a new instance of the <see cref="RagController"/> class.
         /// </summary>
         /// <param name="ragLogic">The business logic for managing RAG indexes.</param>
-        public RagController(IRagLogic ragLogic, IUserLogic userLogic) : base(userLogic)
+        public RagController(IRagLogic ragLogic, IUserLogic userLogic, ITenantProvider tenantProvider) : base(userLogic, tenantProvider)
         {
             _ragLogic = ragLogic;
         }

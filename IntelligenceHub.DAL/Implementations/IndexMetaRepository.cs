@@ -13,8 +13,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// Constructor for the IndexMetaRepository class.
         /// </summary>
         /// <param name="context">The database context used to map to the SQL database.</param>
-        public IndexMetaRepository(IntelligenceHubDbContext context) : base(context)
+        private readonly ITenantProvider _tenantProvider;
+        public IndexMetaRepository(IntelligenceHubDbContext context, ITenantProvider tenantProvider) : base(context, tenantProvider)
         {
+            _tenantProvider = tenantProvider;
         }
 
         /// <summary>
@@ -24,7 +26,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The index's metadata.</returns>
         public async Task<DbIndexMetadata?> GetByNameAsync(string name)
         {
-            return await _dbSet.FirstOrDefaultAsync(im => im.Name == name);
+            return await _dbSet.FirstOrDefaultAsync(im => im.Name == name && im.TenantId == _tenantProvider.TenantId);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Controllers;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using static IntelligenceHub.Common.GlobalVariables;
@@ -11,6 +12,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
     {
         private readonly Mock<IMessageHistoryLogic> _mockMessageHistoryLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
+        private readonly Mock<ITenantProvider> _mockTenantProvider;
         private readonly MessageHistoryController _controller;
 
         public MessageHistoryControllerTests()
@@ -18,7 +20,8 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             // Mock the MessageHistoryLogic
             _mockMessageHistoryLogic = new Mock<IMessageHistoryLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
-            _controller = new MessageHistoryController(_mockMessageHistoryLogic.Object, _mockUserLogic.Object);
+            _mockTenantProvider = new Mock<ITenantProvider>();
+            _controller = new MessageHistoryController(_mockMessageHistoryLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
         }
 
         #region GetConversation Tests

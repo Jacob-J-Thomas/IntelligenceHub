@@ -14,8 +14,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// Constructor for the ProfileRepository class.
         /// </summary>
         /// <param name="context">The database context used to map to the SQL database.</param>
-        public ProfileRepository(IntelligenceHubDbContext context) : base(context)
+        private readonly ITenantProvider _tenantProvider;
+        public ProfileRepository(IntelligenceHubDbContext context, ITenantProvider tenantProvider) : base(context, tenantProvider)
         {
+            _tenantProvider = tenantProvider;
         }
 
         /// <summary>
@@ -29,7 +31,7 @@ namespace IntelligenceHub.DAL.Implementations
                 .Include(p => p.ProfileTools)
                 .ThenInclude(pt => pt.Tool)
                 .ThenInclude(t => t.Properties)
-                .FirstOrDefaultAsync(p => p.Name == name);
+                .FirstOrDefaultAsync(p => p.Name == name && p.TenantId == _tenantProvider.TenantId);
         }
 
         /// <summary>
@@ -43,7 +45,7 @@ namespace IntelligenceHub.DAL.Implementations
                 .Include(p => p.ProfileTools)
                 .ThenInclude(pt => pt.Tool)
                 .ThenInclude(t => t.Properties)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == id && p.TenantId == _tenantProvider.TenantId);
         }
     }
 }

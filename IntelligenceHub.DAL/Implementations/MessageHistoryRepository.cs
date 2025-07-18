@@ -13,8 +13,10 @@ namespace IntelligenceHub.DAL.Implementations
         /// Constructor for the MessageHistoryRepository class.
         /// </summary>
         /// <param name="context">The database context used to map to the SQL database.</param>
-        public MessageHistoryRepository(IntelligenceHubDbContext context) : base(context)
+        private readonly ITenantProvider _tenantProvider;
+        public MessageHistoryRepository(IntelligenceHubDbContext context, ITenantProvider tenantProvider) : base(context, tenantProvider)
         {
+            _tenantProvider = tenantProvider;
         }
 
         /// <summary>
@@ -26,7 +28,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A list of messages.</returns>
         public async Task<List<DbMessage>> GetConversationAsync(Guid conversationId, int maxMessages, int pageNumber)
         {
-            return await _dbSet.Where(m => m.ConversationId == conversationId)
+            return await _dbSet.Where(m => m.ConversationId == conversationId && m.TenantId == _tenantProvider.TenantId)
                 .OrderBy(m => m.TimeStamp)
                 .Skip((pageNumber - 1) * maxMessages)
                 .Take(maxMessages)
@@ -40,7 +42,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteConversationAsync(Guid conversationId)
         {
-            var messages = await _dbSet.Where(m => m.ConversationId == conversationId).ToListAsync();
+            var messages = await _dbSet.Where(m => m.ConversationId == conversationId && m.TenantId == _tenantProvider.TenantId).ToListAsync();
             if (messages.Any())
             {
                 _dbSet.RemoveRange(messages);
@@ -58,7 +60,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteAsync(Guid conversationId, int messageId)
         {
-            var message = await _dbSet.FirstOrDefaultAsync(m => m.ConversationId == conversationId && m.Id == messageId);
+            var message = await _dbSet.FirstOrDefaultAsync(m => m.ConversationId == conversationId && m.Id == messageId && m.TenantId == _tenantProvider.TenantId);
             if (message != null)
             {
                 _dbSet.Remove(message);

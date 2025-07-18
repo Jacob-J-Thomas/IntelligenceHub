@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
+using IntelligenceHub.Common.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +26,7 @@ namespace IntelligenceHub.Controllers
         /// Initializes a new instance of the <see cref="ProfileController"/> class.
         /// </summary>
         /// <param name="profileLogic">The agent profiles business logic.</param>
-        public ProfileController(IProfileLogic profileLogic, IUserLogic userLogic) : base(userLogic)
+        public ProfileController(IProfileLogic profileLogic, IUserLogic userLogic, ITenantProvider tenantProvider) : base(userLogic, tenantProvider)
         {
             _profileLogic = profileLogic;
         }

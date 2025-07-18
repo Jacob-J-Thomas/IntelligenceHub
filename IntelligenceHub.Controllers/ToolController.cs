@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
+using IntelligenceHub.Common.Tenant;
 using static IntelligenceHub.Common.GlobalVariables;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -24,7 +25,7 @@ namespace IntelligenceHub.Controllers
         /// Initializes a new instance of the <see cref="ToolController"/> class.
         /// </summary>
         /// <param name="profileLogic">The profile logic.</param>
-        public ToolController(IProfileLogic profileLogic, IUserLogic userLogic) : base(userLogic)
+        public ToolController(IProfileLogic profileLogic, IUserLogic userLogic, ITenantProvider tenantProvider) : base(userLogic, tenantProvider)
         {
             _profileLogic = profileLogic;
         }
