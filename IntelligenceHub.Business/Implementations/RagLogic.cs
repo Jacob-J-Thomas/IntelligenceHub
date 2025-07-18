@@ -454,7 +454,17 @@ namespace IntelligenceHub.Business.Implementations
             return APIResponseWrapper<int>.Success(deletedDocuments);
         }
 
-        private async Task SyncWeaviateIndex(string index, IIndexRepository repository, WeaviateSearchServiceClient weaviateClient, CancellationToken token)
+        /// <summary>
+        /// Synchronizes documents in a Weaviate index with the SQL source.
+        /// </summary>
+        /// <param name="index">The index name.</param>
+        /// <param name="token">Cancellation token.</param>
+        public Task SyncWeaviateIndexAsync(string index, CancellationToken token = default)
+        {
+            return SyncWeaviateIndex(index, _ragRepository, _weaviateClient, token);
+        }
+
+        private static async Task SyncWeaviateIndex(string index, IIndexRepository repository, WeaviateSearchServiceClient weaviateClient, CancellationToken token)
         {
             const int batch = 100;
             int page = 1;

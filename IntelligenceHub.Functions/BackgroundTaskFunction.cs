@@ -7,7 +7,6 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.Client.Implementations;
-using IntelligenceHub.Functions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -65,54 +64,22 @@ public class BackgroundTaskFunction
             case "DocumentUpdate":
                 if (message.Document != null)
                 {
-                    var request = new RagUpsertRequest { Documents = new List<IndexDocument> { DAL.DbMappingHandler.MapFromDbIndexDocument(message.Document!) } };
+                    var request = new RagUpsertRequest
+                    {
+                        Documents = new List<IndexDocument>
+                        {
+                            DAL.DbMappingHandler.MapFromDbIndexDocument(message.Document!)
+                        }
+                    };
                     await ragLogic.UpsertDocuments(message.IndexName, request);
                 }
                 break;
             case "SyncWeaviate":
-                await InvokeSync(ragLogic, message.IndexName);
+                await ragLogic.SyncWeaviateIndexAsync(message.IndexName);
                 break;
             default:
                 logger.LogWarning($"Unknown task type '{message.TaskType}'");
                 break;
-        }
-    }
-
-    private static async Task InvokeSync(RagLogic ragLogic, string index)
-    {
-        var metaRepo = ragLogic.GetType().GetField("_metaRepository", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ragLogic) as IIndexMetaRepository;
-        var repo = ragLogic.GetType().GetField("_ragRepository", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ragLogic) as IIndexRepository;
-        var weaviate = ragLogic.GetType().GetField("_weaviateClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ragLogic) as WeaviateSearchServiceClient;
-        var dbContext = ragLogic.GetType().GetField("_dbContext", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ragLogic) as IntelligenceHubDbContext;
-
-        var indexMetadata = await metaRepo!.GetByNameAsync(index);
-        if (indexMetadata == null) return;
-        const int batch = 100;
-        int page = 1;
-        var sqlDocs = new List<DAL.Models.DbIndexDocument>();
-        IEnumerable<DAL.Models.DbIndexDocument> pageDocs;
-        do
-        {
-            pageDocs = await repo!.GetAllAsync(index, batch, page);
-            sqlDocs.AddRange(pageDocs);
-            page++;
-        } while (pageDocs.Any());
-
-        var weavDocs = await weaviate!.GetAllDocuments(index);
-        var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
-
-        foreach (var wdoc in weavDocs)
-        {
-            if (!sqlLookup.ContainsKey(wdoc.Id))
-            {
-                await weaviate.DeleteDocument(index, wdoc.Id);
-            }
-        }
-
-        foreach (var sdoc in sqlDocs)
-        {
-            var dto = DAL.DbMappingHandler.MapFromDbIndexDocument(sdoc);
-            await weaviate.UpsertDocument(index, dto);
         }
     }
 }
