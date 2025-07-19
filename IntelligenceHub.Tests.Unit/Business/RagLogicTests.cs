@@ -31,6 +31,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         private readonly Mock<IBackgroundTaskQueueHandler> _mockBackgroundTaskQueueHandler;
         private readonly Mock<IOptionsMonitor<Settings>> _mockIOptions;
         private readonly Mock<IntelligenceHubDbContext> _context;
+        private readonly Mock<ITenantProvider> _tenantProvider;
         private readonly RagLogic _ragLogic;
 
         public RagLogicTests()
@@ -47,11 +48,13 @@ namespace IntelligenceHub.Tests.Unit.Business
             var mockScopeFactory = new Mock<IServiceScopeFactory>();
             _mockIOptions = new Mock<IOptionsMonitor<Settings>>();
             _context = new Mock<IntelligenceHubDbContext>();
+            _tenantProvider = new Mock<ITenantProvider>();
+            _tenantProvider.SetupGet(t => t.TenantId).Returns(Guid.NewGuid());
 
             var settings = new Settings { ValidAGIModels = new[] { "Model1", "Model2" } };
             _mockIOptions.Setup(m => m.CurrentValue).Returns(settings);
 
-            _ragLogic = new RagLogic(_mockIOptions.Object, _mockClientFactory.Object, _mockProfileRepository.Object, _mockRagClientFactory.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object, null!, mockScopeFactory.Object);
+            _ragLogic = new RagLogic(_mockIOptions.Object, _mockClientFactory.Object, _mockProfileRepository.Object, _mockRagClientFactory.Object, _mockMetaRepository.Object, _mockRagRepository.Object, _mockValidationHandler.Object, _mockBackgroundTaskQueueHandler.Object, _context.Object, null!, mockScopeFactory.Object, _tenantProvider.Object);
         }
 
         [Fact]
@@ -59,9 +62,13 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexName, GenerationHost = AGIServiceHost.Azure.ToString() };
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
             _mockValidationHandler.Setup(repo => repo.IsValidIndexName(indexName)).Returns(true);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
 
             // Act
             var result = await _ragLogic.GetRagIndex(indexName);
@@ -76,7 +83,8 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "nonExistentIndex";
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync((DbIndexMetadata)null);
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync((DbIndexMetadata)null);
 
             // Act
             var result = await _ragLogic.GetRagIndex(indexName);
@@ -89,10 +97,11 @@ namespace IntelligenceHub.Tests.Unit.Business
         public async Task GetAllIndexesAsync_ShouldReturnAllIndexes_WhenIndexesExist()
         {
             // Arrange
+            var tenant = _tenantProvider.Object.TenantId.ToString();
             var dbIndexes = new List<DbIndexMetadata>
     {
-        new DbIndexMetadata { Name = "index1", GenerationHost = AGIServiceHost.Azure.ToString() },
-        new DbIndexMetadata { Name = "index2", GenerationHost = AGIServiceHost.Azure.ToString() }
+        new DbIndexMetadata { Name = $"index1_{tenant}", GenerationHost = AGIServiceHost.Azure.ToString() },
+        new DbIndexMetadata { Name = $"index2_{tenant}", GenerationHost = AGIServiceHost.Azure.ToString() }
     };
             _mockMetaRepository.Setup(repo => repo.GetAllAsync(null, null)).ReturnsAsync(dbIndexes);
 
@@ -136,14 +145,15 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "newIndex", QueryType = QueryType.Simple };
-            var dbIndexMetadata = new DbIndexMetadata() { Name = indexMetadata.Name, QueryType = QueryType.Simple.ToString(), ChunkOverlap = DefaultChunkOverlap, GenerationHost = AGIServiceHost.Azure.ToString(), EmbeddingModel = DefaultAzureSearchEmbeddingModel };
+            var fullName = $"{indexMetadata.Name}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata() { Name = fullName, QueryType = QueryType.Simple.ToString(), ChunkOverlap = DefaultChunkOverlap, GenerationHost = AGIServiceHost.Azure.ToString(), EmbeddingModel = DefaultAzureSearchEmbeddingModel };
 
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync((DbIndexMetadata)null);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync((DbIndexMetadata)null);
             _mockMetaRepository.Setup(repo => repo.AddAsync(It.IsAny<DbIndexMetadata>())).ReturnsAsync(dbIndexMetadata);
-            _mockRagRepository.Setup(repo => repo.CreateIndexAsync(indexMetadata.Name)).ReturnsAsync(true);
-            _mockRagRepository.Setup(repo => repo.EnableChangeTrackingAsync(indexMetadata.Name)).ReturnsAsync(true);
+            _mockRagRepository.Setup(repo => repo.CreateIndexAsync(fullName)).ReturnsAsync(true);
+            _mockRagRepository.Setup(repo => repo.EnableChangeTrackingAsync(fullName)).ReturnsAsync(true);
             _mockSearchClient.Setup(client => client.UpsertIndex(indexMetadata)).ReturnsAsync(true);
-            _mockSearchClient.Setup(client => client.CreateDatasource(indexMetadata.Name)).ReturnsAsync(true);
+            _mockSearchClient.Setup(client => client.CreateDatasource(fullName)).ReturnsAsync(true);
             _mockSearchClient.Setup(client => client.UpsertIndexer(indexMetadata)).ReturnsAsync(true);
 
             // Act
@@ -171,8 +181,9 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "existingIndex" };
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerationHost = AGIServiceHost.Azure.ToString() };
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync(dbIndexMetadata);
+            var fullName = $"{indexMetadata.Name}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
 
             // Act
             var result = await _ragLogic.CreateIndex(indexMetadata);
@@ -200,8 +211,9 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "nonExistentIndex" };
+            var fullName = $"{indexMetadata.Name}_{_tenantProvider.Object.TenantId}";
             _mockValidationHandler.Setup(v => v.ValidateIndexDefinition(indexMetadata)).Returns(string.Empty);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync((DbIndexMetadata)null);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync((DbIndexMetadata)null);
 
             // Act
             var result = await _ragLogic.ConfigureIndex(indexMetadata);
@@ -215,9 +227,10 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "testIndex" };
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerationHost = AGIServiceHost.Azure.ToString() };
+            var fullName = $"{indexMetadata.Name}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
             _mockValidationHandler.Setup(v => v.ValidateIndexDefinition(indexMetadata)).Returns(string.Empty);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync(dbIndexMetadata);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.UpsertIndex(indexMetadata)).ReturnsAsync(false);
 
             // Act
@@ -232,9 +245,10 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "testIndex" };
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerationHost = AGIServiceHost.Azure.ToString() };
+            var fullName = $"{indexMetadata.Name}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
             _mockValidationHandler.Setup(v => v.ValidateIndexDefinition(indexMetadata)).Returns(string.Empty);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync(dbIndexMetadata);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.UpsertIndex(indexMetadata)).ReturnsAsync(true);
             _mockSearchClient.Setup(client => client.UpsertIndexer(indexMetadata)).ReturnsAsync(false);
 
@@ -250,13 +264,14 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "testIndex" };
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerationHost = AGIServiceHost.Azure.ToString(), RagHost = RagServiceHost.Weaviate.ToString(), GenerateKeywords = false, GenerateTopic = false }; // To vastly simplify testing, these are set to false for the time being
+            var fullName = $"{indexMetadata.Name}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString(), RagHost = RagServiceHost.Weaviate.ToString(), GenerateKeywords = false, GenerateTopic = false }; // To vastly simplify testing, these are set to false for the time being
             _mockValidationHandler.Setup(v => v.ValidateIndexDefinition(indexMetadata)).Returns(string.Empty);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync(dbIndexMetadata);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.UpsertIndex(indexMetadata)).ReturnsAsync(true);
             _mockSearchClient.Setup(client => client.UpsertIndexer(indexMetadata)).ReturnsAsync(true);
             _mockMetaRepository.Setup(repo => repo.UpdateAsync(It.IsAny<DbIndexMetadata>())).ReturnsAsync(dbIndexMetadata);
-            _mockSearchClient.Setup(repo => repo.RunIndexer(indexMetadata.Name)).ReturnsAsync(true);
+            _mockSearchClient.Setup(repo => repo.RunIndexer(fullName)).ReturnsAsync(true);
 
             // Act
             var result = await _ragLogic.ConfigureIndex(indexMetadata);
@@ -270,22 +285,23 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "testIndex", GenerateContentVector = true };
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerateContentVector = false, GenerationHost = AGIServiceHost.Azure.ToString(), RagHost = RagServiceHost.Weaviate.ToString() };
+            var fullName = $"{indexMetadata.Name}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerateContentVector = false, GenerationHost = AGIServiceHost.Azure.ToString(), RagHost = RagServiceHost.Weaviate.ToString() };
             _mockValidationHandler.Setup(v => v.ValidateIndexDefinition(indexMetadata)).Returns(string.Empty);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync(dbIndexMetadata);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.UpsertIndex(indexMetadata)).ReturnsAsync(true);
             _mockSearchClient.Setup(client => client.UpsertIndexer(indexMetadata)).ReturnsAsync(true);
             _mockMetaRepository.Setup(repo => repo.UpdateAsync(It.IsAny<DbIndexMetadata>())).ReturnsAsync(dbIndexMetadata);
-            _mockRagRepository.Setup(repo => repo.MarkIndexForUpdateAsync(indexMetadata.Name)).ReturnsAsync(true);
-            _mockSearchClient.Setup(client => client.RunIndexer(indexMetadata.Name)).ReturnsAsync(true);
+            _mockRagRepository.Setup(repo => repo.MarkIndexForUpdateAsync(fullName)).ReturnsAsync(true);
+            _mockSearchClient.Setup(client => client.RunIndexer(fullName)).ReturnsAsync(true);
 
             // Act
             var result = await _ragLogic.ConfigureIndex(indexMetadata);
 
             // Assert
             Assert.True(result.Data);
-            _mockRagRepository.Verify(repo => repo.MarkIndexForUpdateAsync(indexMetadata.Name), Times.Once);
-            _mockSearchClient.Verify(client => client.RunIndexer(indexMetadata.Name), Times.Once);
+            _mockRagRepository.Verify(repo => repo.MarkIndexForUpdateAsync(fullName), Times.Once);
+            _mockSearchClient.Verify(client => client.RunIndexer(fullName), Times.Once);
         }
 
         [Fact]
@@ -307,8 +323,9 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "nonExistentIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync((DbIndexMetadata?)null);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync((DbIndexMetadata?)null);
 
             // Act
             var result = await _ragLogic.RunIndexUpdate(indexName);
@@ -322,10 +339,11 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexName, RagHost = AGIServiceHost.Azure.ToString() };
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, RagHost = AGIServiceHost.Azure.ToString() };
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
-            _mockSearchClient.Setup(client => client.RunIndexer(indexName)).ReturnsAsync(true);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
+            _mockSearchClient.Setup(client => client.RunIndexer(fullName)).ReturnsAsync(true);
             _mockRagClientFactory.Setup(f => f.GetClient(RagServiceHost.Azure)).Returns(_mockSearchClient.Object);
 
             // Act
@@ -342,10 +360,11 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexName, GenerationHost = AGIServiceHost.Azure.ToString() };
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
-            _mockSearchClient.Setup(client => client.RunIndexer(indexName)).ReturnsAsync(false);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
+            _mockSearchClient.Setup(client => client.RunIndexer(fullName)).ReturnsAsync(false);
 
             // Act
             var result = await _ragLogic.RunIndexUpdate(indexName);
@@ -396,8 +415,9 @@ namespace IntelligenceHub.Tests.Unit.Business
             // Arrange
             var indexName = "nonExistentIndex";
             var query = "test query";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync((DbIndexMetadata?)null);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync((DbIndexMetadata?)null);
 
             // Act
             var result = await _ragLogic.QueryIndex(indexName, query);
@@ -415,11 +435,12 @@ namespace IntelligenceHub.Tests.Unit.Business
             // Arrange
             var indexName = "testIndex";
             var query = "test query";
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexName, QueryType = QueryType.Simple.ToString(), GenerationHost = AGIServiceHost.Azure.ToString() };
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, QueryType = QueryType.Simple.ToString(), GenerationHost = AGIServiceHost.Azure.ToString() };
             var searchResults = CreateMockSimpleSearchResults();
 
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.SearchIndex(It.IsAny<IndexMetadata>(), query))
                 .ReturnsAsync(searchResults);
 
@@ -443,11 +464,12 @@ namespace IntelligenceHub.Tests.Unit.Business
             // Arrange
             var indexName = "testIndex";
             var query = "test query";
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexName, QueryType = QueryType.Semantic.ToString(), GenerationHost = AGIServiceHost.Azure.ToString() };
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, QueryType = QueryType.Semantic.ToString(), GenerationHost = AGIServiceHost.Azure.ToString() };
             var searchResults = CreateMockSemanticSearchResults();
 
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.SearchIndex(It.IsAny<IndexMetadata>(), query))
                 .ReturnsAsync(searchResults);
 
@@ -562,10 +584,11 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
 
             var dbIndexMetadata = new DbIndexMetadata
             {
-                Name = indexName,
+                Name = fullName,
                 QueryType = QueryType.Simple.ToString(),
                 ChunkOverlap = DefaultChunkOverlap,
                 GenerationHost = AGIServiceHost.Azure.ToString(),
@@ -575,13 +598,13 @@ namespace IntelligenceHub.Tests.Unit.Business
 
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
 
-            _mockMetaRepository.Setup(r => r.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
+            _mockMetaRepository.Setup(r => r.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
 
-            _mockRagRepository.Setup(r => r.DeleteIndexAsync(indexName)).ReturnsAsync(true);
+            _mockRagRepository.Setup(r => r.DeleteIndexAsync(fullName)).ReturnsAsync(true);
 
-            _mockSearchClient.Setup(c => c.DeleteIndexer(indexName)).ReturnsAsync(true);
-            _mockSearchClient.Setup(c => c.DeleteDatasource(indexName)).ReturnsAsync(true);
-            _mockSearchClient.Setup(c => c.DeleteIndex(indexName)).ReturnsAsync(true);
+            _mockSearchClient.Setup(c => c.DeleteIndexer(fullName)).ReturnsAsync(true);
+            _mockSearchClient.Setup(c => c.DeleteDatasource(fullName)).ReturnsAsync(true);
+            _mockSearchClient.Setup(c => c.DeleteIndex(fullName)).ReturnsAsync(true);
 
             _mockMetaRepository.Setup(r => r.DeleteAsync(dbIndexMetadata)).ReturnsAsync(true);
 
@@ -615,7 +638,8 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "nonExistentIndex";
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync((DbIndexMetadata)null);
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync((DbIndexMetadata)null);
 
             // Act
             var result = await _ragLogic.DeleteIndex(indexName);
@@ -629,14 +653,15 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexName, GenerationHost = AGIServiceHost.Azure.ToString() };
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
             var document = new IndexDocument { Title = "testDocument", Content = "testContent" };
             var upsertRequest = new RagUpsertRequest { Documents = new List<IndexDocument> { document } };
             _mockValidationHandler.Setup(repo => repo.IsValidIndexName(indexName)).Returns(true);
             _mockValidationHandler.Setup(repo => repo.IsValidRagUpsertRequest(upsertRequest)).Returns(string.Empty);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(dbIndexMetadata);
-            _mockRagRepository.Setup(repo => repo.GetDocumentAsync(indexName, document.Title)).ReturnsAsync((DbIndexDocument?)null);
-            _mockRagRepository.Setup(repo => repo.AddAsync(It.IsAny<DbIndexDocument>(), indexName)).ReturnsAsync(new DbIndexDocument());
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
+            _mockRagRepository.Setup(repo => repo.GetDocumentAsync(fullName, document.Title)).ReturnsAsync((DbIndexDocument?)null);
+            _mockRagRepository.Setup(repo => repo.AddAsync(It.IsAny<DbIndexDocument>(), fullName)).ReturnsAsync(new DbIndexDocument());
 
             // Act
             var result = await _ragLogic.UpsertDocuments(indexName, upsertRequest);
@@ -664,8 +689,9 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "nonExistentIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var upsertRequest = new RagUpsertRequest();
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync((DbIndexMetadata?)null);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync((DbIndexMetadata?)null);
 
             // Act
             var result = await _ragLogic.UpsertDocuments(indexName, upsertRequest);
@@ -754,8 +780,8 @@ namespace IntelligenceHub.Tests.Unit.Business
             var expectedDocuments = dbDocuments.Select(DbMappingHandler.MapFromDbIndexDocument).ToList();
 
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockRagRepository.Setup(repo => repo.GetAllAsync(indexName, count, page)).ReturnsAsync(dbDocuments);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(new DbIndexMetadata { Name = indexName });
+            _mockRagRepository.Setup(repo => repo.GetAllAsync(fullName, count, page)).ReturnsAsync(dbDocuments);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(new DbIndexMetadata { Name = fullName });
 
             // Act
             var result = await _ragLogic.GetAllDocuments(indexName, count, page);
@@ -794,8 +820,8 @@ namespace IntelligenceHub.Tests.Unit.Business
             var dbDocuments = new List<DbIndexDocument>();
 
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockRagRepository.Setup(repo => repo.GetAllAsync(indexName, count, page)).ReturnsAsync(dbDocuments);
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(new DbIndexMetadata { Name = indexName });
+            _mockRagRepository.Setup(repo => repo.GetAllAsync(fullName, count, page)).ReturnsAsync(dbDocuments);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(new DbIndexMetadata { Name = fullName });
 
             // Act
             var result = await _ragLogic.GetAllDocuments(indexName, count, page);
@@ -814,8 +840,8 @@ namespace IntelligenceHub.Tests.Unit.Business
             var page = 1;
 
             _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
-            _mockRagRepository.Setup(repo => repo.GetAllAsync(indexName, count, page)).ThrowsAsync(new Exception("Database error"));
-            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexName)).ReturnsAsync(new DbIndexMetadata { Name = indexName });
+            _mockRagRepository.Setup(repo => repo.GetAllAsync(fullName, count, page)).ThrowsAsync(new Exception("Database error"));
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(new DbIndexMetadata { Name = fullName });
 
             // Act & Assert
             await Assert.ThrowsAsync<Exception>(() => _ragLogic.GetAllDocuments(indexName, count, page));
