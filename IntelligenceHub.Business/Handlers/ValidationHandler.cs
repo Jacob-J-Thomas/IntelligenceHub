@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using IntelligenceHub.Common.Config;
 using Microsoft.Extensions.Options;
 using IntelligenceHub.Common.Extensions;
+using IntelligenceHub.Business.Interfaces;
 using System.Drawing.Imaging;
 using Message = IntelligenceHub.API.DTOs.Message;
 using Tool = IntelligenceHub.API.DTOs.Tools.Tool;
@@ -22,6 +23,7 @@ namespace IntelligenceHub.Business.Handlers
         private const int VALIDATION_TIMEOUT_MS = 1500; // 1500ms timeout
 
         private readonly string[] _validModels;
+        private readonly IFeatureFlagService _featureFlags;
 
         public string[] _validToolArgTypes = new string[]
         {
@@ -43,10 +45,11 @@ namespace IntelligenceHub.Business.Handlers
         /// <summary>
         /// Default constructor for the ValidationHandler class.
         /// </summary>
-        public ValidationHandler(IOptionsMonitor<Settings> settings)
+        public ValidationHandler(IOptionsMonitor<Settings> settings, IFeatureFlagService featureFlags)
         {
             // Azure uses the same set of valid models as OpenAI
             _validModels = ValidOpenAIModelsAndContextLimits.Keys.ToArray();
+            _featureFlags = featureFlags;
         }
 
         #region Profile And Tool Validation
@@ -342,6 +345,8 @@ namespace IntelligenceHub.Business.Handlers
 
             var includesContentSummarization = index.GenerateKeywords ?? index.GenerateTopic ?? false;
             if (index.RagHost == null || index.RagHost == RagServiceHost.None) return "A RagHost must be provided.";
+            if (!_featureFlags.UseAzureAISearch && index.RagHost == RagServiceHost.Azure)
+                return "Azure is not a supported RAG host for your pricing tier.";
             if (index.GenerationHost == null && includesContentSummarization) return "The GenerationProfile is required if 'GenerateKeywords' or 'GenerateTopic' are set to true.";
             if (index.Name.Length > 128) return "The index name exceeds the maximum allowed length of 128 characters.";
 

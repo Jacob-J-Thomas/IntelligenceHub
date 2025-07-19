@@ -105,7 +105,7 @@ namespace IntelligenceHub.Controllers
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (indexDefinition is null) return BadRequest("The request body is malformed.");
                 if (!_featureFlags.UseAzureAISearch && indexDefinition.RagHost == RagServiceHost.Azure)
-                    return BadRequest("Azure AI Search is disabled.");
+                    return BadRequest("Azure is not a supported RAG host for your pricing tier.");
                 var response = await _ragLogic.CreateIndex(indexDefinition);
                 if (response.IsSuccess) return Ok(indexDefinition);
                 else if (response.StatusCode == APIResponseStatusCodes.BadRequest) return BadRequest(response.ErrorMessage);
@@ -137,7 +137,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (indexDefinition is null) return BadRequest("The request body is malformed.");
-                if (!_featureFlags.UseAzureAISearch && indexDefinition.RagHost == RagServiceHost.Azure) return BadRequest("Azure AI Search is disabled.");
+                if (!_featureFlags.UseAzureAISearch && indexDefinition.RagHost == RagServiceHost.Azure) return BadRequest("Azure is not a supported RAG host for your pricing tier.");
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);
                 if (response.IsSuccess) return Ok(indexDefinition);
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
