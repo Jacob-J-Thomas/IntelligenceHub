@@ -7,6 +7,7 @@ using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using Moq;
 using System.Reflection;
+using System.Linq;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Tests.Unit.Business
@@ -263,6 +264,98 @@ namespace IntelligenceHub.Tests.Unit.Business
             var result = (List<Message>)method.Invoke(logic, new object?[] { original, "pre:" })!;
             Assert.Equal("pre:b", result.Last().Content);
             Assert.Equal("a", result.First().Content);
+        }
+
+        [Fact]
+        public async Task StreamCompletion_ReturnsFailure_WhenProfileNameMissing()
+        {
+            var request = new CompletionRequest
+            {
+                ProfileOptions = new Profile(),
+                Messages = new List<Message> { new Message { Content = "hi", Role = Role.User } }
+            };
+
+            var enumerator = _completionLogic.StreamCompletion(request).GetAsyncEnumerator();
+            Assert.True(await enumerator.MoveNextAsync());
+            var first = enumerator.Current;
+            Assert.False(first.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.BadRequest, first.StatusCode);
+        }
+
+        [Fact]
+        public async Task StreamCompletion_ReturnsFailure_WhenProfileNotFound()
+        {
+            var request = new CompletionRequest
+            {
+                ProfileOptions = new Profile { Name = "missing" },
+                Messages = new List<Message> { new Message { Content = "hi", Role = Role.User } }
+            };
+            _mockProfileRepository.Setup(r => r.GetByNameAsync("missing")).ReturnsAsync((DbProfile?)null);
+
+            var enumerator = _completionLogic.StreamCompletion(request).GetAsyncEnumerator();
+            Assert.True(await enumerator.MoveNextAsync());
+            var first = enumerator.Current;
+            Assert.False(first.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.NotFound, first.StatusCode);
+        }
+
+        [Fact]
+        public async Task ProcessCompletion_ReturnsFailure_WhenProfileNotFound()
+        {
+            var request = new CompletionRequest
+            {
+                ProfileOptions = new Profile { Name = "missing" },
+                Messages = new List<Message> { new Message { Content = "hi", Role = Role.User } }
+            };
+            _mockProfileRepository.Setup(r => r.GetByNameAsync("missing")).ReturnsAsync((DbProfile?)null);
+
+            var result = await _completionLogic.ProcessCompletion(request);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.NotFound, result.StatusCode);
+        }
+
+        [Fact]
+        public async Task ProcessCompletion_ReturnsFailure_WhenAgiClientError()
+        {
+            var request = new CompletionRequest
+            {
+                ProfileOptions = new Profile { Name = "p", Host = AGIServiceHost.Azure, Model = DefaultOpenAIModel },
+                Messages = new List<Message> { new Message { Content = "hi", Role = Role.User } }
+            };
+            var dbProfile = new DbProfile { Name = "p", Host = AGIServiceHost.Azure.ToString(), Model = DefaultOpenAIModel };
+            var response = new CompletionResponse { FinishReason = FinishReasons.Error };
+            _mockProfileRepository.Setup(r => r.GetByNameAsync("p")).ReturnsAsync(dbProfile);
+            _mockAIClient.Setup(c => c.PostCompletion(It.IsAny<CompletionRequest>())).ReturnsAsync(response);
+
+            var result = await _completionLogic.ProcessCompletion(request);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.InternalError, result.StatusCode);
+            Assert.Equal(response, result.Data);
+        }
+
+        [Fact]
+        public async Task ExecuteTools_ImageGenAnthropic_ReturnsUnchangedMessages()
+        {
+            var toolCalls = new Dictionary<string, string> { { SystemTools.Image_Gen.ToString(), "{\"prompt\":\"hi\"}" } };
+            var messages = new List<Message> { new Message { Content = "hi", Role = Role.User } };
+            var options = new Profile { Host = AGIServiceHost.Anthropic, ImageHost = AGIServiceHost.Anthropic };
+
+            var result = await _completionLogic.ExecuteTools(toolCalls, messages, options);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(messages, result.Data.Item2);
+        }
+
+        [Fact]
+        public async Task BuildCompletionOptions_DoesNotAddImageTool_ForAnthropic()
+        {
+            var profile = new Profile { Name = "p", Host = AGIServiceHost.Anthropic, ImageHost = AGIServiceHost.Anthropic };
+
+            var result = await _completionLogic.BuildCompletionOptions(profile);
+
+            Assert.Empty(result.Tools);
         }
     }
 }

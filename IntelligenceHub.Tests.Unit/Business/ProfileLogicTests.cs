@@ -1,4 +1,5 @@
 using IntelligenceHub.API.DTOs;
+using IntelligenceHub.API.DTOs.Tools;
 using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Implementations;
 using IntelligenceHub.Common.Config;
@@ -106,6 +107,96 @@ namespace IntelligenceHub.Tests.Unit.Business
             Assert.NotNull(result);
             Assert.Equal(string.Empty, result.Data);
             _mockProfileRepository.Verify(repo => repo.AddAsync(It.IsAny<DbProfile>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task CreateOrUpdateProfile_UpdatesProfile_WhenProfileExists()
+        {
+            var profileDto = new Profile { Name = "ExistingProfile", Tools = new List<Tool>() };
+            var existingDbProfile = new DbProfile { Id = 1, Name = "ExistingProfile", Host = AGIServiceHost.Azure.ToString() };
+            _mockValidationHandler.Setup(h => h.ValidateAPIProfile(It.IsAny<Profile>())).Returns((string?)null);
+            _mockProfileRepository.Setup(r => r.GetByNameAsync(profileDto.Name)).ReturnsAsync(existingDbProfile);
+            _mockProfileRepository.Setup(r => r.UpdateAsync(existingDbProfile)).ReturnsAsync(existingDbProfile);
+            _mockProfileToolsRepository.Setup(r => r.DeleteAllProfileAssociationsAsync(existingDbProfile.Id)).ReturnsAsync(true);
+
+            var result = await _profileLogic.CreateOrUpdateProfile(profileDto);
+
+            Assert.True(result.IsSuccess);
+            _mockProfileRepository.Verify(r => r.UpdateAsync(existingDbProfile), Times.Once);
+            _mockProfileToolsRepository.Verify(r => r.DeleteAllProfileAssociationsAsync(existingDbProfile.Id), Times.Once);
+        }
+
+        [Fact]
+        public async Task AddProfileToTools_ReturnsFailure_WhenToolNotFound()
+        {
+            var tools = new List<string> { "Tool1" };
+            _mockToolRepository.Setup(r => r.GetByNameAsync("Tool1")).ReturnsAsync((DbTool?)null);
+
+            var result = await _profileLogic.AddProfileToTools("Profile1", tools);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.NotFound, result.StatusCode);
+        }
+
+        [Fact]
+        public async Task AddProfileToTools_ReturnsFailure_WhenProfileNotFound()
+        {
+            var tools = new List<string> { "Tool1" };
+            var tool = new DbTool { Id = 1, Name = "Tool1" };
+            _mockToolRepository.Setup(r => r.GetByNameAsync("Tool1")).ReturnsAsync(tool);
+            _mockProfileRepository.Setup(r => r.GetByNameAsync("Profile1")).ReturnsAsync((DbProfile?)null);
+
+            var result = await _profileLogic.AddProfileToTools("Profile1", tools);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.NotFound, result.StatusCode);
+        }
+
+        [Fact]
+        public async Task AddToolToProfiles_ReturnsFailure_WhenToolNotFound()
+        {
+            _mockToolRepository.Setup(r => r.GetByNameAsync("Tool1")).ReturnsAsync((DbTool?)null);
+
+            var result = await _profileLogic.AddToolToProfiles("Tool1", new List<string> { "Profile1" });
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.NotFound, result.StatusCode);
+        }
+
+        [Fact]
+        public async Task AddToolToProfiles_ReturnsSuccess_WhenAdded()
+        {
+            var tool = new DbTool { Id = 2, Name = "Tool1" };
+            _mockToolRepository.Setup(r => r.GetByNameAsync("Tool1")).ReturnsAsync(tool);
+            _mockProfileToolsRepository.Setup(r => r.AddAssociationsByToolIdAsync(tool.Id, It.IsAny<List<string>>())).ReturnsAsync(true);
+
+            var result = await _profileLogic.AddToolToProfiles("Tool1", new List<string> { "Profile1" });
+
+            Assert.True(result.IsSuccess);
+            Assert.Single(result.Data);
+            Assert.Equal("Profile1", result.Data.First());
+        }
+
+        [Fact]
+        public async Task DeleteProfileAssociations_ReturnsFailure_WhenProfileNotFound()
+        {
+            _mockProfileRepository.Setup(r => r.GetByNameAsync("Profile1")).ReturnsAsync((DbProfile?)null);
+
+            var result = await _profileLogic.DeleteProfileAssociations("Profile1", new List<string> { "Tool1" });
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.NotFound, result.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeleteToolAssociations_ReturnsFailure_WhenToolNotFound()
+        {
+            _mockToolRepository.Setup(r => r.GetByNameAsync("Tool1")).ReturnsAsync((DbTool?)null);
+
+            var result = await _profileLogic.DeleteToolAssociations("Tool1", new List<string> { "Profile1" });
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(APIResponseStatusCodes.NotFound, result.StatusCode);
         }
 
         [Fact]
