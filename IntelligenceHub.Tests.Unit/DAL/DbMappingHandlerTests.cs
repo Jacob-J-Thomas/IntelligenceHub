@@ -365,6 +365,7 @@ namespace IntelligenceHub.Tests.Unit.DAL
                 Name = "Test Name",
                 QueryType = QueryType.Simple,
                 GenerationHost = AGIServiceHost.OpenAI,
+                RagHost = RagServiceHost.Azure,
                 ChunkOverlap = 0.5,
                 IndexingInterval = TimeSpan.FromHours(24),
                 MaxRagAttachments = 5,
