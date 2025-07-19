@@ -84,14 +84,13 @@ namespace IntelligenceHub.DAL
             if (existingProfile == null) existingProfile = new DbProfile();
 
             var host = profileUpdate?.Host ?? existingProfile.Host.ConvertToServiceHost();
-            if (host == AGIServiceHost.None) host = AGIServiceHost.OpenAI;
+            if (host == AGIServiceHost.None) host = AGIServiceHost.Azure;
 
             var model = profileUpdate?.Model ?? existingProfile.Model ?? null;
             if (string.IsNullOrEmpty(model))
             {
-                if (host == AGIServiceHost.Azure) model = defaultAzureModel;
                 if (host == AGIServiceHost.Anthropic) model = DefaultAnthropicModel;
-                if (host == AGIServiceHost.OpenAI) model = DefaultOpenAIModel;
+                else model = defaultAzureModel;
             }
 
             existingProfile.Name = profileName;

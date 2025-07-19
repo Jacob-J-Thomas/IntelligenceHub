@@ -695,7 +695,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "TestIndex",
                 RagHost = RagServiceHost.Weaviate,
-                GenerationHost = AGIServiceHost.OpenAI,
+                GenerationHost = AGIServiceHost.Azure,
                 IndexingInterval = TimeSpan.Zero,
                 ChunkOverlap = 0.1
             };
@@ -712,7 +712,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "TestIndex",
                 RagHost = RagServiceHost.Weaviate,
-                GenerationHost = AGIServiceHost.OpenAI,
+                GenerationHost = AGIServiceHost.Azure,
                 IndexingInterval = TimeSpan.FromMinutes(5)
             };
 
@@ -728,7 +728,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Name = "TestIndex",
                 RagHost = RagServiceHost.Weaviate,
-                GenerationHost = AGIServiceHost.OpenAI,
+                GenerationHost = AGIServiceHost.Azure,
                 IndexingInterval = TimeSpan.Zero,
                 ScoringProfile = new IndexScoringProfile { Name = "Test" }
             };

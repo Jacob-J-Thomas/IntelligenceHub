@@ -508,9 +508,8 @@ namespace IntelligenceHub.Business.Implementations
             completion += $"\ncontent: {document.Content}";
             completion += $"\n```";
 
-            var model = DefaultOpenAIModel;
-            if (host == AGIServiceHost.Azure) model = _defaultAzureModel;
-            else if (host == AGIServiceHost.Anthropic) model = DefaultAnthropicModel;
+            var model = _defaultAzureModel;
+            if (host == AGIServiceHost.Anthropic) model = DefaultAnthropicModel;
 
             var completionRequest = new CompletionRequest()
             {

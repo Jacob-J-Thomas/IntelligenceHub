@@ -1,37 +1,26 @@
-﻿using IntelligenceHub.API.DTOs;
-using IntelligenceHub.Client.Interfaces;
-using Anthropic.SDK;
-using Anthropic.SDK.Messaging;
-using static IntelligenceHub.Common.GlobalVariables;
-using Microsoft.Extensions.Options;
-using IntelligenceHub.Common.Config;
+using Azure.AI.OpenAI;
+using IntelligenceHub.API.DTOs;
 using IntelligenceHub.API.DTOs.Tools;
+using IntelligenceHub.Client.Interfaces;
+using IntelligenceHub.Common.Config;
+using IntelligenceHub.Common.Extensions;
+using Microsoft.Extensions.Options;
+using OpenAI.Chat;
+using OpenAI.Images;
+using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Text.Json;
-using System.Text.Json.Nodes;
+using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Client.Implementations
 {
     /// <summary>
-    /// A client for interacting with Claude's API.
+    /// A client for interacting with Anthropic models deployed through Azure AI Foundry.
     /// </summary>
     public class AnthropicAIClient : IAGIClient
     {
-        private enum AnthropicSpecificStrings 
-        {
-            user_id,
-            stop_sequence,
-            max_tokens,
-            end_turn
-        }
+        private AzureOpenAIClient _azureOpenAIClient;
 
-        private readonly AnthropicClient _anthropicClient;
-
-        /// <summary>
-        /// Creates a new instance of the AnthropicAIClient.
-        /// </summary>
-        /// <param name="settings">The AGIClient settings used to configure this client.</param>
-        /// <param name="policyFactory">The client factory used to retrieve a policy.</param>
-        /// <exception cref="InvalidOperationException">Thrown if the provided settings are invalid.</exception>
         public AnthropicAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
         {
             var policyClient = policyFactory.CreateClient(ClientPolicies.AnthropicAIClientPolicy.ToString());
@@ -39,48 +28,61 @@ namespace IntelligenceHub.Client.Implementations
             var service = settings.CurrentValue.AnthropicServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
                 ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
 
-            var apiKey = service.Key;
-            _anthropicClient = new AnthropicClient(apiKey, policyClient);
+            var credential = new ApiKeyCredential(service.Key);
+            var options = new AzureOpenAIClientOptions()
+            {
+                Transport = new HttpClientPipelineTransport(policyClient)
+            };
+            _azureOpenAIClient = new AzureOpenAIClient(policyClient.BaseAddress, credential, options);
         }
 
-        /// <summary>
-        /// Generates an image based on the provided prompt. Is not supported by Anthropic.
-        /// </summary>
-        /// <param name="prompt">The prompt used to generate the image.</param>
-        /// <returns>The base 64 representation of the image, or null if an error was encountered.</returns>
         public Task<string?> GenerateImage(string prompt)
         {
-            // Anthropic does not currently support image gen
+            // Anthropic models deployed via Foundry do not currently support image generation
             return Task.FromResult<string?>(null);
         }
 
-        /// <summary>
-        /// Generates a completion based on the provided request.
-        /// </summary>
-        /// <param name="completionRequest">The request details used to generate the completion.</param>
-        /// <returns>A completion response.</returns>
         public async Task<CompletionResponse> PostCompletion(CompletionRequest completionRequest)
         {
             try
             {
-                var request = BuildCompletionParameters(completionRequest);
-                var response = await _anthropicClient.Messages.GetClaudeMessageAsync(request);
+                var options = BuildCompletionOptions(completionRequest);
+                var messages = BuildCompletionMessages(completionRequest);
+                var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
 
-                var toolCalls = ConvertResponseTools(response.ToolCalls);
+                var completionResult = await chatClient.CompleteChatAsync(messages, options);
 
-                var responseContent = response.ContentBlock?.Text ?? string.Empty;
-                if (response.Content != null) responseContent = string.Join("", response.Content.OfType<TextContent>().Select(tc => tc.Text));
-                var contentString = GetMessageContent(responseContent, toolCalls);
-
-                var messages = completionRequest.Messages;
-                var responseMessage = ConvertFromAnthropicMessage(response, contentString);
-                messages.Add(responseMessage);
-                return new CompletionResponse
+                var toolCalls = new Dictionary<string, string>();
+                foreach (var tool in completionResult.Value.ToolCalls)
                 {
-                    Messages = messages,
-                    ToolCalls = toolCalls,
-                    FinishReason = ConvertFinishReason(response.StopReason, response.ToolCalls.Any())
+                    if (tool.FunctionName.ToLower() != SystemTools.Chat_Recursion.ToString().ToLower()) toolCalls.Add(tool.FunctionName, tool.FunctionArguments.ToString());
+                    else toolCalls.Add(SystemTools.Chat_Recursion.ToString().ToLower(), string.Empty);
+                }
+
+                var contentString = GetMessageContent(completionResult.Value.Content.FirstOrDefault()?.Text, toolCalls);
+
+                var responseMessage = new Message()
+                {
+                    Content = contentString,
+                    Role = completionResult.Value.Role.ToString().ConvertStringToRole() ?? Role.Assistant,
+                    User = completionRequest.ProfileOptions.User ?? string.Empty,
+                    TimeStamp = DateTime.UtcNow
                 };
+
+                foreach (var content in completionResult.Value.Content)
+                {
+                    if (responseMessage.Base64Image == null && content.Kind == ChatMessageContentPartKind.Image) responseMessage.Base64Image = Convert.ToBase64String(content.ImageBytes);
+                    else if (string.IsNullOrEmpty(responseMessage.Content) && content.Kind == ChatMessageContentPartKind.Text) responseMessage.Content = content.Text;
+                }
+
+                var response = new CompletionResponse()
+                {
+                    FinishReason = completionResult.Value.FinishReason.ToString().ConvertStringToFinishReason(),
+                    Messages = completionRequest.Messages,
+                    ToolCalls = toolCalls
+                };
+                response.Messages.Add(responseMessage);
+                return response ?? new CompletionResponse() { FinishReason = FinishReasons.Error };
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
             {
@@ -88,98 +90,129 @@ namespace IntelligenceHub.Client.Implementations
             }
         }
 
-        /// <summary>
-        /// Streams a completion based on the provided request.
-        /// </summary>
-        /// <param name="completionRequest">The request details used to generate the completion.</param>
-        /// <returns>Any asyncronous collection of streaming chunks containing the completion response.</returns>
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
-            var request = BuildCompletionParameters(completionRequest);
-            var response = _anthropicClient.Messages.StreamClaudeMessageAsync(request);
+            var options = BuildCompletionOptions(completionRequest);
+            var messages = BuildCompletionMessages(completionRequest);
+            var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
+            var resultCollection = chatClient.CompleteChatStreamingAsync(messages, options);
 
+            var chunkId = 0;
+            string role = null;
+            string finishReason = null;
+            var currentTool = string.Empty;
+            var currentToolArgs = string.Empty;
             var toolCalls = new Dictionary<string, string>();
-            await foreach (var chunk in response)
+            await foreach (var result in resultCollection)
             {
+                if (!string.IsNullOrEmpty(result.Role.ToString())) role = result.Role.ToString() ?? role ?? string.Empty;
+                if (!string.IsNullOrEmpty(result.FinishReason.ToString())) finishReason = result.FinishReason.ToString() ?? finishReason ?? string.Empty;
                 var content = string.Empty;
                 var base64Image = string.Empty;
-                foreach (var contentPart in chunk.Content)
+
+                foreach (var update in result.ContentUpdate)
                 {
-                    if (contentPart is ImageContent imageContent) base64Image = imageContent.Source.Data;
-                    else if (contentPart is TextContent textContent) content += textContent.Text;
+                    if (string.IsNullOrEmpty(base64Image) && update.Kind == ChatMessageContentPartKind.Image) base64Image = Convert.ToBase64String(update.ImageBytes);
+                    if (string.IsNullOrEmpty(content) && update.Kind == ChatMessageContentPartKind.Text) content += update.Text;
                 }
 
-                var contentString = GetMessageContent(content, toolCalls);
-
-                yield return new CompletionStreamChunk
+                foreach (var update in result.ToolCallUpdates)
                 {
+                    if (string.IsNullOrEmpty(currentTool)) currentTool = update.FunctionName;
+                    if (currentTool == update.FunctionName && update.FunctionArgumentsUpdate != null && update.FunctionArgumentsUpdate.ToArray().Any()) currentToolArgs += update.FunctionArgumentsUpdate.ToString() ?? string.Empty;
+
+                    if (toolCalls.ContainsKey(currentTool)) toolCalls[currentTool] = currentToolArgs ?? string.Empty;
+                    else
+                    {
+                        if (currentTool.ToLower() != SystemTools.Chat_Recursion.ToString().ToLower()) toolCalls.Add(currentTool, currentToolArgs ?? string.Empty);
+                        else toolCalls.Add(SystemTools.Chat_Recursion.ToString().ToLower(), string.Empty);
+                    }
+                }
+                var finalContentString = GetMessageContent(content, toolCalls);
+                yield return new CompletionStreamChunk()
+                {
+                    Id = chunkId++,
+                    Role = role?.ConvertStringToRole(),
+                    User = completionRequest.ProfileOptions.User,
+                    CompletionUpdate = finalContentString,
                     Base64Image = base64Image,
-                    CompletionUpdate = contentString,
-                    ToolCalls = ConvertResponseTools(chunk.ToolCalls),
-                    Role = ConvertFromAnthropicRole(chunk.Role),
-                    FinishReason = ConvertFinishReason(chunk.StopReason, chunk.ToolCalls.Any())
+                    FinishReason = finishReason?.ConvertStringToFinishReason(),
+                    ToolCalls = toolCalls
                 };
             }
         }
 
-        /// <summary>
-        /// Builds the parameters used to generate a completion.
-        /// </summary>
-        /// <param name="request">The completion request details.</param>
-        /// <returns>The parameters used to generate a completion.</returns>
-        private MessageParameters BuildCompletionParameters(CompletionRequest request)
+        private List<ChatMessage> BuildCompletionMessages(CompletionRequest completionRequest)
         {
-            var anthropicMessages = new List<Anthropic.SDK.Messaging.Message>();
-            var systemMessages = new List<SystemMessage>();
-            foreach (var message in request.Messages)
-            {
-                var messageContents = ConvertToAnthropicMessage(message);
-                var mimeType = GetMimeTypeFromBase64(message.Base64Image);
+            var systemMessage = completionRequest.ProfileOptions.SystemMessage;
+            var completionMessages = new List<ChatMessage>();
 
-                if (message.Role == Role.System) systemMessages.Add(new Anthropic.SDK.Messaging.SystemMessage(message.Content));
-                if (message.Base64Image != null) anthropicMessages.Add(new Anthropic.SDK.Messaging.Message { Content = new List<ContentBase> { new ImageContent { Source = new ImageSource() { Data = message.Base64Image, MediaType = mimeType } } }, Role = ConvertToAnthropicRole(message.Role) });
-                else if (!string.IsNullOrEmpty(message.Content)) anthropicMessages.Add(new Anthropic.SDK.Messaging.Message { Content = messageContents, Role = ConvertToAnthropicRole(message.Role) });
+            if (!string.IsNullOrWhiteSpace(systemMessage)) completionMessages.Add(new SystemChatMessage(systemMessage));
+            foreach (var message in completionRequest.Messages)
+            {
+                if (message.Role == Role.User)
+                {
+                    var contentBlocks = new List<ChatMessageContentPart>();
+
+                    if (!string.IsNullOrWhiteSpace(message.Content)) contentBlocks.Add(ChatMessageContentPart.CreateTextPart(message.Content));
+
+                    if (!string.IsNullOrEmpty(message.Base64Image))
+                    {
+                        var imageBytes = Convert.FromBase64String(message.Base64Image);
+                        var mimeType = GetMimeTypeFromBase64(message.Base64Image);
+                        contentBlocks.Add(ChatMessageContentPart.CreateImagePart(new BinaryData(imageBytes), mimeType));
+                    }
+
+                    completionMessages.Add(new UserChatMessage(contentBlocks));
+                }
+                else if (message.Role == Role.Assistant) completionMessages.Add(new AssistantChatMessage(message.Content));
             }
-
-            var anthropicTools = new List<Anthropic.SDK.Common.Tool>();
-            foreach (var tool in request.ProfileOptions?.Tools)
-            {
-                var schema = ConvertToolParameters(tool);
-                var serializedParams = JsonSerializer.Serialize(tool.Function.Parameters);
-                var nodefiedParams = JsonNode.Parse(serializedParams);
-
-                var function = new Anthropic.SDK.Common.Function(tool.Function.Name, tool.Function.Description, nodefiedParams);
-                var anthropicTool = new Anthropic.SDK.Common.Tool(function);
-                anthropicTools.Add(anthropicTool);
-            }
-
-            ToolChoiceType? toolChoiceType = null;
-            if (request.ProfileOptions.ToolChoice?.ToString().ToLower() == ToolExecutionRequirement.Auto.ToString().ToLower()) toolChoiceType = ToolChoiceType.Auto;
-            else if (request.ProfileOptions.ToolChoice?.ToString().ToLower() == ToolExecutionRequirement.Required.ToString().ToLower()) toolChoiceType = ToolChoiceType.Tool;
-            var messageParams = new MessageParameters()
-            {
-                Messages = anthropicMessages,
-                Model = request.ProfileOptions.Model, // only one model is supported from anthropic
-                Stream = false,
-                StopSequences = request.ProfileOptions.Stop,
-                System = systemMessages,
-                Tools = anthropicTools,
-                Metadata = new Dictionary<string, string> { { AnthropicSpecificStrings.user_id.ToString(), request.ProfileOptions.User ?? string.Empty } },
-            };
-
-            if (request.ProfileOptions.MaxTokens.HasValue) messageParams.MaxTokens = request.ProfileOptions.MaxTokens.Value;
-            if (request.ProfileOptions.Temperature.HasValue) messageParams.Temperature = Convert.ToDecimal(request.ProfileOptions.Temperature.Value);
-            if (request.ProfileOptions.TopP.HasValue) messageParams.TopP = Convert.ToDecimal(request.ProfileOptions.TopP.Value);
-            if (toolChoiceType.HasValue) messageParams.ToolChoice = new ToolChoice() { Name = request.ProfileOptions.ToolChoice, Type = (ToolChoiceType)toolChoiceType };
-            return messageParams;
+            return completionMessages;
         }
 
-        /// <summary>
-        /// Sets the message content based on the presence of a ChatRecursion tool call.
-        /// </summary>
-        /// <param name="messageContent">The original message content.</param>
-        /// <param name="toolCalls">The tool calls associated with the content.</param>
-        /// <returns>The original messageContent, or a response to send to the next ChatRecursion LLM model.</returns>
+        private ChatCompletionOptions BuildCompletionOptions(CompletionRequest completion)
+        {
+            var options = new ChatCompletionOptions()
+            {
+                MaxOutputTokenCount = completion.ProfileOptions.MaxTokens ?? null,
+                Temperature = completion.ProfileOptions.Temperature,
+                TopP = completion.ProfileOptions.TopP,
+                FrequencyPenalty = completion.ProfileOptions.FrequencyPenalty,
+                PresencePenalty = completion.ProfileOptions.PresencePenalty,
+                IncludeLogProbabilities = completion.ProfileOptions.Logprobs,
+                EndUserId = completion.ProfileOptions.User,
+            };
+
+            if (completion.ProfileOptions.ResponseFormat == ResponseFormat.Json.ToString()) options.ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat();
+            else if (completion.ProfileOptions.ResponseFormat == ResponseFormat.Text.ToString()) options.ResponseFormat = ChatResponseFormat.CreateTextFormat();
+
+            if (options.IncludeLogProbabilities == true) options.TopLogProbabilityCount = completion.ProfileOptions.TopLogprobs;
+
+            if (completion.ProfileOptions.Stop != null && completion.ProfileOptions.Stop.Length > 0)
+            {
+                foreach (var message in completion.ProfileOptions.Stop) options.StopSequences.Add(message);
+            }
+
+            if (completion.ProfileOptions.Tools != null)
+                foreach (var tool in completion.ProfileOptions.Tools)
+                {
+                    var serializedParameters = JsonSerializer.Serialize(tool.Function.Parameters);
+                    var newTool = ChatTool.CreateFunctionTool(tool.Function.Name, tool.Function.Description, BinaryData.FromString(serializedParameters));
+                    options.Tools.Add(newTool);
+                };
+
+            if (completion.ProfileOptions.Tools != null && completion.ProfileOptions.Tools.Any())
+            {
+                if (completion.ProfileOptions.Tools.Count > 1) options.AllowParallelToolCalls = true;
+
+                if (completion.ProfileOptions.ToolChoice == null || completion.ProfileOptions.ToolChoice == ToolExecutionRequirement.Auto.ToString()) options.ToolChoice = ChatToolChoice.CreateAutoChoice();
+                else if (completion.ProfileOptions.ToolChoice == ToolExecutionRequirement.None.ToString()) options.ToolChoice = ChatToolChoice.CreateNoneChoice();
+                else if (completion.ProfileOptions.ToolChoice == ToolExecutionRequirement.Required.ToString()) options.ToolChoice = ChatToolChoice.CreateRequiredChoice();
+                else options.ToolChoice = ChatToolChoice.CreateFunctionChoice(completion.ProfileOptions.ToolChoice);
+            }
+            return options;
+        }
+
         private string GetMessageContent(string? messageContent, Dictionary<string, string> toolCalls)
         {
             try
@@ -196,136 +229,15 @@ namespace IntelligenceHub.Client.Implementations
             catch (ArgumentNullException) { return string.Empty; }
         }
 
-        /// <summary>
-        /// Converts an IntelligenceHub message to an Anthropic ContentBase object.
-        /// </summary>
-        /// <param name="message">The message to be converted.</param>
-        /// <returns>The ContentBase object.</returns>
-        private List<ContentBase> ConvertToAnthropicMessage(API.DTOs.Message message)
-        {
-            var content = new List<ContentBase>();
-            if (!string.IsNullOrEmpty(message.Content)) content.Add(new TextContent { Text = message.Content });  
-            if (!string.IsNullOrEmpty(message.Base64Image)) content.Add(new ImageContent { Source = new ImageSource() { Data = message.Base64Image } });
-            return content;
-        }
-
-        /// <summary>
-        /// Converts an Anthropic MessageResponse object to a Message.
-        /// </summary>
-        /// <param name="message">The message response object returned from the client.</param>
-        /// <param name="contentString">The content of the response message.</param>
-        /// <returns></returns>
-        private IntelligenceHub.API.DTOs.Message ConvertFromAnthropicMessage(MessageResponse message, string contentString)
-        {
-            return new API.DTOs.Message
-            {
-                Content = contentString,
-                Role = ConvertFromAnthropicRole(message.Role)
-            };
-        }
-
-        /// <summary>
-        /// Converts an IntelligenceHub Role to an Anthropic Role.
-        /// </summary>
-        /// <param name="role">The IntelligenceHub role to be converted.</param>
-        /// <returns>The converted role.</returns>
-        private RoleType ConvertToAnthropicRole(Role? role)
-        {
-            var anthropicRole = RoleType.Assistant;
-            if (role == Role.User) anthropicRole = RoleType.User;
-            else if (role == Role.Tool) anthropicRole = RoleType.Assistant;
-            else if (role == Role.Assistant) anthropicRole = RoleType.Assistant;
-            return anthropicRole;
-        }
-
-        /// <summary>
-        /// Converts an Anthropic role to an IntelligenceHub role.
-        /// </summary>
-        /// <param name="role">The role to be conveted.</param>
-        /// <returns>The converted role.</returns>
-        private Role ConvertFromAnthropicRole(RoleType role)
-        {
-            var intelligenceHubRole = Role.Assistant;
-            if (role == RoleType.User) intelligenceHubRole = Role.User;
-            else if (role == RoleType.Assistant) intelligenceHubRole = Role.Assistant;
-            return intelligenceHubRole;
-        }
-
-        /// <summary>
-        /// Converts an IntelligenceHub tool to an Anthropic tool.
-        /// </summary>
-        /// <param name="tool">The tool to be converted.</param>
-        /// <returns>The converted tool/InputSchema.</returns>
-        private InputSchema ConvertToolParameters(IntelligenceHub.API.DTOs.Tools.Tool tool)
-        {
-            var anthropicProperties = new Dictionary<string, Anthropic.SDK.Messaging.Property>();
-            foreach (var propertyData in tool.Function.Parameters.properties)
-            {
-                var property = propertyData.Value;
-                var anthropicProperty = new Anthropic.SDK.Messaging.Property()
-                {
-                    Description = property.description,
-                    Type = property.type,
-                };
-                anthropicProperties.Add(propertyData.Key, anthropicProperty);
-            }
-
-            return new InputSchema()
-            {
-                Properties = anthropicProperties,
-                Required = tool.Function.Parameters.required,
-                Type = tool.Type,
-            };
-        }
-
-        /// <summary>
-        /// Converts an Anthropic tool call to an IntelligenceHub tool call.
-        /// </summary>
-        /// <param name="toolCalls">The tool calls to be converted.</param>
-        /// <returns>The converted tool calls.</returns>
-        private Dictionary<string, string> ConvertResponseTools(List<Anthropic.SDK.Common.Function> toolCalls)
-        {
-            var intelligenceHubTools = new Dictionary<string, string>();
-            foreach (var tool in toolCalls)
-            {
-                if (tool.Name.ToLower() != SystemTools.Chat_Recursion.ToString().ToLower()) intelligenceHubTools.Add(tool.Name, tool.Arguments.ToJsonString());
-                else intelligenceHubTools.Add(SystemTools.Chat_Recursion.ToString().ToLower(), string.Empty);
-            }
-            return intelligenceHubTools;
-        }
-
-        /// <summary>
-        /// Converts an Anthropic stop reason to an IntelligenceHub finish reason.
-        /// </summary>
-        /// <param name="anthropicStopReason">The stop reason to be converted.</param>
-        /// <param name="hasTools">Whether or not tools were included in the response.</param>
-        /// <returns>The converted finish reason.</returns>
-        private FinishReasons ConvertFinishReason(string anthropicStopReason, bool hasTools)
-        {
-            var reason = FinishReasons.Stop;
-            if (hasTools) reason = FinishReasons.ToolCalls;
-            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.end_turn.ToString().ToLower()) reason = FinishReasons.Stop;
-            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.stop_sequence.ToString().ToLower()) reason = FinishReasons.Stop;
-            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.max_tokens.ToString().ToLower()) reason = FinishReasons.Length;
-            return reason;
-        }
-
-        /// <summary>
-        /// Retrieves the MIME type of the base 64 image.
-        /// </summary>
-        /// <param name="base64">The base64 image string.</param>
-        /// <returns>The MIME type string.</returns>
         private string GetMimeTypeFromBase64(string base64)
         {
-            byte[] imageBytes = Convert.FromBase64String(base64.Substring(0, 20)); // Read only the first few bytes
+            byte[] imageBytes = Convert.FromBase64String(base64.Substring(0, 20));
             if (imageBytes.Length < 4) return "image/png";
-
-            // Check the file signature (magic number) to determine the MIME type
             if (imageBytes.Take(4).SequenceEqual(new byte[] { 0xFF, 0xD8, 0xFF })) return "image/jpeg";
             if (imageBytes.Take(8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47 })) return "image/png";
             if (imageBytes.Take(6).SequenceEqual(new byte[] { 0x47, 0x49, 0x46, 0x38 })) return "image/gif";
             if (imageBytes.Take(4).SequenceEqual(new byte[] { 0x42, 0x4D })) return "image/bmp";
-            return "image/png"; // Default if unknown
+            return "image/png";
         }
     }
 }

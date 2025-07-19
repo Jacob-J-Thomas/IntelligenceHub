@@ -105,10 +105,10 @@ namespace IntelligenceHub.Tests.Unit.Business
             {
                 Messages = new List<Message> { userMessage },
                 ConversationId = Guid.NewGuid(),
-                ProfileOptions = new Profile { Name = "TestProfile", Host = AGIServiceHost.OpenAI, Model = DefaultOpenAIModel }
+                ProfileOptions = new Profile { Name = "TestProfile", Host = AGIServiceHost.Azure, Model = DefaultOpenAIModel }
             };
 
-            var profile = new DbProfile { Name = "TestProfile", Host = AGIServiceHost.OpenAI.ToString(), Model = DefaultOpenAIModel };
+            var profile = new DbProfile { Name = "TestProfile", Host = AGIServiceHost.Azure.ToString(), Model = DefaultOpenAIModel };
             var completionResponse = new CompletionResponse() 
             { 
                 Messages = new List<Message>()

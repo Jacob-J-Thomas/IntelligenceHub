@@ -98,8 +98,7 @@ namespace IntelligenceHub.Business.Handlers
             // Validate model names for each host.
             if (!string.IsNullOrEmpty(profile.Model))
             {
-                if (profile.Host == AGIServiceHost.Azure && !_validModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Azure. Supported model names include: {_validModels.ToCommaSeparatedString()}.";
-                if (profile.Host == AGIServiceHost.OpenAI && !ValidOpenAIModelsAndContextLimits.Keys.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by OpenAI. Supported model names include: {ValidOpenAIModelsAndContextLimits.Keys.ToCommaSeparatedString()}.";
+                if ((profile.Host == AGIServiceHost.Azure || profile.Host == AGIServiceHost.OpenAI) && !_validModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Azure. Supported model names include: {_validModels.ToCommaSeparatedString()}.";
                 if (profile.Host == AGIServiceHost.Anthropic && !ValidAnthropicModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Anthropic. Supported model names include: {ValidAnthropicModels.ToCommaSeparatedString()}.";
             }
 
@@ -113,20 +112,7 @@ namespace IntelligenceHub.Business.Handlers
             if (profile.ReferenceProfiles != null && profile.ReferenceProfiles.Length > 0) foreach (var reference in profile.ReferenceProfiles) if (reference.Length > 40) return "The 'ReferenceProfiles' field exceeds the maximum allowed length of 40 characters.";
 
             // Validate model-specific parameters.
-            if (profile.Host == AGIServiceHost.OpenAI)
-            {
-                // Look up the context limit for the specified model.
-                if (!ValidOpenAIModelsAndContextLimits.TryGetValue(profile.Model.ToLower(), out int contextLimit)) contextLimit = 4096;
-                if (profile.MaxTokens > contextLimit) return $"For OpenAI, Max_Tokens cannot exceed {contextLimit} for the selected model.";
-
-                // Validate total tokens (prompt + maxTokens) against model capacity.
-                if (messages != null)
-                {
-                    int promptTokens = EstimateTokenCount(messages);
-                    if (promptTokens + profile.MaxTokens > contextLimit) return $"The combined token count of the prompt ({promptTokens}) and the requested max tokens ({profile.MaxTokens}) exceeds the model's capacity of {contextLimit} tokens.";
-                }
-            }
-            else if (profile.Host == AGIServiceHost.Anthropic)
+            if (profile.Host == AGIServiceHost.Anthropic)
             {
                 // For Anthropic, use a fixed context limit.
                 int contextLimit = 4000; // Recommended limit; update if newer models allow more.
@@ -141,7 +127,7 @@ namespace IntelligenceHub.Business.Handlers
                     if (promptTokens + profile.MaxTokens > contextLimit) return $"The combined token count of the prompt ({promptTokens}) and the requested max tokens ({profile.MaxTokens}) exceeds the Anthropic model's capacity of {contextLimit} tokens.";
                 }
             }
-            else if (profile.Host == AGIServiceHost.Azure)
+            else if (profile.Host == AGIServiceHost.Azure || profile.Host == AGIServiceHost.OpenAI)
             {
                 // Azure endpoints typically do not support returning token-level log probabilities.
                 if (profile.TopLogprobs.HasValue && profile.TopLogprobs.Value != 0) return "The Azure endpoint does not support TopLogprobs. Please set TopLogprobs to 0 or leave it unset.";
