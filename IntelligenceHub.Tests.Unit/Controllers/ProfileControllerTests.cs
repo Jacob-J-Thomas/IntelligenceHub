@@ -159,6 +159,47 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             Assert.Equal(tools, okResult.Value);
         }
 
+        #region GetAllProfiles Tests
+        [Fact]
+        public async Task GetAllProfiles_ReturnsBadRequest_WhenPageIsLessThanOne()
+        {
+            var result = await _controller.GetAllProfiles(0, 1);
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("The page must be greater than 0.", badRequest.Value);
+        }
+
+        [Fact]
+        public async Task GetAllProfiles_ReturnsBadRequest_WhenCountIsLessThanOne()
+        {
+            var result = await _controller.GetAllProfiles(1, 0);
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("The count must be greater than 0.", badRequest.Value);
+        }
+
+        [Fact]
+        public async Task GetAllProfiles_ReturnsOk_WhenProfilesExist()
+        {
+            var profiles = new List<Profile> { new Profile { Name = "p" } };
+            _mockProfileLogic.Setup(p => p.GetAllProfiles(1, 1)).ReturnsAsync(APIResponseWrapper<IEnumerable<Profile>>.Success(profiles));
+
+            var result = await _controller.GetAllProfiles(1, 1);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(profiles, ok.Value);
+        }
+        #endregion
+
+        [Fact]
+        public async Task GetProfile_Returns500_WhenTenantResolutionFails()
+        {
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+
+            var result = await _controller.GetProfile("name");
+
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status500InternalServerError, obj.StatusCode);
+        }
+
         [Fact]
         public async Task RemoveProfileFromTools_ReturnsOk_WhenSuccessfullyRemoved()
         {

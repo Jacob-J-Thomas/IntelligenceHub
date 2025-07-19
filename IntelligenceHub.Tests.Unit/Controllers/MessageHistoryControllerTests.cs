@@ -187,5 +187,50 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             Assert.IsType<NoContentResult>(result);
         }
         #endregion
+
+        #region Additional Negative Tests
+        [Fact]
+        public async Task GetConversation_ReturnsStatus500_WhenTenantResolutionFails()
+        {
+            // Arrange
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+
+            // Act
+            var result = await _controller.GetConversation(Guid.NewGuid(), 1, 1);
+
+            // Assert
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status500InternalServerError, obj.StatusCode);
+        }
+
+        [Fact]
+        public async Task UpsertConversationData_ReturnsStatus500_WhenTenantResolutionFails()
+        {
+            // Arrange
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+
+            // Act
+            var result = await _controller.UpsertConversationData(Guid.NewGuid(), new List<Message>{ new Message() });
+
+            // Assert
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status500InternalServerError, obj.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetConversation_ReturnsStatus500_WhenExceptionThrown()
+        {
+            // Arrange
+            _mockMessageHistoryLogic.Setup(m => m.GetConversationHistory(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<int>()))
+                                      .ThrowsAsync(new Exception());
+
+            // Act
+            var result = await _controller.GetConversation(Guid.NewGuid(), 1, 1);
+
+            // Assert
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status500InternalServerError, obj.StatusCode);
+        }
+        #endregion
     }
 }
