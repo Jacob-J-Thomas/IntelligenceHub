@@ -30,7 +30,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockValidationHandler = new Mock<IValidationHandler>();
             _mockIOptions = new Mock<IOptionsMonitor<Settings>>();
 
-            var settings = new Settings { ValidAGIModels = new[] { "Model1", "Model2" } };
+            var settings = new Settings();
             _mockIOptions.Setup(m => m.CurrentValue).Returns(settings);
 
             _profileLogic = new ProfileLogic(

@@ -45,7 +45,8 @@ namespace IntelligenceHub.Business.Handlers
         /// </summary>
         public ValidationHandler(IOptionsMonitor<Settings> settings)
         {
-            _validModels = settings.CurrentValue.ValidAGIModels;
+            // Azure uses the same set of valid models as OpenAI
+            _validModels = ValidOpenAIModelsAndContextLimits.Keys.ToArray();
         }
 
         #region Profile And Tool Validation
@@ -99,7 +100,7 @@ namespace IntelligenceHub.Business.Handlers
             if (!string.IsNullOrEmpty(profile.Model))
             {
                 if (profile.Host == AGIServiceHost.Azure && !_validModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Azure. Supported model names include: {_validModels.ToCommaSeparatedString()}.";
-                if (profile.Host == AGIServiceHost.OpenAI && !ValidOpenAIModelsAndContextLimits.Keys.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by OpenAI. Supported model names include: {ValidOpenAIModelsAndContextLimits.Keys.ToCommaSeparatedString()}.";
+                if (profile.Host == AGIServiceHost.OpenAI && !_validModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by OpenAI. Supported model names include: {_validModels.ToCommaSeparatedString()}.";
                 if (profile.Host == AGIServiceHost.Anthropic && !ValidAnthropicModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Anthropic. Supported model names include: {ValidAnthropicModels.ToCommaSeparatedString()}.";
             }
 

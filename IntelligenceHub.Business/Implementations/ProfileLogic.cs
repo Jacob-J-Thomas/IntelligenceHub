@@ -39,7 +39,7 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="validationLogic">The validation class used to assess the validity of request properties.</param>
         public ProfileLogic(IOptionsMonitor<Settings> settings, IProfileRepository profileDb, IProfileToolsAssociativeRepository profileToolsDb, IToolRepository toolDb, IPropertyRepository propertyDb, IValidationHandler validationLogic)
         {
-            _defaulAzureModel = settings.CurrentValue.ValidAGIModels.FirstOrDefault() ?? string.Empty;
+            _defaulAzureModel = ValidOpenAIModelsAndContextLimits.Keys.FirstOrDefault() ?? string.Empty;
             _profileDb = profileDb;
             _profileToolsDb = profileToolsDb;
             _toolDb = toolDb;

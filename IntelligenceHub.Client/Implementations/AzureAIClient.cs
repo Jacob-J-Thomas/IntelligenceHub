@@ -9,6 +9,7 @@ using OpenAI.Chat;
 using OpenAI.Images;
 using System.ClientModel;
 using System.ClientModel.Primitives;
+using System.Collections.Generic;
 using System.Text.Json;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -27,11 +28,27 @@ namespace IntelligenceHub.Client.Implementations
         /// <param name="settings">The AGIClient settings used to configure this client.</param>
         /// <param name="policyFactory">The client factory used to retrieve a policy.</param>
         /// <exception cref="InvalidOperationException">Thrown if the provided settings are invalid.</exception>
-        public AzureAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
+        public AzureAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory, AGIServiceHost host)
         {
-            var policyClient = policyFactory.CreateClient(ClientPolicies.AzureAIClientPolicy.ToString());
+            var policyName = host switch
+            {
+                AGIServiceHost.OpenAI => ClientPolicies.OpenAIClientPolicy.ToString(),
+                AGIServiceHost.Azure => ClientPolicies.AzureAIClientPolicy.ToString(),
+                AGIServiceHost.Anthropic => ClientPolicies.AnthropicAIClientPolicy.ToString(),
+                _ => throw new InvalidOperationException($"Invalid host specified: {host}")
+            };
 
-            var service = settings.CurrentValue.AzureOpenAIServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
+            var policyClient = policyFactory.CreateClient(policyName);
+
+            var serviceList = host switch
+            {
+                AGIServiceHost.OpenAI => settings.CurrentValue.AzureOpenAIServices,
+                AGIServiceHost.Azure => settings.CurrentValue.AzureOpenAIServices,
+                AGIServiceHost.Anthropic => settings.CurrentValue.AnthropicServices,
+                _ => new List<AGIServiceDetails>()
+            };
+
+            var service = serviceList.Find(s => s.Endpoint == policyClient.BaseAddress?.ToString())
                 ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
 
             var apiKey = service.Key;
