@@ -77,7 +77,8 @@ required_env_vars = [
     "AzureSearchServiceClientSettings_Key",
     "Settings_DefaultImageHost",  # token for DefaultImageGenHost
     "WeaviateSearchServiceClientSettings_Endpoint",
-    "WeaviateSearchServiceClientSettings_Key"
+    "WeaviateSearchServiceClientSettings_Key",
+    "FeatureFlagSettings_UseAzureAISearch"
 ]
 
 # Check the current environment

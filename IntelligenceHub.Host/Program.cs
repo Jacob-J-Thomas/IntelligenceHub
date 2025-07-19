@@ -54,11 +54,13 @@ namespace IntelligenceHub.Host
 
             var agiClientSettingsSection = builder.Configuration.GetRequiredSection(nameof(AGIClientSettings));
             var agiClientSettings = agiClientSettingsSection.Get<AGIClientSettings>();
+            var featureFlagsSection = builder.Configuration.GetSection(nameof(FeatureFlagSettings));
 
             builder.Services.Configure<Settings>(settingsSection);
             builder.Services.Configure<AuthSettings>(authSection);
             builder.Services.Configure<AppInsightSettings>(insightSettingsSection);
             builder.Services.Configure<AGIClientSettings>(agiClientSettingsSection);
+            builder.Services.Configure<FeatureFlagSettings>(featureFlagsSection);
             builder.Services.Configure<AzureSearchServiceClientSettings>(builder.Configuration.GetRequiredSection(nameof(AzureSearchServiceClientSettings)));
             builder.Services.Configure<WeaviateSearchServiceClientSettings>(builder.Configuration.GetSection(nameof(WeaviateSearchServiceClientSettings)));
 
@@ -123,6 +125,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
             builder.Services.AddSingleton<IBackgroundTaskQueueHandler, BackgroundTaskQueueHandler>();
             builder.Services.AddHostedService<BackgroundWorker>();
+            builder.Services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
 
             #endregion
 

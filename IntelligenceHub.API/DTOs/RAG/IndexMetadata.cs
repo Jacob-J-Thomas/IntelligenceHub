@@ -1,4 +1,5 @@
 ﻿using static IntelligenceHub.Common.GlobalVariables;
+using System.Text.Json.Serialization;
 
 namespace IntelligenceHub.API.DTOs.RAG
 {
@@ -25,17 +26,20 @@ namespace IntelligenceHub.API.DTOs.RAG
         /// <summary>
         /// Gets or sets the service that stores the vectors.
         /// </summary>
-        public RagServiceHost? RagHost { get; set; }
+        [JsonIgnore]
+        public RagServiceHost? RagHost { get; set; } = RagServiceHost.Weaviate; // Weaviate is currently only supported and does not support this value
 
         /// <summary>
         /// Gets or sets how frequently the index should be rebuilt.
         /// </summary>
-        public TimeSpan? IndexingInterval { get; set; }
+        [JsonIgnore]
+        public TimeSpan? IndexingInterval { get; set; } // Weaviate is currently only supported and does not support this value
 
         /// <summary>
         /// Gets or sets the embedding model used for vectorization.
         /// </summary>
-        public string? EmbeddingModel { get; set; }
+        [JsonIgnore]
+        public string? EmbeddingModel { get; set; } = DefaultWeaviateEmbeddingModel; // Weaviate is currently only supported and does not support this value
 
         /// <summary>
         /// Gets or sets the maximum number of attachments to return in RAG queries.
@@ -45,7 +49,8 @@ namespace IntelligenceHub.API.DTOs.RAG
         /// <summary>
         /// Gets or sets the overlap between adjacent chunks of text.
         /// </summary>
-        public double? ChunkOverlap { get; set; }
+        [JsonIgnore]
+        public double? ChunkOverlap { get; set; } // Weaviate is currently only supported and does not support this value
 
         /// <summary>
         /// Gets or sets a value indicating whether the topic should be generated.
@@ -80,6 +85,7 @@ namespace IntelligenceHub.API.DTOs.RAG
         /// <summary>
         /// Gets or sets the scoring profile applied when ranking results.
         /// </summary>
-        public IndexScoringProfile? ScoringProfile { get; set; } = new IndexScoringProfile();
+        [JsonIgnore]
+        public IndexScoringProfile? ScoringProfile { get; set; } = new IndexScoringProfile(); // Weaviate is currently only supported and does not support this value
     }
 }

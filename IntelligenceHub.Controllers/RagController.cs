@@ -21,14 +21,16 @@ namespace IntelligenceHub.Controllers
     public class RagController : TenantControllerBase
     {
         private readonly IRagLogic _ragLogic;
+        private readonly IFeatureFlagService _featureFlags;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RagController"/> class.
         /// </summary>
         /// <param name="ragLogic">The business logic for managing RAG indexes.</param>
-        public RagController(IRagLogic ragLogic, IUserLogic userLogic, ITenantProvider tenantProvider) : base(userLogic, tenantProvider)
+        public RagController(IRagLogic ragLogic, IUserLogic userLogic, ITenantProvider tenantProvider, IFeatureFlagService featureFlags) : base(userLogic, tenantProvider)
         {
             _ragLogic = ragLogic;
+            _featureFlags = featureFlags;
         }
         /// <summary>
         /// This endpoint is used to get a RAG index by name.
@@ -102,6 +104,8 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (indexDefinition is null) return BadRequest("The request body is malformed.");
+                if (!_featureFlags.UseAzureAISearch && indexDefinition.RagHost == RagServiceHost.Azure)
+                    return BadRequest("Azure AI Search is disabled.");
                 var response = await _ragLogic.CreateIndex(indexDefinition);
                 if (response.IsSuccess) return Ok(indexDefinition);
                 else if (response.StatusCode == APIResponseStatusCodes.BadRequest) return BadRequest(response.ErrorMessage);
@@ -133,6 +137,8 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (indexDefinition is null) return BadRequest("The request body is malformed.");
+                if (!_featureFlags.UseAzureAISearch && indexDefinition.RagHost == RagServiceHost.Azure)
+                    return BadRequest("Azure AI Search is disabled.");
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);
                 if (response.IsSuccess) return Ok(indexDefinition);
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
