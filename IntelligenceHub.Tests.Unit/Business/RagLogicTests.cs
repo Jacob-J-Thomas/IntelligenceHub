@@ -250,7 +250,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "testIndex" };
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerationHost = AGIServiceHost.Azure.ToString(), GenerateKeywords = false, GenerateTopic = false }; // To vastly simplify testing, these are set to false for the time being
+            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerationHost = AGIServiceHost.Azure.ToString(), RagHost = RagServiceHost.Weaviate.ToString(), GenerateKeywords = false, GenerateTopic = false }; // To vastly simplify testing, these are set to false for the time being
             _mockValidationHandler.Setup(v => v.ValidateIndexDefinition(indexMetadata)).Returns(string.Empty);
             _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.UpsertIndex(indexMetadata)).ReturnsAsync(true);
@@ -270,7 +270,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexMetadata = new IndexMetadata { Name = "testIndex", GenerateContentVector = true };
-            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerateContentVector = false, GenerationHost = AGIServiceHost.Azure.ToString() };
+            var dbIndexMetadata = new DbIndexMetadata { Name = indexMetadata.Name, GenerateContentVector = false, GenerationHost = AGIServiceHost.Azure.ToString(), RagHost = RagServiceHost.Weaviate.ToString() };
             _mockValidationHandler.Setup(v => v.ValidateIndexDefinition(indexMetadata)).Returns(string.Empty);
             _mockMetaRepository.Setup(repo => repo.GetByNameAsync(indexMetadata.Name)).ReturnsAsync(dbIndexMetadata);
             _mockSearchClient.Setup(client => client.UpsertIndex(indexMetadata)).ReturnsAsync(true);
