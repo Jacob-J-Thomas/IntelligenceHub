@@ -174,14 +174,11 @@
         public static readonly Dictionary<string, int> ValidOpenAIModelsAndContextLimits = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
             {
                 { "o1", 4096 },
-                { "o1-mini", 2048 },
                 { "o3-mini", 2048 },
-                { "gpt-4.5", 8192 },
+                { "gpt-4.1", 8192 },
                 { "gpt-4o", 8192 },
                 { "gpt-4o-mini", 4096 },
                 { "gpt-4", 8192 },
-                { "gpt-4-turbo", 8192 },
-                { "gpt-4-0125", 8192 },
                 { "gpt-3.5-turbo", 4096 }
             };
 
