@@ -1,6 +1,9 @@
 using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Client.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using System.Net.Http;
+using IntelligenceHub.Common.Config;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Business.Factories
@@ -29,10 +32,14 @@ namespace IntelligenceHub.Business.Factories
         /// <exception cref="ArgumentException">Thrown if the host does not match any existing client.</exception>
         public IAGIClient GetClient(AGIServiceHost? host)
         {
-            if (host == AGIServiceHost.OpenAI) return _serviceProvider.GetRequiredService<OpenAIClient>();
-            else if (host == AGIServiceHost.Azure) return _serviceProvider.GetRequiredService<AzureAIClient>();
-            else if (host == AGIServiceHost.Anthropic) return _serviceProvider.GetRequiredService<AnthropicAIClient>();
-            else throw new ArgumentException($"Invalid service name: {host}");
+            if (host == AGIServiceHost.OpenAI || host == AGIServiceHost.Azure || host == AGIServiceHost.Anthropic)
+            {
+                var options = _serviceProvider.GetRequiredService<IOptionsMonitor<AGIClientSettings>>();
+                var httpFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
+                return new AzureAIClient(options, httpFactory, host.Value);
+            }
+
+            throw new ArgumentException($"Invalid service name: {host}");
         }
     }
 }

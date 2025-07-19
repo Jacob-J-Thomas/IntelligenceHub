@@ -48,7 +48,7 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="context">DAL context from EFCore used for some more specialized scenarios.</param>
         public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient, IServiceScopeFactory serviceScopeFactory)
         {
-            _defaultAzureModel = settings.CurrentValue.ValidAGIModels.FirstOrDefault() ?? string.Empty;
+            _defaultAzureModel = ValidOpenAIModelsAndContextLimits.Keys.FirstOrDefault() ?? string.Empty;
             _agiClientFactory = agiFactory;
             _ragClientFactory = ragClientFactory;
             _metaRepository = metaRepository;

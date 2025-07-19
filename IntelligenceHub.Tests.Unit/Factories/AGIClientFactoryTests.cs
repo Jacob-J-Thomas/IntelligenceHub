@@ -1,62 +1,75 @@
 using IntelligenceHub.Business.Factories;
 using IntelligenceHub.Client.Implementations;
 using Moq;
-using System.Runtime.Serialization;
 using static IntelligenceHub.Common.GlobalVariables;
+using Microsoft.Extensions.Options;
+using System.Net.Http;
+using IntelligenceHub.Common.Config;
+using System;
+using System.Collections.Generic;
 
 namespace IntelligenceHub.Tests.Unit.Factories
 {
     public class AGIClientFactoryTests
     {
-        [Fact]
-        public void GetClient_ReturnsOpenAIClient()
+        private IServiceProvider CreateProvider()
         {
-            var open = (OpenAIClient)FormatterServices.GetUninitializedObject(typeof(OpenAIClient));
-            var azure = (AzureAIClient)FormatterServices.GetUninitializedObject(typeof(AzureAIClient));
-            var anthropic = (AnthropicAIClient)FormatterServices.GetUninitializedObject(typeof(AnthropicAIClient));
-            var provider = new Mock<IServiceProvider>();
-            provider.Setup(p => p.GetService(typeof(OpenAIClient))).Returns(open);
-            provider.Setup(p => p.GetService(typeof(AzureAIClient))).Returns(azure);
-            provider.Setup(p => p.GetService(typeof(AnthropicAIClient))).Returns(anthropic);
+            var options = new Mock<IOptionsMonitor<AGIClientSettings>>();
+            options.Setup(o => o.CurrentValue).Returns(new AGIClientSettings
+            {
+                AzureOpenAIServices = new List<AGIServiceDetails>
+                {
+                    new AGIServiceDetails { Endpoint = "https://azure/", Key = "a" },
+                    new AGIServiceDetails { Endpoint = "https://openai/", Key = "o" }
+                },
+                AnthropicServices = new List<AGIServiceDetails>
+                {
+                    new AGIServiceDetails { Endpoint = "https://anthropic/", Key = "x" }
+                }
+            });
 
-            var factory = new AGIClientFactory(provider.Object);
+            var httpFactory = new Mock<IHttpClientFactory>();
+            httpFactory.Setup(f => f.CreateClient(ClientPolicies.AzureAIClientPolicy.ToString()))
+                .Returns(new HttpClient { BaseAddress = new Uri("https://azure/") });
+            httpFactory.Setup(f => f.CreateClient(ClientPolicies.OpenAIClientPolicy.ToString()))
+                .Returns(new HttpClient { BaseAddress = new Uri("https://openai/") });
+            httpFactory.Setup(f => f.CreateClient(ClientPolicies.AnthropicAIClientPolicy.ToString()))
+                .Returns(new HttpClient { BaseAddress = new Uri("https://anthropic/") });
+
+            var provider = new Mock<IServiceProvider>();
+            provider.Setup(p => p.GetService(typeof(IOptionsMonitor<AGIClientSettings>))).Returns(options.Object);
+            provider.Setup(p => p.GetService(typeof(IHttpClientFactory))).Returns(httpFactory.Object);
+            return provider.Object;
+        }
+
+        [Fact]
+        public void GetClient_ReturnsAzureClient_ForOpenAI()
+        {
+            var provider = CreateProvider();
+            var factory = new AGIClientFactory(provider);
             var result = factory.GetClient(AGIServiceHost.OpenAI);
 
-            Assert.Same(open, result);
+            Assert.IsType<AzureAIClient>(result);
         }
 
         [Fact]
         public void GetClient_ReturnsAzureClient()
         {
-            var open = (OpenAIClient)FormatterServices.GetUninitializedObject(typeof(OpenAIClient));
-            var azure = (AzureAIClient)FormatterServices.GetUninitializedObject(typeof(AzureAIClient));
-            var anthropic = (AnthropicAIClient)FormatterServices.GetUninitializedObject(typeof(AnthropicAIClient));
-            var provider = new Mock<IServiceProvider>();
-            provider.Setup(p => p.GetService(typeof(OpenAIClient))).Returns(open);
-            provider.Setup(p => p.GetService(typeof(AzureAIClient))).Returns(azure);
-            provider.Setup(p => p.GetService(typeof(AnthropicAIClient))).Returns(anthropic);
-
-            var factory = new AGIClientFactory(provider.Object);
+            var provider = CreateProvider();
+            var factory = new AGIClientFactory(provider);
             var result = factory.GetClient(AGIServiceHost.Azure);
 
-            Assert.Same(azure, result);
+            Assert.IsType<AzureAIClient>(result);
         }
 
         [Fact]
-        public void GetClient_ReturnsAnthropicClient()
+        public void GetClient_ReturnsAzureClient_ForAnthropic()
         {
-            var open = (OpenAIClient)FormatterServices.GetUninitializedObject(typeof(OpenAIClient));
-            var azure = (AzureAIClient)FormatterServices.GetUninitializedObject(typeof(AzureAIClient));
-            var anthropic = (AnthropicAIClient)FormatterServices.GetUninitializedObject(typeof(AnthropicAIClient));
-            var provider = new Mock<IServiceProvider>();
-            provider.Setup(p => p.GetService(typeof(OpenAIClient))).Returns(open);
-            provider.Setup(p => p.GetService(typeof(AzureAIClient))).Returns(azure);
-            provider.Setup(p => p.GetService(typeof(AnthropicAIClient))).Returns(anthropic);
-
-            var factory = new AGIClientFactory(provider.Object);
+            var provider = CreateProvider();
+            var factory = new AGIClientFactory(provider);
             var result = factory.GetClient(AGIServiceHost.Anthropic);
 
-            Assert.Same(anthropic, result);
+            Assert.IsType<AzureAIClient>(result);
         }
 
         [Fact]

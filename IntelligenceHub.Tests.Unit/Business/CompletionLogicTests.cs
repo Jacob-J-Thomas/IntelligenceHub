@@ -232,7 +232,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         private CompletionLogic CreateLogic(Mock<IAGIClient> agiClientMock, out Mock<IAGIClientFactory> factoryMock)
         {
             factoryMock = new Mock<IAGIClientFactory>();
-            factoryMock.Setup(f => f.GetClient(It.IsAny<AGIServiceHost?>())).Returns(agiClientMock.Object);
+            factoryMock.Setup(f => f.GetClient(AGIServiceHost.Azure)).Returns(agiClientMock.Object);
             var ragFactory = new Mock<IRagClientFactory>();
             var toolClient = new Mock<IToolClient>();
             var toolRepo = new Mock<IToolRepository>();
@@ -247,12 +247,13 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             var agiMock = new Mock<IAGIClient>();
             agiMock.Setup(c => c.GenerateImage("prompt"))!.ReturnsAsync("imgdata");
-            var logic = CreateLogic(agiMock, out _);
+            var logic = CreateLogic(agiMock, out var factoryMock);
             var method = typeof(CompletionLogic).GetMethod("GenerateImage", BindingFlags.NonPublic | BindingFlags.Instance)!;
             var messages = new List<Message> { new Message { Role = Role.User, Content = "hi" } };
             var task = (Task<List<Message>>)method.Invoke(logic, new object?[] { "{\"prompt\":\"prompt\"}", AGIServiceHost.Azure, messages })!;
             var result = await task;
             Assert.Equal("imgdata", result.Last().Base64Image);
+            factoryMock.Verify(f => f.GetClient(AGIServiceHost.Azure), Times.Once);
         }
 
         [Fact]

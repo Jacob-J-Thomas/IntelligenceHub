@@ -18,11 +18,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         public ValidationHandlerTests()
         {
             // Setup dummy settings with valid models for Azure
-            var settings = new Settings
-            {
-                // Assumed valid AGI models (in lowercase) for testing purposes.
-                ValidAGIModels = new string[] { "gpt-4o", "gpt-3.5" }
-            };
+            var settings = new Settings();
 
             _mockSettings = new Mock<IOptionsMonitor<Settings>>();
             _mockSettings.Setup(x => x.CurrentValue).Returns(settings);
