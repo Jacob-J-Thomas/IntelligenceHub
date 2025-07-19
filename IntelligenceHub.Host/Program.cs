@@ -85,6 +85,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddScoped<ICompletionLogic, CompletionLogic>();
             builder.Services.AddScoped<IMessageHistoryLogic, MessageHistoryLogic>();
             builder.Services.AddScoped<IProfileLogic, ProfileLogic>();
+            builder.Services.AddHttpClient();
             builder.Services.AddScoped<IRagLogic, RagLogic>();
             builder.Services.AddScoped<IAuthLogic, AuthLogic>();
             builder.Services.AddScoped<IUserLogic, UserLogic>();
@@ -123,8 +124,8 @@ namespace IntelligenceHub.Host
 
             builder.Services.AddSingleton(new LoadBalancingSelector(serviceUrls));
             builder.Services.AddSingleton<IValidationHandler, ValidationHandler>();
-            builder.Services.AddSingleton<IBackgroundTaskQueueHandler, BackgroundTaskQueueHandler>();
-            builder.Services.AddHostedService<BackgroundWorker>();
+            builder.Services.AddHttpClient<AzureFunctionTaskQueueHandler>();
+            builder.Services.AddSingleton<IBackgroundTaskQueueHandler, AzureFunctionTaskQueueHandler>();
             builder.Services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
 
             #endregion
