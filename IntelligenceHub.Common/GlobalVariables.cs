@@ -149,7 +149,7 @@
         /// <summary>
         /// The default model for Anthropic.
         /// </summary>
-        public const string DefaultAnthropicModel = "claude-3-7-sonnet-20250219";
+        public const string DefaultAnthropicModel = "claude-3-7-sonnet";
 
         /// <summary>
         /// The default model for OpenAI.
@@ -161,16 +161,11 @@
         /// </summary>
         public static readonly string[] ValidAnthropicModels =
         {
-                "claude-3-7-sonnet-latest",
-                "claude-3-7-sonnet-20250219",
-                "claude-3-5-sonnet-latest",
-                "claude-3-5-sonnet-20241022",
-                "claude-3-5-sonnet-20240620",
-                "claude-3-5-haiku-latest",
-                "claude-3-5-haiku-20241022",
-                "claude-3-opus-latest",
-                "claude-3-opus-20240229",
-                "claude-3-haiku-20240307"
+                "claude-3-7-sonnet",
+                "claude-3-5-sonnet",
+                "claude-3-5-haiku",
+                "claude-3-opus",
+                "claude-3-haiku"
             };
 
         /// <summary>
@@ -179,33 +174,15 @@
         public static readonly Dictionary<string, int> ValidOpenAIModelsAndContextLimits = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
             {
                 { "o1", 4096 },
-                { "o1-2024-12-17", 4096 },
                 { "o1-mini", 2048 },
-                { "o1-mini-2024-09-12", 2048 },
-                { "o1-preview", 4096 },
-                { "o1-preview-2024-09-12", 4096 },
                 { "o3-mini", 2048 },
-                { "o3-mini-2025-01-31", 2048 },
-                { "gpt-4.5-preview", 8192 },
-                { "gpt-4.5-preview-2025-02-27", 8192 },
+                { "gpt-4.5", 8192 },
                 { "gpt-4o", 8192 },
-                { "chatgpt-4o-latest", 8192 },
-                { "gpt-4o-2024-11-20", 8192 },
-                { "gpt-4o-2024-08-06", 8192 },
-                { "gpt-4o-2024-05-13", 8192 },
                 { "gpt-4o-mini", 4096 },
-                { "gpt-4o-mini-2024-07-18", 4096 },
                 { "gpt-4", 8192 },
-                { "gpt-4-0613", 8192 },
-                { "gpt-4-0314", 8192 },
                 { "gpt-4-turbo", 8192 },
-                { "gpt-4-turbo-2024-04-09", 8192 },
-                { "gpt-4-turbo-preview", 8192 },
-                { "gpt-4-0125-preview", 8192 },
-                { "gpt-4-1106-preview", 8192 },
-                { "gpt-3.5-turbo", 4096 },
-                { "gpt-3.5-turbo-0125", 4096 },
-                { "gpt-3.5-turbo-1106", 4096 }
+                { "gpt-4-0125", 8192 },
+                { "gpt-3.5-turbo", 4096 }
             };
 
         /// <summary>
