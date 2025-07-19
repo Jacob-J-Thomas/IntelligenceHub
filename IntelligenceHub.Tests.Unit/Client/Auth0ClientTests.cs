@@ -137,5 +137,22 @@ namespace IntelligenceHub.Tests.Unit.Client
             // Assert
             Assert.Null(result);
         }
+        [Fact]
+        public async Task RequestAuthToken_InvalidJson_ThrowsException()
+        {
+            _mockHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("invalid")
+                });
+            var client = new Auth0Client(_mockSettings.Object, _mockFactory.Object);
+            await Assert.ThrowsAsync<System.Text.Json.JsonException>(async () => await client.RequestAuthToken());
+        }
+
     }
+
 }

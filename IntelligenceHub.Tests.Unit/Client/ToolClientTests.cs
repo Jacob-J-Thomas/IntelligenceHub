@@ -172,5 +172,12 @@ namespace IntelligenceHub.Tests.Unit.Client
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
+
+        [Fact]
+        public async Task CallFunction_NoEndpoint_ReturnsNotFound()
+        {
+            var response = await _toolClient.CallFunction("tool", "args", string.Empty);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
     }
 }
