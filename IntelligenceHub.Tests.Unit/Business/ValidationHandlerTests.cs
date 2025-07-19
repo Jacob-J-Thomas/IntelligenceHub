@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Common.Config;
+using IntelligenceHub.Business.Interfaces;
 
 namespace IntelligenceHub.Tests.Unit.Business
 {
@@ -12,6 +13,7 @@ namespace IntelligenceHub.Tests.Unit.Business
     {
         private readonly ValidationHandler _handler;
         private readonly Mock<IOptionsMonitor<Settings>> _mockSettings;
+        private readonly Mock<IFeatureFlagService> _mockFeatureFlags;
 
         public ValidationHandlerTests()
         {
@@ -25,7 +27,10 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockSettings = new Mock<IOptionsMonitor<Settings>>();
             _mockSettings.Setup(x => x.CurrentValue).Returns(settings);
 
-            _handler = new ValidationHandler(_mockSettings.Object);
+            _mockFeatureFlags = new Mock<IFeatureFlagService>();
+            _mockFeatureFlags.Setup(f => f.UseAzureAISearch).Returns(true);
+
+            _handler = new ValidationHandler(_mockSettings.Object, _mockFeatureFlags.Object);
         }
 
         #region ValidateChatRequest Tests
@@ -493,6 +498,24 @@ namespace IntelligenceHub.Tests.Unit.Business
             var result = _handler.ValidateIndexDefinition(index);
 
             Assert.Equal("Scoring profiles are not supported when using the Weaviate RagHost.", result);
+        }
+
+        [Fact]
+        public void ValidateIndexDefinition_WithAzureHostWhenFeatureDisabled_ReturnsError()
+        {
+            _mockFeatureFlags.Setup(f => f.UseAzureAISearch).Returns(false);
+            var handler = new ValidationHandler(_mockSettings.Object, _mockFeatureFlags.Object);
+            var index = new IndexMetadata
+            {
+                Name = "TestIndex",
+                RagHost = RagServiceHost.Azure,
+                GenerationHost = AGIServiceHost.OpenAI,
+                IndexingInterval = TimeSpan.FromHours(1)
+            };
+
+            var result = handler.ValidateIndexDefinition(index);
+
+            Assert.Equal("Azure is not a supported RAG host for your pricing tier.", result);
         }
 
         #endregion
