@@ -9,11 +9,14 @@ using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.DAL;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Common.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using IntelligenceHub.Business.Handlers;
+using System.Net.Http;
+using System.Net.Http.Json;
 
 namespace IntelligenceHub.Business.Implementations
 {
@@ -31,6 +34,8 @@ namespace IntelligenceHub.Business.Implementations
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IntelligenceHubDbContext _dbContext;
         private readonly WeaviateSearchServiceClient _weaviateClient;
+        private readonly HttpClient _httpClient;
+        private readonly IConfiguration _configuration;
 
         private readonly string _defaultAzureModel;
 
@@ -46,7 +51,7 @@ namespace IntelligenceHub.Business.Implementations
         /// <param name="validationHandler">A class that can be used to validate DTO bodies passed to the API.</param>
         /// <param name="backgroundTaskQueue">A background task handler useful for performing operations without tying up resources.</param>
         /// <param name="context">DAL context from EFCore used for some more specialized scenarios.</param>
-        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient, IServiceScopeFactory serviceScopeFactory)
+        public RagLogic(IOptionsMonitor<Settings> settings, IAGIClientFactory agiFactory, IProfileRepository profileRepository, IRagClientFactory ragClientFactory, IIndexMetaRepository metaRepository, IIndexRepository indexRepository, IValidationHandler validationHandler, IBackgroundTaskQueueHandler backgroundTaskQueue, IntelligenceHubDbContext context, WeaviateSearchServiceClient weaviateClient, IServiceScopeFactory serviceScopeFactory, HttpClient? httpClient = null, IConfiguration? configuration = null)
         {
             _defaultAzureModel = settings.CurrentValue.ValidAGIModels.FirstOrDefault() ?? string.Empty;
             _agiClientFactory = agiFactory;
@@ -58,6 +63,8 @@ namespace IntelligenceHub.Business.Implementations
             _dbContext = context;
             _weaviateClient = weaviateClient;
             _serviceScopeFactory = serviceScopeFactory;
+            _httpClient = httpClient ?? new HttpClient();
+            _configuration = configuration ?? new ConfigurationBuilder().Build();
         }
 
         /// <summary>
@@ -222,7 +229,7 @@ namespace IntelligenceHub.Business.Implementations
                 {
                     _backgroundTaskQueue.QueueBackgroundWorkItem(async token =>
                     {
-                        await RunBackgroundDocumentUpdate(index, document);
+                        await InvokeDocumentUpdateFunction(index.Name, document.Id);
                     });
                 }
                 currentPage++;
@@ -346,10 +353,7 @@ namespace IntelligenceHub.Business.Implementations
             {
                 _backgroundTaskQueue.QueueBackgroundWorkItem(async token =>
                 {
-                    using var scope = _serviceScopeFactory.CreateScope();
-                    var repo = scope.ServiceProvider.GetRequiredService<IIndexRepository>();
-                    var client = scope.ServiceProvider.GetRequiredService<WeaviateSearchServiceClient>();
-                    await SyncWeaviateIndex(index, repo, client, token);
+                    await InvokeWeaviateSyncFunction(index);
                 });
                 return APIResponseWrapper<bool>.Success(true);
             }
@@ -483,6 +487,22 @@ namespace IntelligenceHub.Business.Implementations
                 var dto = DbMappingHandler.MapFromDbIndexDocument(sdoc);
                 await weaviateClient.UpsertDocument(index, dto);
             }
+        }
+
+        private async Task InvokeDocumentUpdateFunction(string index, int documentId)
+        {
+            var baseUrl = _configuration["AzureFunctionsBaseUrl"];
+            if (string.IsNullOrEmpty(baseUrl)) return;
+            var payload = new { Index = index, DocumentId = documentId };
+            await _httpClient.PostAsJsonAsync($"{baseUrl}/api/DocumentUpdateFunction", payload);
+        }
+
+        private async Task InvokeWeaviateSyncFunction(string index)
+        {
+            var baseUrl = _configuration["AzureFunctionsBaseUrl"];
+            if (string.IsNullOrEmpty(baseUrl)) return;
+            var payload = new { Index = index };
+            await _httpClient.PostAsJsonAsync($"{baseUrl}/api/WeaviateSyncFunction", payload);
         }
 
         #region Private Methods
