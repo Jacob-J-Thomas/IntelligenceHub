@@ -38,6 +38,7 @@ namespace IntelligenceHub.Business.Factories
                 var httpFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
                 return new AzureAIClient(options, httpFactory, host.Value);
             }
+            else if (host == AGIServiceHost.Anthropic) return _serviceProvider.GetRequiredService<AnthropicAIClient>();
 
             throw new ArgumentException($"Invalid service name: {host}");
         }
