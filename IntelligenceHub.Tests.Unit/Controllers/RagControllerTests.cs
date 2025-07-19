@@ -17,6 +17,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         private readonly Mock<IRagLogic> _mockRagLogic;
         private readonly Mock<IUserLogic> _mockUserLogic;
         private readonly RagController _controller;
+        private readonly Mock<IFeatureFlagService> _mockFeatureFlags;
         private readonly Mock<ITenantProvider> _tenantProvider;
         private readonly Mock<HttpContext> _httpContext;
 
@@ -25,6 +26,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _mockRagLogic = new Mock<IRagLogic>();
             _mockUserLogic = new Mock<IUserLogic>();
             _tenantProvider = new Mock<ITenantProvider>();
+            _mockFeatureFlags = new Mock<IFeatureFlagService>();
             _httpContext = new Mock<HttpContext>();
 
             var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
@@ -32,7 +34,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
             _httpContext.Setup(c => c.User).Returns(claims);
 
-            _controller = new RagController(_mockRagLogic.Object, _mockUserLogic.Object, _tenantProvider.Object);
+            _controller = new RagController(_mockRagLogic.Object, _mockUserLogic.Object, _tenantProvider.Object, _mockFeatureFlags.Object);
             _controller.ControllerContext.HttpContext = _httpContext.Object;
         }
 
@@ -134,6 +136,17 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         }
 
         [Fact]
+        public async Task CreateIndex_AzureDisabled_ReturnsBadRequest()
+        {
+            var indexDefinition = new IndexMetadata { RagHost = RagServiceHost.Azure };
+            _mockFeatureFlags.Setup(f => f.UseAzureAISearch).Returns(false);
+
+            var result = await _controller.CreateIndex(indexDefinition);
+
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
         public async Task DeleteIndex_ValidRequest_ReturnsNoContentResult()
         {
             // Arrange
@@ -161,6 +174,17 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             // Assert
             var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
             Assert.Equal(expectedResponse.ErrorMessage, notFoundResult.Value);
+        }
+
+        [Fact]
+        public async Task ConfigureIndex_AzureDisabled_ReturnsBadRequest()
+        {
+            var metadata = new IndexMetadata { RagHost = RagServiceHost.Azure };
+            _mockFeatureFlags.Setup(f => f.UseAzureAISearch).Returns(false);
+
+            var result = await _controller.ConfigureIndex("index", metadata);
+
+            Assert.IsType<BadRequestObjectResult>(result);
         }
 
         [Fact]
