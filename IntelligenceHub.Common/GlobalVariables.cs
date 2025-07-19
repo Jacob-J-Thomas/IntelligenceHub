@@ -161,26 +161,31 @@
         /// </summary>
         public static readonly string[] ValidAnthropicModels =
         {
-                "claude-3-7-sonnet",
-                "claude-3-5-sonnet",
-                "claude-3-5-haiku",
-                "claude-3-opus",
-                "claude-3-haiku"
-            };
+            "claude-3-7-sonnet-latest",
+            "claude-3-7-sonnet-20250219",
+            "claude-3-5-sonnet-latest",
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-sonnet-20240620",
+            "claude-3-5-haiku-latest",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-latest",
+            "claude-3-opus-20240229",
+            "claude-3-haiku-20240307"
+        };
 
         /// <summary>
         /// The valid models and context limits for OpenAI.
         /// </summary>
         public static readonly Dictionary<string, int> ValidOpenAIModelsAndContextLimits = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "o1", 4096 },
-                { "o3-mini", 2048 },
-                { "gpt-4.1", 8192 },
-                { "gpt-4o", 8192 },
-                { "gpt-4o-mini", 4096 },
-                { "gpt-4", 8192 },
-                { "gpt-3.5-turbo", 4096 }
-            };
+        {
+            { "o1", 4096 },
+            { "o3-mini", 2048 },
+            { "gpt-4.1", 8192 },
+            { "gpt-4o", 8192 },
+            { "gpt-4o-mini", 4096 },
+            { "gpt-4", 8192 },
+            { "gpt-3.5-turbo", 4096 }
+        };
 
         /// <summary>
         /// The policy for elevated authentication.
