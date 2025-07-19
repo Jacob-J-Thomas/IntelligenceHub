@@ -31,7 +31,7 @@ namespace IntelligenceHub.Business.Factories
         {
             if (host == AGIServiceHost.OpenAI) return _serviceProvider.GetRequiredService<AzureAIClient>();
             else if (host == AGIServiceHost.Azure) return _serviceProvider.GetRequiredService<AzureAIClient>();
-            else if (host == AGIServiceHost.Anthropic) return _serviceProvider.GetRequiredService<AnthropicAIClient>();
+            else if (host == AGIServiceHost.Anthropic) return _serviceProvider.GetRequiredService<AzureAIClient>();
             else throw new ArgumentException($"Invalid service name: {host}");
         }
     }

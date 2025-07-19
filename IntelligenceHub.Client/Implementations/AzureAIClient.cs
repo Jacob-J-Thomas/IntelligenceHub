@@ -27,11 +27,13 @@ namespace IntelligenceHub.Client.Implementations
         /// <param name="settings">The AGIClient settings used to configure this client.</param>
         /// <param name="policyFactory">The client factory used to retrieve a policy.</param>
         /// <exception cref="InvalidOperationException">Thrown if the provided settings are invalid.</exception>
-        public AzureAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory)
+        public AzureAIClient(IOptionsMonitor<AGIClientSettings> settings, IHttpClientFactory policyFactory, bool useAnthropic = false)
         {
-            var policyClient = policyFactory.CreateClient(ClientPolicies.AzureAIClientPolicy.ToString());
+            var policyName = useAnthropic ? ClientPolicies.AnthropicAIClientPolicy.ToString() : ClientPolicies.AzureAIClientPolicy.ToString();
+            var policyClient = policyFactory.CreateClient(policyName);
 
-            var service = settings.CurrentValue.AzureOpenAIServices.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
+            var services = useAnthropic ? settings.CurrentValue.AnthropicServices : settings.CurrentValue.AzureOpenAIServices;
+            var service = services.Find(service => service.Endpoint == policyClient.BaseAddress?.ToString())
                 ?? throw new InvalidOperationException("service key failed to be retrieved when attempting to generate a completion.");
 
             var apiKey = service.Key;
