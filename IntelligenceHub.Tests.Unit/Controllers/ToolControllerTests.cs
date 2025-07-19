@@ -234,6 +234,27 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             Assert.IsType<List<string>>(okResult.Value);
             Assert.Equal(profileAssociations, okResult.Value);
         }
+
+        [Fact]
+        public async Task AddToolToProfiles_ReturnsBadRequest_WhenNameIsNull()
+        {
+            var result = await _controller.AddToolToProfiles(null!, new List<string>{"p"});
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("Invalid request. Please check the route parameter for the profile name.", badRequest.Value);
+        }
+
+        [Fact]
+        public async Task AddToolToProfiles_ReturnsNotFound_WhenToolDoesNotExist()
+        {
+            _profileLogicMock.Setup(p => p.AddToolToProfiles("tool1", It.IsAny<List<string>>()))
+                              .ReturnsAsync(APIResponseWrapper<List<string>>.Failure("missing", APIResponseStatusCodes.NotFound));
+
+            var result = await _controller.AddToolToProfiles("tool1", new List<string>{"p"});
+
+            var notFound = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal("missing", notFound.Value);
+        }
         #endregion
 
         #region RemoveToolFromProfiles Tests

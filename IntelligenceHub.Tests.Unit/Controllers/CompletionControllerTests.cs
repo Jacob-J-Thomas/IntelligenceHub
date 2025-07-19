@@ -153,6 +153,21 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             var obj = Assert.IsType<ObjectResult>(result);
             Assert.Equal(StatusCodes.Status429TooManyRequests, obj.StatusCode);
         }
+
+        [Fact]
+        public async Task CompletionStandard_Returns500_WhenTenantResolutionFails()
+        {
+            // Arrange
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+            var request = new CompletionRequest { ProfileOptions = new Profile { Name = "p" } };
+
+            // Act
+            var result = await _controller.CompletionStandard("p", request);
+
+            // Assert
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status500InternalServerError, obj.StatusCode);
+        }
         #endregion
 
         #region SSE Completion
@@ -235,6 +250,18 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             var objectResult = Assert.IsType<ObjectResult>(result);
             Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
             Assert.Equal(GlobalVariables.DefaultExceptionMessage, objectResult.Value);
+        }
+
+        [Fact]
+        public async Task CompletionStreaming_Returns500_WhenTenantResolutionFails()
+        {
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+            var request = new CompletionRequest { ProfileOptions = new Profile { Name = "p" } };
+
+            var result = await _controller.CompletionStreaming("p", request);
+
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status500InternalServerError, obj.StatusCode);
         }
 
         private async IAsyncEnumerable<APIResponseWrapper<CompletionStreamChunk>> GetAsyncStream(List<APIResponseWrapper<CompletionStreamChunk>> chunks)

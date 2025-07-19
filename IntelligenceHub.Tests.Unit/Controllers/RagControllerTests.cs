@@ -304,5 +304,79 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
             Assert.Equal(expectedResponse.ErrorMessage, notFoundResult.Value);
         }
+
+        #region Additional Endpoint Tests
+        [Fact]
+        public async Task QueryIndex_ReturnsBadRequest_WhenQueryIsEmpty()
+        {
+            var result = await _controller.QueryIndex("index", string.Empty);
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("The required route parameter, 'query', is null or empty.", badRequest.Value);
+        }
+
+        [Fact]
+        public async Task QueryIndex_ReturnsNotFound_WhenIndexMissing()
+        {
+            _mockRagLogic.Setup(r => r.QueryIndex("index", "q")).ReturnsAsync(APIResponseWrapper<List<IndexDocument>>.Failure("missing", APIResponseStatusCodes.NotFound));
+
+            var result = await _controller.QueryIndex("index", "q");
+
+            var notFound = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal("missing", notFound.Value);
+        }
+
+        [Fact]
+        public async Task RunIndexUpdate_ReturnsNoContent_OnSuccess()
+        {
+            _mockRagLogic.Setup(r => r.RunIndexUpdate("index")).ReturnsAsync(APIResponseWrapper<bool>.Success(true));
+
+            var result = await _controller.RunIndexUpdate("index");
+
+            Assert.IsType<NoContentResult>(result);
+        }
+
+        [Fact]
+        public async Task RunIndexUpdate_ReturnsNotFound_WhenIndexMissing()
+        {
+            _mockRagLogic.Setup(r => r.RunIndexUpdate("index")).ReturnsAsync(APIResponseWrapper<bool>.Failure("bad", APIResponseStatusCodes.NotFound));
+
+            var result = await _controller.RunIndexUpdate("index");
+
+            var notFound = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.Equal("bad", notFound.Value);
+        }
+
+        [Fact]
+        public async Task GetAllDocuments_ReturnsBadRequest_WhenPageInvalid()
+        {
+            var result = await _controller.GetAllDocuments("index", 1, 0);
+
+            var bad = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.Equal("Page must be 1 or greater", bad.Value);
+        }
+
+        [Fact]
+        public async Task GetAllDocuments_ReturnsOk_WhenSuccess()
+        {
+            var docs = new List<IndexDocument> { new IndexDocument { Title = "a" } };
+            _mockRagLogic.Setup(r => r.GetAllDocuments("index", 1, 1)).ReturnsAsync(APIResponseWrapper<IEnumerable<IndexDocument>>.Success(docs));
+
+            var result = await _controller.GetAllDocuments("index", 1, 1);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(docs, ok.Value);
+        }
+
+        [Fact]
+        public async Task QueryIndex_ReturnsStatus500_WhenTenantResolutionFails()
+        {
+            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+
+            var result = await _controller.QueryIndex("index", "q");
+
+            var obj = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status500InternalServerError, obj.StatusCode);
+        }
+        #endregion
     }
 }
