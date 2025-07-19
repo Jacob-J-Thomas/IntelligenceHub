@@ -629,7 +629,8 @@ namespace IntelligenceHub.Business.Implementations
 
             var prompt = imageGenArgsJson["prompt"];
 
-            var client = _agiClientFactory.GetClient(host);
+            // Image generation always uses the Azure endpoint regardless of the provided host
+            var client = _agiClientFactory.GetClient(AGIServiceHost.Azure);
             var base64Image = await client.GenerateImage(prompt);
 
             // Append the generated image to the last message

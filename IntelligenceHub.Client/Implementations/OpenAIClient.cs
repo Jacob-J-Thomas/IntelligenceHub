@@ -24,12 +24,10 @@ namespace IntelligenceHub.Client.Implementations
         private readonly string _gpt4o = "gpt-4o";
         private readonly string _gpt4oMini = "gpt-4o-mini";
         private readonly string _dalle3 = DefaultImageGenModel;
-        private readonly string _dalle2 = "dall-e-2";
 
         private readonly ChatClient _gpt4oAIClient;
         private readonly ChatClient _gpt4ominiAIClient;
-        private readonly ImageClient _qualityImageGenClient; // DALL-E 3 - does not current support image modifications and prompting is less reliable (as of 2/7/2025)
-        private readonly ImageClient _versatileImageGenClient; // DALL-E 2 - currently more versatile and provides more reliable image generation via prompting (as of 2/7/2025)
+        private readonly ImageClient _qualityImageGenClient; // DALL-E 3
 
         /// <summary>
         /// Creates a new instance of the OpenAIClient class
@@ -53,7 +51,6 @@ namespace IntelligenceHub.Client.Implementations
             _gpt4ominiAIClient = new ChatClient(_gpt4oMini, credential, options);
 
             _qualityImageGenClient = new ImageClient(_dalle3, credential, options);
-            _versatileImageGenClient = new ImageClient(_dalle2, credential, options);
         }
 
         /// <summary>
