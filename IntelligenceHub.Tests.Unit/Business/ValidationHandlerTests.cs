@@ -141,6 +141,73 @@ namespace IntelligenceHub.Tests.Unit.Business
             Assert.Equal("The messages array was null or empty.", result);
         }
 
+        [Fact]
+        public void ValidateChatRequest_NoUserMessage_ReturnsError()
+        {
+            var profile = new Profile
+            {
+                Name = "TestProfile",
+                Model = "gpt-4o",
+                Host = AGIServiceHost.Azure,
+                FrequencyPenalty = 0,
+                PresencePenalty = 0,
+                Temperature = 1,
+                TopP = 0.9f,
+                MaxTokens = 50,
+                TopLogprobs = 0,
+                ResponseFormat = "text"
+            };
+
+            var messages = new List<Message>
+            {
+                new Message { Role = Role.Assistant, Content = "Test", User = "Tester" }
+            };
+
+            var chatRequest = new CompletionRequest
+            {
+                ProfileOptions = profile,
+                Messages = messages
+            };
+
+            var result = _handler.ValidateChatRequest(chatRequest);
+
+            Assert.Equal("The messages array must contain at least one user message, but contains none.", result);
+        }
+
+        [Fact]
+        public void ValidateChatRequest_InvalidModel_ReturnsError()
+        {
+            var profile = new Profile
+            {
+                Name = "TestProfile",
+                Model = "bad-model",
+                Host = AGIServiceHost.Azure,
+                FrequencyPenalty = 0,
+                PresencePenalty = 0,
+                Temperature = 1,
+                TopP = 0.9f,
+                MaxTokens = 50,
+                TopLogprobs = 0,
+                ResponseFormat = "text"
+            };
+
+            var messages = new List<Message>
+            {
+                new Message { Role = Role.User, Content = "Test", User = "Tester" }
+            };
+
+            var chatRequest = new CompletionRequest
+            {
+                ProfileOptions = profile,
+                Messages = messages
+            };
+
+            var expected = "The provided model name is not supported by Azure. Supported model names include: gpt-4o,gpt-3.5.";
+            var result = _handler.ValidateChatRequest(chatRequest);
+
+            Assert.Equal(expected, result);
+        }
+
         #endregion
 
         #region ValidateAPIProfile Tests
@@ -195,6 +262,28 @@ namespace IntelligenceHub.Tests.Unit.Business
             Assert.Equal("Profile name 'all' conflicts with the profile/get/all route.", result);
         }
 
+        [Fact]
+        public void ValidateAPIProfile_MissingName_ReturnsError()
+        {
+            var profile = new Profile
+            {
+                Name = null,
+                Model = "gpt-4o",
+                Host = AGIServiceHost.Azure,
+                FrequencyPenalty = 0,
+                PresencePenalty = 0,
+                Temperature = 1,
+                TopP = 0.9f,
+                MaxTokens = 50,
+                TopLogprobs = 0,
+                ResponseFormat = "text"
+            };
+
+            var result = _handler.ValidateAPIProfile(profile);
+
+            Assert.Equal("The 'Name' field is required.", result);
+        }
+
         #endregion
 
         #region ValidateProfileOptions Tests
@@ -247,6 +336,72 @@ namespace IntelligenceHub.Tests.Unit.Business
 
             // Assert
             Assert.Equal("The model parameter is required.", result);
+        }
+
+        [Fact]
+        public void ValidateProfileOptions_MissingHost_ReturnsError()
+        {
+            var profile = new Profile
+            {
+                Name = "Profile1",
+                Model = "gpt-4o",
+                Host = AGIServiceHost.None,
+                FrequencyPenalty = 0,
+                PresencePenalty = 0,
+                Temperature = 1,
+                TopP = 0.9f,
+                MaxTokens = 30,
+                TopLogprobs = 0,
+                ResponseFormat = "text"
+            };
+
+            var result = _handler.ValidateProfileOptions(profile);
+
+            Assert.Equal("The host parameter is required.", result);
+        }
+
+        [Fact]
+        public void ValidateProfileOptions_FrequencyPenaltyOutOfRange_ReturnsError()
+        {
+            var profile = new Profile
+            {
+                Name = "Profile1",
+                Model = "gpt-4o",
+                Host = AGIServiceHost.Azure,
+                FrequencyPenalty = 3,
+                PresencePenalty = 0,
+                Temperature = 1,
+                TopP = 0.9f,
+                MaxTokens = 30,
+                TopLogprobs = 0,
+                ResponseFormat = "text"
+            };
+
+            var result = _handler.ValidateProfileOptions(profile);
+
+            Assert.Equal("FrequencyPenalty must be a value between -2 and 2.", result);
+        }
+
+        [Fact]
+        public void ValidateProfileOptions_InvalidResponseFormat_ReturnsError()
+        {
+            var profile = new Profile
+            {
+                Name = "Profile1",
+                Model = "gpt-4o",
+                Host = AGIServiceHost.Azure,
+                FrequencyPenalty = 0,
+                PresencePenalty = 0,
+                Temperature = 1,
+                TopP = 0.9f,
+                MaxTokens = 30,
+                TopLogprobs = 0,
+                ResponseFormat = "xml"
+            };
+
+            var result = _handler.ValidateProfileOptions(profile);
+
+            Assert.Equal($"If ResponseType is set, it must either be equal to '{ResponseFormat.Text}' or '{ResponseFormat.Json}'.", result);
         }
 
         #endregion
@@ -315,6 +470,50 @@ namespace IntelligenceHub.Tests.Unit.Business
             Assert.Equal("A function name is required for all tools.", result);
         }
 
+        [Fact]
+        public void ValidateTool_RequiredPropertyMissing_ReturnsError()
+        {
+            var tool = new API.DTOs.Tools.Tool
+            {
+                Function = new API.DTOs.Tools.Function
+                {
+                    Name = "TestTool",
+                    Description = "A test tool",
+                    Parameters = new API.DTOs.Tools.Parameters
+                    {
+                        required = new string[] { "prop1" },
+                        properties = new Dictionary<string, API.DTOs.Tools.Property>()
+                    }
+                }
+            };
+
+            var result = _handler.ValidateTool(tool);
+
+            Assert.Equal("Required property prop1 does not exist in the tool TestTool's properties list.", result);
+        }
+
+        [Fact]
+        public void ValidateTool_DescriptionTooLong_ReturnsError()
+        {
+            var tool = new API.DTOs.Tools.Tool
+            {
+                Function = new API.DTOs.Tools.Function
+                {
+                    Name = "TestTool",
+                    Description = new string('a', 513),
+                    Parameters = new API.DTOs.Tools.Parameters
+                    {
+                        required = new string[] { },
+                        properties = new Dictionary<string, API.DTOs.Tools.Property>()
+                    }
+                }
+            };
+
+            var result = _handler.ValidateTool(tool);
+
+            Assert.Equal("The function description exceeds the maximum allowed length of 512 characters.", result);
+        }
+
         #endregion
 
         #region ValidateMessageList and ValidateMessage Tests
@@ -353,6 +552,19 @@ namespace IntelligenceHub.Tests.Unit.Business
         }
 
         [Fact]
+        public void ValidateMessageList_NoUserMessage_ReturnsError()
+        {
+            var messages = new List<Message>
+            {
+                new Message { Role = Role.Assistant, Content = "test", User = "tester" }
+            };
+
+            var result = _handler.ValidateMessageList(messages);
+
+            Assert.Equal("The messages array must contain at least one user message, but contains none.", result);
+        }
+
+        [Fact]
         public void ValidateMessage_WithoutContentOrImage_ReturnsError()
         {
             // Arrange: Message with neither content nor image.
@@ -387,6 +599,37 @@ namespace IntelligenceHub.Tests.Unit.Business
 
             // Assert
             Assert.Null(result);
+        }
+
+        [Fact]
+        public void ValidateMessage_UserTooLong_ReturnsError()
+        {
+            var message = new Message
+            {
+                Role = Role.User,
+                Content = "test",
+                User = new string('a', 256)
+            };
+
+            var result = _handler.ValidateMessage(message);
+
+            Assert.Equal("The user name exceeds the maximum allowed length of 255 characters.", result);
+        }
+
+        [Fact]
+        public void ValidateMessage_InvalidBase64Image_ReturnsError()
+        {
+            var message = new Message
+            {
+                Role = Role.User,
+                Content = "test",
+                Base64Image = "notbase64",
+                User = "tester"
+            };
+
+            var result = _handler.ValidateMessage(message);
+
+            Assert.Equal("The image provided is not valid.", result);
         }
 
         #endregion
@@ -495,6 +738,55 @@ namespace IntelligenceHub.Tests.Unit.Business
             Assert.Equal("Scoring profiles are not supported when using the Weaviate RagHost.", result);
         }
 
+        [Fact]
+        public void ValidateIndexDefinition_IndexingIntervalZero_ReturnsError()
+        {
+            var index = new IndexMetadata
+            {
+                Name = "Test",
+                RagHost = RagServiceHost.Azure,
+                IndexingInterval = TimeSpan.Zero,
+                ChunkOverlap = 0.5
+            };
+
+            var result = _handler.ValidateIndexDefinition(index);
+
+            Assert.Equal("IndexingInterval must be a positive value.", result);
+        }
+
+        [Fact]
+        public void ValidateIndexDefinition_ChunkOverlapOutOfRange_ReturnsError()
+        {
+            var index = new IndexMetadata
+            {
+                Name = "Test",
+                RagHost = RagServiceHost.Azure,
+                IndexingInterval = TimeSpan.FromHours(1),
+                ChunkOverlap = 1.5
+            };
+
+            var result = _handler.ValidateIndexDefinition(index);
+
+            Assert.Equal("ChunkOverlap must be between 0 and 1 (inclusive).", result);
+        }
+
+        [Fact]
+        public void ValidateIndexDefinition_InvalidEmbeddingModelForAzure_ReturnsError()
+        {
+            var index = new IndexMetadata
+            {
+                Name = "Test",
+                RagHost = RagServiceHost.Azure,
+                EmbeddingModel = DefaultWeaviateEmbeddingModel,
+                IndexingInterval = TimeSpan.FromHours(1),
+                ChunkOverlap = 0.5
+            };
+
+            var result = _handler.ValidateIndexDefinition(index);
+
+            Assert.Equal($"EmbeddingModel {DefaultWeaviateEmbeddingModel} is reserved for the Weaviate RagHost.", result);
+        }
+
         #endregion
 
         #region IsValidIndexName Tests
@@ -522,6 +814,16 @@ namespace IntelligenceHub.Tests.Unit.Business
             var result = _handler.IsValidIndexName(invalidName);
 
             // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void IsValidIndexName_WithInvalidCharacters_ReturnsFalse()
+        {
+            string invalidName = "Invalid-Name!";
+
+            var result = _handler.IsValidIndexName(invalidName);
+
             Assert.False(result);
         }
 
@@ -568,6 +870,25 @@ namespace IntelligenceHub.Tests.Unit.Business
 
             // Assert
             Assert.Equal("The request must contain at least one document.", result);
+        }
+
+        [Fact]
+        public void IsValidRagUpsertRequest_DocumentMissingTitle_ReturnsError()
+        {
+            var document = new IndexDocument
+            {
+                Title = "",
+                Content = "content"
+            };
+
+            var request = new RagUpsertRequest
+            {
+                Documents = new List<IndexDocument> { document }
+            };
+
+            var result = _handler.IsValidRagUpsertRequest(request);
+
+            Assert.Equal("Document title cannot be empty.", result);
         }
 
         #endregion
