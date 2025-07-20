@@ -15,6 +15,7 @@ using Moq;
 using System.Reflection;
 using System.Web.Razor.Generator;
 using static IntelligenceHub.Common.GlobalVariables;
+using IntelligenceHub.DAL.Tenant;
 
 namespace IntelligenceHub.Tests.Unit.Business
 {
@@ -62,9 +63,6 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
-            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
-            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
-            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
             _mockValidationHandler.Setup(repo => repo.IsValidIndexName(indexName)).Returns(true);
@@ -769,7 +767,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         public async Task GetAllDocuments_ShouldReturnDocuments_WhenIndexIsValid()
         {
             // Arrange
-            var indexName = "testIndex";
+            var fullName = "testIndex";
             var count = 10;
             var page = 1;
             var dbDocuments = new List<DbIndexDocument>
@@ -779,12 +777,12 @@ namespace IntelligenceHub.Tests.Unit.Business
             };
             var expectedDocuments = dbDocuments.Select(DbMappingHandler.MapFromDbIndexDocument).ToList();
 
-            _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
+            _mockValidationHandler.Setup(v => v.IsValidIndexName(fullName)).Returns(true);
             _mockRagRepository.Setup(repo => repo.GetAllAsync(fullName, count, page)).ReturnsAsync(dbDocuments);
             _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(new DbIndexMetadata { Name = fullName });
 
             // Act
-            var result = await _ragLogic.GetAllDocuments(indexName, count, page);
+            var result = await _ragLogic.GetAllDocuments(fullName, count, page);
 
             // Assert
             Assert.NotNull(result.Data);
@@ -814,17 +812,17 @@ namespace IntelligenceHub.Tests.Unit.Business
         public async Task GetAllDocuments_ShouldReturnEmptyList_WhenNoDocumentsExist()
         {
             // Arrange
-            var indexName = "testIndex";
+            var fullName = "testIndex";
             var count = 10;
             var page = 1;
             var dbDocuments = new List<DbIndexDocument>();
 
-            _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
+            _mockValidationHandler.Setup(v => v.IsValidIndexName(fullName)).Returns(true);
             _mockRagRepository.Setup(repo => repo.GetAllAsync(fullName, count, page)).ReturnsAsync(dbDocuments);
             _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(new DbIndexMetadata { Name = fullName });
 
             // Act
-            var result = await _ragLogic.GetAllDocuments(indexName, count, page);
+            var result = await _ragLogic.GetAllDocuments(fullName, count, page);
 
             // Assert
             Assert.NotNull(result.Data);
@@ -835,16 +833,16 @@ namespace IntelligenceHub.Tests.Unit.Business
         public async Task GetAllDocuments_ShouldThrowException_WhenRepositoryThrowsException()
         {
             // Arrange
-            var indexName = "testIndex";
+            var fullName = "testIndex";
             var count = 10;
             var page = 1;
 
-            _mockValidationHandler.Setup(v => v.IsValidIndexName(indexName)).Returns(true);
+            _mockValidationHandler.Setup(v => v.IsValidIndexName(fullName)).Returns(true);
             _mockRagRepository.Setup(repo => repo.GetAllAsync(fullName, count, page)).ThrowsAsync(new Exception("Database error"));
             _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(new DbIndexMetadata { Name = fullName });
 
             // Act & Assert
-            await Assert.ThrowsAsync<Exception>(() => _ragLogic.GetAllDocuments(indexName, count, page));
+            await Assert.ThrowsAsync<Exception>(() => _ragLogic.GetAllDocuments(fullName, count, page));
         }
 
         [Fact]
