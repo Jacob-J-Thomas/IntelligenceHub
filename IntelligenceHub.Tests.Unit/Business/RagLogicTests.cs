@@ -8,6 +8,7 @@ using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL;
+using IntelligenceHub.DAL.Tenant;
 using IntelligenceHub.DAL.Interfaces;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,9 +63,6 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
-            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
-            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
-            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
             _mockValidationHandler.Setup(repo => repo.IsValidIndexName(indexName)).Returns(true);
@@ -770,6 +768,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var count = 10;
             var page = 1;
             var dbDocuments = new List<DbIndexDocument>
@@ -815,6 +814,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var count = 10;
             var page = 1;
             var dbDocuments = new List<DbIndexDocument>();
@@ -836,6 +836,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         {
             // Arrange
             var indexName = "testIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var count = 10;
             var page = 1;
 
