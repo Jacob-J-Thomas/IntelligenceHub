@@ -63,13 +63,13 @@ namespace IntelligenceHub.Tests.Unit.Factories
         }
 
         [Fact]
-        public void GetClient_ReturnsAzureClient_ForAnthropic()
+        public void GetClient_ReturnsAnthropicClient()
         {
             var provider = CreateProvider();
             var factory = new AGIClientFactory(provider);
             var result = factory.GetClient(AGIServiceHost.Anthropic);
 
-            Assert.IsType<AzureAIClient>(result);
+            Assert.IsType<AnthropicAIClient>(result);
         }
 
         [Fact]

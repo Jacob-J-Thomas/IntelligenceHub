@@ -32,13 +32,18 @@ namespace IntelligenceHub.Business.Factories
         /// <exception cref="ArgumentException">Thrown if the host does not match any existing client.</exception>
         public IAGIClient GetClient(AGIServiceHost? host)
         {
-            if (host == AGIServiceHost.OpenAI || host == AGIServiceHost.Azure || host == AGIServiceHost.Anthropic)
+            if (host == AGIServiceHost.OpenAI || host == AGIServiceHost.Azure)
             {
                 var options = _serviceProvider.GetRequiredService<IOptionsMonitor<AGIClientSettings>>();
                 var httpFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
                 return new AzureAIClient(options, httpFactory, host.Value);
             }
-            else if (host == AGIServiceHost.Anthropic) return _serviceProvider.GetRequiredService<AnthropicAIClient>();
+            else if (host == AGIServiceHost.Anthropic)
+            {
+                var options = _serviceProvider.GetRequiredService<IOptionsMonitor<AGIClientSettings>>();
+                var httpFactory = _serviceProvider.GetRequiredService<IHttpClientFactory>();
+                return new AnthropicAIClient(options, httpFactory);
+            }
 
             throw new ArgumentException($"Invalid service name: {host}");
         }
