@@ -5,6 +5,10 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Setup](#setup)
+- [Authentication](#authentication)
+- [Feature Flags](#feature-flags)
+- [Tenant Isolation](#tenant-isolation)
+- [Rate Limiting](#rate-limiting)
 - [Usage](#usage)
 - [API Reference](#api-reference)
 - [Contributing](#contributing)
@@ -115,9 +119,10 @@ The below resources are the bare minimum requirements to run the API and get a `
    - Execute the script (e.g., open the command line, navigate to the file, and run: `python env_setup.py`).
    - **Script Details**:
      - The script is configured to work in a CI/CD pipeline, but this setup is outside of the scope of this guide.
-     - The script searches for environment variables before requesting they be populated by the user.
-     - Supports multiple entries for service endpoints (e.g., Azure OpenAI Services, OpenAI Services, Anthropic Services).
-     - If using Azure OpenAI, be sure to populate `ValidAGIModels` with the names of your deployed models, otherwise leave empty.
+      - The script searches for environment variables before requesting they be populated by the user.
+      - Supports multiple entries for service endpoints (e.g., Azure OpenAI Services, OpenAI Services, Anthropic Services).
+      - Set environment variables to pre-populate the template. New variables such as `FeatureFlagSettings_UseAzureAISearch` enable optional features.
+      - If using Azure OpenAI, be sure to populate `ValidAGIModels` with the names of your deployed models, otherwise leave empty.
      - Be sure to list any intended clients under `ValidOrigins`, which will be used to populate the cors policy's allowed origins. Can be set to `*` for a permissive policy to get a dev environment up and running quickly. 
      - For the `SearchServiceCompletionService` values, provide any of set of credentials you used for one of the completion services, or if you don't intend to use RAG operations, feel free to leave it null. These values are used to generate the Keywords and Topic strings for RAG documents if `GenerateKeywords` or `GenerateTopic` is set to true on the targeted index.
    - Upon completion, the script writes the updated configuration to `appsettings.Development.json`.
@@ -134,6 +139,29 @@ The below resources are the bare minimum requirements to run the API and get a `
     - Refer to the [next section on usage](#usage) for help making your first request.
 
 ---
+
+## Authentication
+
+The API uses JWT bearer authentication. Obtain a token using your API key with one of the following endpoints:
+
+1. `GET /auth/defaulttoken` – returns a standard token for typical API access.
+2. `GET /auth/admintoken` – returns an elevated token for administrative actions.
+
+Send your API key in the `X-Api-Key` header. The response payload is an `Auth0Response` containing the `access_token`. Include this token in subsequent requests using the `Authorization: Bearer {token}` header.
+
+## Feature Flags
+
+Optional functionality can be toggled through feature flags stored in `FeatureFlagSettings`.
+
+- **UseAzureAISearch** – controls whether Azure AI Search endpoints are available. Set the `FeatureFlagSettings_UseAzureAISearch` environment variable (or update `appsettings.Development.json`) to `true` to enable these features.
+
+## Tenant Isolation
+
+Each user record includes a `TenantId`. When creating RAG indexes, the service prefixes the index name with the tenant ID to ensure resources from different tenants remain isolated. Index names returned by the API have the tenant prefix removed for convenience.
+
+## Rate Limiting
+
+Requests are subject to per-user rate limits. Free users may send up to **10 requests per minute** and no more than **100 requests per month**. Paid users are allowed **60 requests per minute** without a monthly cap. Exceeding these limits results in a `429 Too Many Requests` response.
 
 ## Usage
 

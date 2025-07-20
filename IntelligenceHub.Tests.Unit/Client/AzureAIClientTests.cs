@@ -1,6 +1,7 @@
 using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common;
+using static IntelligenceHub.Common.GlobalVariables;
 using Microsoft.Extensions.Options;
 using Moq;
 using System.Reflection;
@@ -26,7 +27,7 @@ namespace IntelligenceHub.Tests.Unit.Client
             var factory = new Mock<IHttpClientFactory>();
             factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-            return new AzureAIClient(options.Object, factory.Object);
+            return new AzureAIClient(options.Object, factory.Object, AGIServiceHost.Azure);
         }
 
         [Fact]

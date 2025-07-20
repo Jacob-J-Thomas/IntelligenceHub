@@ -8,6 +8,7 @@ using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Client.Implementations;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL;
+using IntelligenceHub.DAL.Tenant;
 using IntelligenceHub.DAL.Interfaces;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
@@ -767,7 +768,8 @@ namespace IntelligenceHub.Tests.Unit.Business
         public async Task GetAllDocuments_ShouldReturnDocuments_WhenIndexIsValid()
         {
             // Arrange
-            var fullName = "testIndex";
+            var indexName = "testIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var count = 10;
             var page = 1;
             var dbDocuments = new List<DbIndexDocument>
@@ -812,7 +814,8 @@ namespace IntelligenceHub.Tests.Unit.Business
         public async Task GetAllDocuments_ShouldReturnEmptyList_WhenNoDocumentsExist()
         {
             // Arrange
-            var fullName = "testIndex";
+            var indexName = "testIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var count = 10;
             var page = 1;
             var dbDocuments = new List<DbIndexDocument>();
@@ -833,7 +836,8 @@ namespace IntelligenceHub.Tests.Unit.Business
         public async Task GetAllDocuments_ShouldThrowException_WhenRepositoryThrowsException()
         {
             // Arrange
-            var fullName = "testIndex";
+            var indexName = "testIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
             var count = 10;
             var page = 1;
 
