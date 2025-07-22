@@ -112,7 +112,7 @@ namespace IntelligenceHub.Business.Implementations
 
             // add index entry for metadata
             indexDefinition.Name = fullName;
-            var newDbIndex = DbMappingHandler.MapToDbIndexMetadata(indexDefinition);
+            var newDbIndex = DbMappingHandler.MapToDbIndexMetadata(indexDefinition, _tenantProvider.TenantId);
             var response = await _metaRepository.AddAsync(newDbIndex);
             if (response == null) APIResponseWrapper<bool>.Failure($"Failed to add index '{indexDefinition.Name}' to the database.", APIResponseStatusCodes.InternalError);
 
@@ -163,7 +163,7 @@ namespace IntelligenceHub.Business.Implementations
             //if (!success) return APIResponseWrapper<bool>.Failure("Failed to update the indexer against the search service.", APIResponseStatusCodes.InternalError);
 
             indexDefinition.Name = fullName;
-            var newDefinition = DbMappingHandler.MapToDbIndexMetadata(indexDefinition);
+            var newDefinition = DbMappingHandler.MapToDbIndexMetadata(indexDefinition, _tenantProvider.TenantId);
 
             // Check if we an update is required - this is done before updating the SQL, as existingDefinition reflects the current state of the corresponding SQL entry
             var updateAllDocs = false;
@@ -514,18 +514,12 @@ namespace IntelligenceHub.Business.Implementations
 
         private string AppendTenant(string indexName)
         {
-            var tenant = _tenantProvider.TenantId?.ToString();
-            return string.IsNullOrEmpty(tenant) ? indexName : $"{indexName}_{tenant}";
+            return indexName.AppendTenant(_tenantProvider.TenantId);
         }
 
         private string RemoveTenant(string indexName)
         {
-            var tenant = _tenantProvider.TenantId?.ToString();
-            if (!string.IsNullOrEmpty(tenant) && indexName.EndsWith("_" + tenant))
-            {
-                return indexName.Substring(0, indexName.Length - tenant.Length - 1);
-            }
-            return indexName;
+            return indexName.RemoveTenant();
         }
 
         /// <summary>

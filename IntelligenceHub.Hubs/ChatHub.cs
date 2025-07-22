@@ -2,6 +2,7 @@
 using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
+using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -71,12 +72,15 @@ namespace IntelligenceHub.Hubs
                     return;
                 }
 
+                
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (!string.IsNullOrEmpty(errorMessage))
                 {
                     await Clients.Caller.SendAsync("broadcastMessage", errorMessage);
                     return;
                 }
+
+                completionRequest.ProfileOptions.Name = completionRequest.ProfileOptions.Name.AppendTenant(user.TenantId);
 
                 var response = _completionLogic.StreamCompletion(completionRequest);
                 await foreach (var chunk in response)

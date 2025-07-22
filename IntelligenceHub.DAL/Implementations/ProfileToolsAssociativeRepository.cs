@@ -3,6 +3,7 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.DAL.Tenant;
+using IntelligenceHub.Common.Extensions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -90,7 +91,8 @@ namespace IntelligenceHub.DAL.Implementations
         {
             foreach (var name in profileNames)
             {
-                var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Name == name && p.TenantId == _tenantProvider.TenantId);
+                var fullName = name.AppendTenant(_tenantProvider.TenantId);
+                var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Name == fullName && p.TenantId == _tenantProvider.TenantId);
                 if (profile != null && !await _context.ProfileTools.AnyAsync(pt => pt.ProfileID == profile.Id && pt.ToolID == toolId && pt.TenantId == _tenantProvider.TenantId))
                 {
                     _context.ProfileTools.Add(new DbProfileTool { ProfileID = profile.Id, ToolID = toolId, TenantId = _tenantProvider.TenantId.Value });
@@ -108,7 +110,8 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteToolAssociationAsync(int toolId, string profileName)
         {
-            var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Name == profileName && p.TenantId == _tenantProvider.TenantId);
+            var fullName = profileName.AppendTenant(_tenantProvider.TenantId);
+            var profile = await _context.Profiles.FirstOrDefaultAsync(p => p.Name == fullName && p.TenantId == _tenantProvider.TenantId);
             if (profile != null)
             {
                 var association = await _context.ProfileTools.FirstOrDefaultAsync(pt => pt.ToolID == toolId && pt.ProfileID == profile.Id && pt.TenantId == _tenantProvider.TenantId);
@@ -129,7 +132,8 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteProfileAssociationAsync(int profileId, string toolName)
         {
-            var tool = await _context.Tools.FirstOrDefaultAsync(t => t.Name == toolName && t.TenantId == _tenantProvider.TenantId);
+            var fullName = toolName.AppendTenant(_tenantProvider.TenantId);
+            var tool = await _context.Tools.FirstOrDefaultAsync(t => t.Name == fullName && t.TenantId == _tenantProvider.TenantId);
             if (tool != null)
             {
                 var association = await _context.ProfileTools.FirstOrDefaultAsync(pt => pt.ProfileID == profileId && pt.ToolID == tool.Id && pt.TenantId == _tenantProvider.TenantId);

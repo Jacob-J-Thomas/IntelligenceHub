@@ -1,6 +1,7 @@
 ﻿using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.DAL.Tenant;
+using IntelligenceHub.Common.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace IntelligenceHub.DAL.Implementations
@@ -27,7 +28,8 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The index's metadata.</returns>
         public async Task<DbIndexMetadata?> GetByNameAsync(string name)
         {
-            return await _dbSet.FirstOrDefaultAsync(im => im.Name == name && im.TenantId == _tenantProvider.TenantId);
+            var fullName = name.AppendTenant(_tenantProvider.TenantId);
+            return await _dbSet.FirstOrDefaultAsync(im => im.Name == fullName && im.TenantId == _tenantProvider.TenantId);
         }
     }
 }
