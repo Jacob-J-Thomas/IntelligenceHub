@@ -61,12 +61,12 @@ namespace IntelligenceHub.Controllers
             {
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
-                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(_tenantProvider.User!);
-                if (!usageResult.IsSuccess) return StatusCode(StatusCodes.Status429TooManyRequests, usageResult.ErrorMessage);
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
-                if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name; 
+                if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name;
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (errorMessage is not null) return BadRequest(errorMessage);
+                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(_tenantProvider.User!);
+                if (!usageResult.IsSuccess) return StatusCode(StatusCodes.Status429TooManyRequests, usageResult.ErrorMessage);
                 var response = await _completionLogic.ProcessCompletion(completionRequest);
                 if (response.IsSuccess) return Ok(response.Data);
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -100,12 +100,12 @@ namespace IntelligenceHub.Controllers
             {
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
-                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(_tenantProvider.User!);
-                if (!usageResult.IsSuccess) return StatusCode(StatusCodes.Status429TooManyRequests, usageResult.ErrorMessage);
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
                 if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name;
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (errorMessage is not null) return BadRequest(errorMessage);
+                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(_tenantProvider.User!);
+                if (!usageResult.IsSuccess) return StatusCode(StatusCodes.Status429TooManyRequests, usageResult.ErrorMessage);
                 var response = _completionLogic.StreamCompletion(completionRequest);
 
                 // set headers to return SSE

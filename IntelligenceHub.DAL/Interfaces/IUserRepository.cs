@@ -1,4 +1,5 @@
 using IntelligenceHub.DAL.Models;
+using System;
 
 namespace IntelligenceHub.DAL.Interfaces
 {
@@ -25,5 +26,14 @@ namespace IntelligenceHub.DAL.Interfaces
         /// Updates a user entity.
         /// </summary>
         Task<DbUser> UpdateAsync(DbUser user);
+
+        /// <summary>
+        /// Atomically increments the monthly request count if the quota is not exceeded.
+        /// </summary>
+        /// <param name="userId">The identifier of the user.</param>
+        /// <param name="now">The current timestamp used to determine the month.</param>
+        /// <param name="limit">The allowed monthly request quota.</param>
+        /// <returns><c>true</c> if the count was incremented; otherwise, <c>false</c>.</returns>
+        Task<bool> TryIncrementMonthlyRequestAsync(int userId, DateTime now, int limit);
     }
 }

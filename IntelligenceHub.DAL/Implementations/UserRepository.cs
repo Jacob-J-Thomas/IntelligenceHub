@@ -1,5 +1,6 @@
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
+using System;
 using Microsoft.EntityFrameworkCore;
 
 namespace IntelligenceHub.DAL.Implementations
@@ -42,6 +43,25 @@ namespace IntelligenceHub.DAL.Implementations
             await _context.SaveChangesAsync();
             await _context.Entry(user).ReloadAsync();
             return user;
+        }
+
+        /// <inheritdoc/>
+        public async Task<bool> TryIncrementMonthlyRequestAsync(int userId, DateTime now, int limit)
+        {
+            var monthStart = new DateTime(now.Year, now.Month, 1);
+            FormattableString query = $@"UPDATE Users
+SET
+    RequestMonthStart = CASE WHEN RequestMonthStart < {monthStart} THEN {monthStart} ELSE RequestMonthStart END,
+    RequestsThisMonth = CASE
+        WHEN RequestMonthStart < {monthStart} THEN 1
+        WHEN RequestsThisMonth < {limit} THEN RequestsThisMonth + 1
+        ELSE RequestsThisMonth
+    END
+WHERE Id = {userId}
+  AND (RequestMonthStart < {monthStart} OR RequestsThisMonth < {limit});";
+
+            var affected = await _context.Database.ExecuteSqlInterpolatedAsync(query);
+            return affected > 0;
         }
     }
 }
