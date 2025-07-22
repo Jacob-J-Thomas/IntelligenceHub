@@ -253,6 +253,7 @@ namespace IntelligenceHub.Business.Implementations
             if (profile == null) return APIResponseWrapper<List<string>>.Failure($"No tool with the name '{name}' was found.", APIResponseStatusCodes.NotFound);
 
             var toolNames = await _toolDb.GetProfileToolsAsync(name);
+            toolNames = toolNames.Select(t => t.RemoveTenant()).ToList();
             if (toolNames.Count > 0) return APIResponseWrapper<List<string>>.Success(toolNames);
             else return APIResponseWrapper<List<string>>.Success(new List<string>());
         }
@@ -268,6 +269,7 @@ namespace IntelligenceHub.Business.Implementations
             if (tool == null) return APIResponseWrapper<List<string>>.Failure($"No tool with the name '{name}' was found.", APIResponseStatusCodes.NotFound);
 
             var profileNames = await _toolDb.GetToolProfilesAsync(name);
+            profileNames = profileNames.Select(p => p.RemoveTenant()).ToList();
             if (profileNames.Count > 0) return APIResponseWrapper<List<string>>.Success(profileNames);
             else return APIResponseWrapper<List<string>>.Success(new List<string>());
         }
@@ -346,7 +348,7 @@ namespace IntelligenceHub.Business.Implementations
                 var tool = await _toolDb.GetByNameAsync(toolName);
                 if (tool is null) return APIResponseWrapper<List<string>>.Failure(_missingToolMessage + $"'{toolName}'", APIResponseStatusCodes.NotFound);
                 toolIDs.Add(tool.Id);
-                toolNames.Add(tool.Name);
+                toolNames.Add(tool.Name.RemoveTenant());
             }
             var profile = await _profileDb.GetByNameAsync(name);
             if (profile != null && toolIDs.Count > 0)
@@ -378,7 +380,7 @@ namespace IntelligenceHub.Business.Implementations
                 foreach (var association in associations)
                 {
                     var profileData = await _profileDb.GetAsync(association.ProfileID);
-                    if (profileData != null) persistingProfiles.Add(profileData.Name);
+                    if (profileData != null) persistingProfiles.Add(profileData.Name.RemoveTenant());
                 }
                 return APIResponseWrapper<List<string>>.Success(persistingProfiles);
             }
@@ -399,7 +401,7 @@ namespace IntelligenceHub.Business.Implementations
                 foreach (var tool in tools) await _profileToolsDb.DeleteProfileAssociationAsync(profile.Id, tool);
                 var existingAssociations = await _profileToolsDb.GetToolAssociationsAsync(profile.Id);
                 var toolNames = new List<string>();
-                foreach (var association in existingAssociations) toolNames.Add(association.Tool.Name);
+                foreach (var association in existingAssociations) toolNames.Add(association.Tool.Name.RemoveTenant());
                 return APIResponseWrapper<List<string>>.Success(toolNames);
             }
             return APIResponseWrapper<List<string>>.Failure(_missingToolMessage + $"'{name}'", APIResponseStatusCodes.NotFound);

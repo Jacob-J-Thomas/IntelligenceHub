@@ -58,7 +58,7 @@ namespace IntelligenceHub.DAL.Implementations
                 .Select(pt => pt.Tool.Name)
                 .ToListAsync();
 
-            return profileTools;
+            return profileTools.Select(t => t.RemoveTenant()).ToList();
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace IntelligenceHub.DAL.Implementations
                 .Select(pt => pt.Profile.Name)
                 .ToListAsync();
 
-            return toolProfiles;
+            return toolProfiles.Select(p => p.RemoveTenant()).ToList();
         }
     }
 }
