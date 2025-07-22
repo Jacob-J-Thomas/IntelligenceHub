@@ -11,9 +11,7 @@ using IntelligenceHub.Host.Config;
 using IntelligenceHub.Host.Logging;
 using IntelligenceHub.Host.Policies;
 using IntelligenceHub.Hubs;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Polly;
 using Polly.Extensions.Http;
@@ -234,27 +232,18 @@ namespace IntelligenceHub.Host
 
             #region Authentication
 
-            // Configure Auth
-            builder.Services.AddAuthentication(options =>
+            // Configure API key authentication
+            var authBuilder = builder.Services.AddAuthentication(options =>
             {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
-            {
-                options.Authority = authSettings.Domain;
-                options.Audience = authSettings.Audience;
-
-                // Specify the Role Claim Type if necessary
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    RoleClaimType = "roles"
-                };
+                options.DefaultAuthenticateScheme = "ApiKey";
+                options.DefaultChallengeScheme = "ApiKey";
             });
+
+            authBuilder.AddScheme<AuthenticationSchemeOptions, Host.Auth.ApiKeyAuthenticationHandler>("ApiKey", null);
 
             if (builder.Environment.IsDevelopment())
             {
-                builder.Services.AddAuthentication("BasicAuthentication")
-                    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+                authBuilder.AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
             }
 
             // Add role-based authorization policies
@@ -283,15 +272,13 @@ namespace IntelligenceHub.Host
                 // Enable annotations to set NSwag generated names for client methods
                 options.EnableAnnotations();
 
-                // Define the security scheme for bearer tokens
-                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                // Define the security scheme for API key authentication
+                options.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
                 {
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer",
-                    BearerFormat = "JWT",
+                    Name = "X-Api-Key",
+                    Type = SecuritySchemeType.ApiKey,
                     In = ParameterLocation.Header,
-                    Description = "Enter 'Bearer' followed by a space and the JWT token."
+                    Description = "API key used for authentication"
                 });
 
                 // Apply the security scheme globally
@@ -303,7 +290,7 @@ namespace IntelligenceHub.Host
                             Reference = new OpenApiReference
                             {
                                 Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
+                                Id = "ApiKey"
                             }
                         },
                         Array.Empty<string>()
