@@ -25,6 +25,7 @@ using IntelligenceHub.Host.Swagger;
 using IntelligenceHub.Business.Handlers;
 using Microsoft.AspNetCore.Authentication;
 using IntelligenceHub.DAL.Tenant;
+using Microsoft.Extensions.Options;
 
 namespace IntelligenceHub.Host
 {
@@ -95,10 +96,20 @@ namespace IntelligenceHub.Host
             // Clients and Client Factory
             builder.Services.AddSingleton<IAGIClientFactory, AGIClientFactory>();
             builder.Services.AddSingleton<IRagClientFactory, RagClientFactory>();
-            builder.Services.AddSingleton<IAGIClient, AzureAIClient>();
-            builder.Services.AddSingleton<OpenAIClient>();
-            builder.Services.AddSingleton<AzureAIClient>();
-            builder.Services.AddSingleton<AnthropicAIClient>();
+            builder.Services.AddSingleton<AzureAIClient>(sp =>
+                new AzureAIClient(
+                    sp.GetRequiredService<IOptionsMonitor<AGIClientSettings>>(),
+                    sp.GetRequiredService<IHttpClientFactory>(),
+                    AGIServiceHost.Azure));
+            builder.Services.AddSingleton<OpenAIClient>(sp =>
+                new OpenAIClient(
+                    sp.GetRequiredService<IOptionsMonitor<AGIClientSettings>>(),
+                    sp.GetRequiredService<IHttpClientFactory>()));
+            builder.Services.AddSingleton<AnthropicAIClient>(sp =>
+                new AnthropicAIClient(
+                    sp.GetRequiredService<IOptionsMonitor<AGIClientSettings>>(),
+                    sp.GetRequiredService<IHttpClientFactory>()));
+            builder.Services.AddSingleton<IAGIClient>(sp => sp.GetRequiredService<AzureAIClient>());
             builder.Services.AddSingleton<IToolClient, ToolClient>();
             builder.Services.AddSingleton<AzureAISearchServiceClient>();
             builder.Services.AddSingleton<WeaviateSearchServiceClient>();
