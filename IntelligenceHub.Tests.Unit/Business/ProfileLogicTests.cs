@@ -5,6 +5,7 @@ using IntelligenceHub.Business.Implementations;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
+using IntelligenceHub.DAL.Tenant;
 using Microsoft.Extensions.Options;
 using Moq;
 using static IntelligenceHub.Common.GlobalVariables;
@@ -19,6 +20,7 @@ namespace IntelligenceHub.Tests.Unit.Business
         private readonly Mock<IPropertyRepository> _mockPropertyRepository;
         private readonly Mock<IValidationHandler> _mockValidationHandler;
         private readonly Mock<IOptionsMonitor<Settings>> _mockIOptions;
+        private readonly Mock<ITenantProvider> _mockTenantProvider;
         private readonly ProfileLogic _profileLogic;
 
         public ProfileLogicTests()
@@ -29,6 +31,8 @@ namespace IntelligenceHub.Tests.Unit.Business
             _mockPropertyRepository = new Mock<IPropertyRepository>();
             _mockValidationHandler = new Mock<IValidationHandler>();
             _mockIOptions = new Mock<IOptionsMonitor<Settings>>();
+            _mockTenantProvider = new Mock<ITenantProvider>();
+            _mockTenantProvider.SetupProperty(tp => tp.TenantId, Guid.NewGuid());
 
             var settings = new Settings();
             _mockIOptions.Setup(m => m.CurrentValue).Returns(settings);
@@ -39,7 +43,8 @@ namespace IntelligenceHub.Tests.Unit.Business
                 _mockProfileToolsRepository.Object,
                 _mockToolRepository.Object,
                 _mockPropertyRepository.Object,
-                _mockValidationHandler.Object
+                _mockValidationHandler.Object,
+                _mockTenantProvider.Object
             );
         }
 

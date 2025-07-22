@@ -67,6 +67,16 @@ namespace IntelligenceHub.DAL
                 MaxMessageHistory = dbProfile.MaxMessageHistory,
             };
             profile.Logprobs = profile.TopLogprobs > 0 ? true : false;
+
+            profile.Name = profile.Name.RemoveTenant();
+            if (profile.Tools != null)
+            {
+                foreach (var t in profile.Tools)
+                {
+                    t.Function.Name = t.Function.Name.RemoveTenant();
+                }
+            }
+
             return profile;
         }
 
@@ -79,7 +89,7 @@ namespace IntelligenceHub.DAL
         /// <param name="existingProfile">Optional existing database profile entity.</param>
         /// <param name="profileUpdate">Optional profile DTO with updated values.</param>
         /// <returns>A database profile entity.</returns>
-        public static DbProfile MapToDbProfile(string profileName, string defaultAzureModel, DbProfile? existingProfile = null, Profile? profileUpdate = null)
+        public static DbProfile MapToDbProfile(string profileName, string defaultAzureModel, Guid? tenantId, DbProfile? existingProfile = null, Profile? profileUpdate = null)
         {
             if (existingProfile == null) existingProfile = new DbProfile();
 
@@ -94,7 +104,7 @@ namespace IntelligenceHub.DAL
                 if (host == AGIServiceHost.OpenAI) model = DefaultOpenAIModel;
             }
 
-            existingProfile.Name = profileName;
+            existingProfile.Name = profileName.AppendTenant(tenantId);
             existingProfile.ResponseFormat = profileUpdate?.ResponseFormat ?? existingProfile.ResponseFormat;
             existingProfile.User = profileUpdate?.User ?? existingProfile.User;
             existingProfile.SystemMessage = profileUpdate?.SystemMessage ?? existingProfile.SystemMessage;
@@ -150,6 +160,8 @@ namespace IntelligenceHub.DAL
                 tool.Function.Parameters.properties.Add(property.Name, convertedProp);
                 tool.Function.Parameters.required = dbTool.Required.ToStringArray();
             }
+
+            tool.Function.Name = tool.Function.Name.RemoveTenant();
             return tool;
         }
 
@@ -158,12 +170,12 @@ namespace IntelligenceHub.DAL
         /// </summary>
         /// <param name="tool">The tool DTO.</param>
         /// <returns>A database tool entity.</returns>
-        public static DbTool MapToDbTool(Tool tool)
+        public static DbTool MapToDbTool(Tool tool, Guid? tenantId)
         {
             return new DbTool()
             {
                 Id = tool.Id,
-                Name = tool.Function.Name,
+                Name = tool.Function.Name.AppendTenant(tenantId),
                 Description = tool.Function.Description ?? string.Empty,
                 Required = tool.Function.Parameters.required?.ToCommaSeparatedString() ?? string.Empty,
                 ExecutionUrl = tool.ExecutionUrl,
@@ -280,7 +292,7 @@ namespace IntelligenceHub.DAL
         /// <returns>An index metadata DTO.</returns>
         public static IndexMetadata MapFromDbIndexMetadata(DbIndexMetadata dbIndexData)
         {
-            return new IndexMetadata()
+            var metadata = new IndexMetadata()
             {
                 Name = dbIndexData.Name,
                 QueryType = dbIndexData.QueryType?.ConvertStringToQueryType() ?? QueryType.Simple,
@@ -307,6 +319,9 @@ namespace IntelligenceHub.DAL
                     Weights = DeserializeDbWeights(dbIndexData.ScoringWeights) ?? new Dictionary<string, double>()
                 }
             };
+
+            metadata.Name = metadata.Name.RemoveTenant();
+            return metadata;
         }
 
         /// <summary>
@@ -314,7 +329,7 @@ namespace IntelligenceHub.DAL
         /// </summary>
         /// <param name="indexData">The index metadata DTO.</param>
         /// <returns>A database index metadata entity.</returns>
-        public static DbIndexMetadata MapToDbIndexMetadata(IndexMetadata indexData)
+        public static DbIndexMetadata MapToDbIndexMetadata(IndexMetadata indexData, Guid? tenantId)
         {
             var defaultEmbeddingModel = indexData.RagHost == RagServiceHost.Azure ? DefaultAzureSearchEmbeddingModel : DefaultWeaviateEmbeddingModel;
             if (indexData.ScoringProfile == null || indexData.RagHost == RagServiceHost.Weaviate) indexData.ScoringProfile = new IndexScoringProfile();
@@ -323,7 +338,7 @@ namespace IntelligenceHub.DAL
             var chunkOverlap = indexData.ChunkOverlap ?? defaultChunkOverlap;
             return new DbIndexMetadata()
             {
-                Name = indexData.Name,
+                Name = indexData.Name.AppendTenant(tenantId),
                 QueryType = indexData.QueryType.ToString(),
                 GenerationHost = indexData.GenerationHost.ToString() ?? AGIServiceHost.None.ToString(),
                 RagHost = indexData.RagHost.ToString() ?? RagServiceHost.None.ToString(),
