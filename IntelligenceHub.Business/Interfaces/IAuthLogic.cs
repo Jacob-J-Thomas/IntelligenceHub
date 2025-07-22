@@ -1,4 +1,5 @@
 ﻿using IntelligenceHub.API.DTOs.Auth;
+using IntelligenceHub.DAL.Models;
 using System.Threading.Tasks;
 
 namespace IntelligenceHub.Business.Interfaces
@@ -12,12 +13,12 @@ namespace IntelligenceHub.Business.Interfaces
         /// Gets the default authentication token.
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the Auth0 response.</returns>
-        Task<Auth0Response?> GetDefaultAuthToken();
+        Task<Auth0Response?> GetDefaultAuthToken(DbUser user);
 
         /// <summary>
         /// Gets the admin authentication token.
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the Auth0 response.</returns>
-        Task<Auth0Response?> GetAdminAuthToken();
+        Task<Auth0Response?> GetAdminAuthToken(DbUser user);
     }
 }

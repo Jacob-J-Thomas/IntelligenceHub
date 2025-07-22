@@ -64,6 +64,7 @@ required_env_vars = [
     "AuthSettings_DefaultClientSecret",
     "AuthSettings_AdminClientId",
     "AuthSettings_AdminClientSecret",
+    "AuthSettings_JwtSecret",
     "AppInsightSettings_ConnectionString",
     "AGIClientSettings_AzureOpenAIServices_0_Endpoint",
     "AGIClientSettings_AzureOpenAIServices_0_Key",

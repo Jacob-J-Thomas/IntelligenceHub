@@ -1,6 +1,6 @@
 ﻿using IntelligenceHub.API.DTOs.Auth;
 using IntelligenceHub.Business.Interfaces;
-using IntelligenceHub.Client.Interfaces;
+using IntelligenceHub.DAL.Models;
 using System.Threading.Tasks;
 
 namespace IntelligenceHub.Business.Implementations
@@ -10,33 +10,33 @@ namespace IntelligenceHub.Business.Implementations
     /// </summary>
     public class AuthLogic : IAuthLogic
     {
-        private readonly IAIAuth0Client _auth0Client;
+        private readonly IJwtService _jwtService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthLogic"/> class.
         /// </summary>
-        /// <param name="auth0Client">The Auth0 client used for authentication requests.</param>
-        public AuthLogic(IAIAuth0Client auth0Client)
+        /// <param name="jwtService">Service used to create JWTs.</param>
+        public AuthLogic(IJwtService jwtService)
         {
-            _auth0Client = auth0Client;
+            _jwtService = jwtService;
         }
 
         /// <summary>
         /// Gets the default authentication token.
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the Auth0 response.</returns>
-        public async Task<Auth0Response?> GetDefaultAuthToken()
+        public Task<Auth0Response?> GetDefaultAuthToken(DbUser user)
         {
-            return await _auth0Client.RequestAuthToken();
+            return Task.FromResult<Auth0Response?>(_jwtService.GenerateToken(user, false));
         }
 
         /// <summary>
         /// Gets the admin authentication token.
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains the Auth0 response.</returns>
-        public async Task<Auth0Response?> GetAdminAuthToken()
+        public Task<Auth0Response?> GetAdminAuthToken(DbUser user)
         {
-            return await _auth0Client.RequestElevatedAuthToken();
+            return Task.FromResult<Auth0Response?>(_jwtService.GenerateToken(user, true));
         }
     }
 }
