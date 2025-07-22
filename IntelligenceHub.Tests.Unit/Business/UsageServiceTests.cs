@@ -23,7 +23,7 @@ namespace IntelligenceHub.Tests.Unit.Business
 
             Assert.False(result.IsSuccess);
             Assert.Equal(APIResponseStatusCodes.TooManyRequests, result.StatusCode);
-            repo.Verify(r => r.UpdateAsync(It.IsAny<DbUser>()), Times.Never);
+            repo.Verify(r => r.TryIncrementMonthlyRequestAsync(It.IsAny<int>(), It.IsAny<DateTime>(), FreeTierMonthlyLimit), Times.Never);
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             var result = await service.ValidateAndIncrementUsageAsync(user);
 
             Assert.True(result.IsSuccess);
-            repo.Verify(r => r.UpdateAsync(It.IsAny<DbUser>()), Times.Never);
+            repo.Verify(r => r.TryIncrementMonthlyRequestAsync(It.IsAny<int>(), It.IsAny<DateTime>(), FreeTierMonthlyLimit), Times.Never);
         }
 
         [Fact]
@@ -49,7 +49,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             var lastMonth = DateTime.UtcNow.AddMonths(-1);
             var user = new DbUser { Id = 3, AccessLevel = "Free", RequestsThisMonth = 0, RequestMonthStart = lastMonth };
             rate.Setup(r => r.IsRequestAllowed("3", false)).Returns(true);
-            repo.Setup(r => r.UpdateAsync(user)).ReturnsAsync(user);
+            repo.Setup(r => r.TryIncrementMonthlyRequestAsync(user.Id, It.IsAny<DateTime>(), FreeTierMonthlyLimit)).ReturnsAsync(true);
             var service = new UsageService(repo.Object, rate.Object);
 
             await service.ValidateAndIncrementUsageAsync(user);
@@ -57,7 +57,7 @@ namespace IntelligenceHub.Tests.Unit.Business
             var expectedStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             Assert.Equal(expectedStart, user.RequestMonthStart);
             Assert.Equal(1, user.RequestsThisMonth);
-            repo.Verify(r => r.UpdateAsync(user), Times.Once);
+            repo.Verify(r => r.TryIncrementMonthlyRequestAsync(user.Id, It.IsAny<DateTime>(), FreeTierMonthlyLimit), Times.Once);
         }
 
         [Fact]
@@ -82,14 +82,14 @@ namespace IntelligenceHub.Tests.Unit.Business
             var rate = new Mock<IRateLimitService>();
             var user = new DbUser { Id = 5, AccessLevel = "Free", RequestsThisMonth = 1, RequestMonthStart = DateTime.UtcNow };
             rate.Setup(r => r.IsRequestAllowed("5", false)).Returns(true);
-            repo.Setup(r => r.UpdateAsync(user)).ReturnsAsync(user);
+            repo.Setup(r => r.TryIncrementMonthlyRequestAsync(user.Id, It.IsAny<DateTime>(), FreeTierMonthlyLimit)).ReturnsAsync(true);
             var service = new UsageService(repo.Object, rate.Object);
 
             var result = await service.ValidateAndIncrementUsageAsync(user);
 
             Assert.True(result.IsSuccess);
             Assert.Equal(2, user.RequestsThisMonth);
-            repo.Verify(r => r.UpdateAsync(user), Times.Once);
+            repo.Verify(r => r.TryIncrementMonthlyRequestAsync(user.Id, It.IsAny<DateTime>(), FreeTierMonthlyLimit), Times.Once);
         }
     }
 }

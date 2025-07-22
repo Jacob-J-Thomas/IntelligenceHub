@@ -97,6 +97,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
             Assert.Equal(StatusCodes.Status400BadRequest, badRequestResult.StatusCode);
             Assert.Equal(errorMessage, badRequestResult.Value);
+            _mockUsageService.Verify(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>()), Times.Never);
         }
 
         [Fact]
@@ -231,6 +232,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
             Assert.Equal(StatusCodes.Status400BadRequest, badRequestResult.StatusCode);
             Assert.Equal(errorMessage, badRequestResult.Value);
+            _mockUsageService.Verify(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>()), Times.Never);
         }
 
         [Fact]

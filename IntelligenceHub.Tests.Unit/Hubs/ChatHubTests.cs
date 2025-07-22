@@ -75,6 +75,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
 
             clientProxy.Verify(p => p.SendCoreAsync("broadcastMessage", It.Is<object[]>(o => (string)o[0] == error), default), Times.Once);
             completionMock.Verify(c => c.StreamCompletion(It.IsAny<CompletionRequest>()), Times.Never);
+            usageMock.Verify(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>()), Times.Never);
         }
 
         [Fact]

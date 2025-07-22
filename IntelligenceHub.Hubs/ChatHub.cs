@@ -64,17 +64,17 @@ namespace IntelligenceHub.Hubs
                 _tenantProvider.TenantId = user.TenantId;
                 _tenantProvider.User = user;
 
-                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(user);
-                if (!usageResult.IsSuccess)
-                {
-                    await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {APIResponseStatusCodes.TooManyRequests}. Error message: {usageResult.ErrorMessage}");
-                    return;
-                }
-
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (!string.IsNullOrEmpty(errorMessage))
                 {
                     await Clients.Caller.SendAsync("broadcastMessage", errorMessage);
+                    return;
+                }
+
+                var usageResult = await _usageService.ValidateAndIncrementUsageAsync(user);
+                if (!usageResult.IsSuccess)
+                {
+                    await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {APIResponseStatusCodes.TooManyRequests}. Error message: {usageResult.ErrorMessage}");
                     return;
                 }
 

@@ -38,19 +38,23 @@ namespace IntelligenceHub.Business.Implementations
             }
 
             var now = DateTime.UtcNow;
-            if (user.RequestMonthStart.Month != now.Month || user.RequestMonthStart.Year != now.Year)
-            {
-                user.RequestMonthStart = new DateTime(now.Year, now.Month, 1);
-                user.RequestsThisMonth = 0;
-            }
 
-            if (user.RequestsThisMonth >= FreeTierMonthlyLimit)
+            var incremented = await _userRepository.TryIncrementMonthlyRequestAsync(user.Id, now, FreeTierMonthlyLimit);
+            if (!incremented)
             {
                 return APIResponseWrapper<bool>.Failure("The monthly free tier quota has been exceeded.", APIResponseStatusCodes.TooManyRequests);
             }
 
-            user.RequestsThisMonth++;
-            await _userRepository.UpdateAsync(user);
+            if (user.RequestMonthStart.Month != now.Month || user.RequestMonthStart.Year != now.Year)
+            {
+                user.RequestMonthStart = new DateTime(now.Year, now.Month, 1);
+                user.RequestsThisMonth = 1;
+            }
+            else
+            {
+                user.RequestsThisMonth++;
+            }
+
             return APIResponseWrapper<bool>.Success(true);
         }
     }
