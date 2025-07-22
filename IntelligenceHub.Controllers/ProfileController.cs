@@ -48,6 +48,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrWhiteSpace(name)) return BadRequest("Invalid route data. Please check your input.");
+                name = AppendTenant(name);
                 var response = await _profileLogic.GetProfile(name);
                 if (!response.IsSuccess) return NotFound(response.ErrorMessage);
 
@@ -106,6 +107,7 @@ namespace IntelligenceHub.Controllers
             {
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
+                profileDto.Name = AppendTenant(profileDto.Name);
                 var updateResponse = await _profileLogic.CreateOrUpdateProfile(profileDto);
                 if (!updateResponse.IsSuccess)
                 {
@@ -144,6 +146,8 @@ namespace IntelligenceHub.Controllers
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: '{name}'.");
                 if (tools is null || tools.Count < 1) return BadRequest($"Invalid request. The 'Tools' property cannot be null or empty: '{tools}'.");
+                name = AppendTenant(name);
+                tools = tools.Select(AppendTenant).ToList();
                 var response = await _profileLogic.AddProfileToTools(name, tools);
                 if (response.IsSuccess)
                 {
@@ -179,6 +183,8 @@ namespace IntelligenceHub.Controllers
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: '{name}'.");
                 if (tools is null || tools.Count < 1) return BadRequest($"Invalid request. The 'Tools' property cannot be null or empty: '{tools}'.");
+                name = AppendTenant(name);
+                tools = tools.Select(AppendTenant).ToList();
                 var response = await _profileLogic.DeleteProfileAssociations(name, tools);
 
                 if (response.IsSuccess) return Ok(response.Data);
@@ -209,6 +215,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrWhiteSpace(name)) return BadRequest($"Invalid request. Please check the route parameter for the profile name: {name}.");
+                name = AppendTenant(name);
                 var response = await _profileLogic.DeleteProfile(name);
 
                 if (!response.IsSuccess)

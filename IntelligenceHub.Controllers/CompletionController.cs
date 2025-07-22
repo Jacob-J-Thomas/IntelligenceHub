@@ -64,7 +64,8 @@ namespace IntelligenceHub.Controllers
                 var usageResult = await _usageService.ValidateAndIncrementUsageAsync(_tenantProvider.User!);
                 if (!usageResult.IsSuccess) return StatusCode(StatusCodes.Status429TooManyRequests, usageResult.ErrorMessage);
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
-                if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name; 
+                if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = AppendTenant(name);
+                else completionRequest.ProfileOptions.Name = AppendTenant(completionRequest.ProfileOptions.Name);
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (errorMessage is not null) return BadRequest(errorMessage);
                 var response = await _completionLogic.ProcessCompletion(completionRequest);
@@ -103,7 +104,8 @@ namespace IntelligenceHub.Controllers
                 var usageResult = await _usageService.ValidateAndIncrementUsageAsync(_tenantProvider.User!);
                 if (!usageResult.IsSuccess) return StatusCode(StatusCodes.Status429TooManyRequests, usageResult.ErrorMessage);
                 name = name?.Replace("{name}", string.Empty); // come up with a more long term fix for this
-                if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = name;
+                if (!string.IsNullOrEmpty(name)) completionRequest.ProfileOptions.Name = AppendTenant(name);
+                else completionRequest.ProfileOptions.Name = AppendTenant(completionRequest.ProfileOptions.Name);
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (errorMessage is not null) return BadRequest(errorMessage);
                 var response = _completionLogic.StreamCompletion(completionRequest);
