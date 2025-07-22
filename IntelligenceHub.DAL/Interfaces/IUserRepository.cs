@@ -22,6 +22,13 @@ namespace IntelligenceHub.DAL.Interfaces
         Task<DbUser?> GetByApiTokenAsync(string apiToken);
 
         /// <summary>
+        /// Retrieves a user entity by tenant identifier.
+        /// </summary>
+        /// <param name="tenantId">Tenant identifier associated with the user.</param>
+        /// <returns>The user if found; otherwise null.</returns>
+        Task<DbUser?> GetByTenantIdAsync(Guid tenantId);
+
+        /// <summary>
         /// Updates a user entity.
         /// </summary>
         Task<DbUser> UpdateAsync(DbUser user);

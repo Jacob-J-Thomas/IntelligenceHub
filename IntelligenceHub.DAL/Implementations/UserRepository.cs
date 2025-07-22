@@ -35,6 +35,12 @@ namespace IntelligenceHub.DAL.Implementations
         }
 
         /// <inheritdoc/>
+        public async Task<DbUser?> GetByTenantIdAsync(Guid tenantId)
+        {
+            return await _dbSet.FirstOrDefaultAsync(u => u.TenantId == tenantId);
+        }
+
+        /// <inheritdoc/>
         public async Task<DbUser> UpdateAsync(DbUser user)
         {
             _dbSet.Attach(user);

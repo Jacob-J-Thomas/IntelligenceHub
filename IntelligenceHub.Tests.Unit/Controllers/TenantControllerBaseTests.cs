@@ -4,6 +4,7 @@ using IntelligenceHub.DAL.Models;
 using IntelligenceHub.Business.Interfaces;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using System;
 using Moq;
 using Xunit;
 using IntelligenceHub.DAL.Tenant;
@@ -43,9 +44,10 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         public async Task SetUserTenantContextAsync_ReturnsFailure_WhenUserNotFound()
         {
             var ctx = new DefaultHttpContext();
-            ctx.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "sub") }));
+            var tenantId = Guid.NewGuid();
+            ctx.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(TenantIdClaim, tenantId.ToString()) }));
             _controller.ControllerContext.HttpContext = ctx;
-            _userLogic.Setup(u => u.GetUserBySubAsync("sub")).ReturnsAsync((DbUser?)null);
+            _userLogic.Setup(u => u.GetUserByTenantIdAsync(tenantId)).ReturnsAsync((DbUser?)null);
 
             var result = await _controller.Invoke();
 
@@ -58,9 +60,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         {
             var user = new DbUser { TenantId = Guid.NewGuid(), Sub = "sub" };
             var ctx = new DefaultHttpContext();
-            ctx.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "sub") }));
+            ctx.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(TenantIdClaim, user.TenantId.ToString()) }));
             _controller.ControllerContext.HttpContext = ctx;
-            _userLogic.Setup(u => u.GetUserBySubAsync("sub")).ReturnsAsync(user);
+            _userLogic.Setup(u => u.GetUserByTenantIdAsync(user.TenantId)).ReturnsAsync(user);
 
             var result = await _controller.Invoke();
 

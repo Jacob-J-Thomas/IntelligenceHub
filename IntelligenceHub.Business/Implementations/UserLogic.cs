@@ -2,6 +2,7 @@
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -32,6 +33,12 @@ namespace IntelligenceHub.Business.Implementations
         {
             var hash = HashApiKey(apiToken);
             return await _userRepository.GetByApiTokenAsync(hash);
+        }
+
+        /// <inheritdoc/>
+        public async Task<DbUser?> GetUserByTenantIdAsync(Guid tenantId)
+        {
+            return await _userRepository.GetByTenantIdAsync(tenantId);
         }
 
         /// <summary>

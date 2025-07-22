@@ -6,6 +6,7 @@ using IntelligenceHub.DAL.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
+using System;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Hubs
@@ -45,22 +46,21 @@ namespace IntelligenceHub.Hubs
         {
             try
             {
-                var sub = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
-                          Context.User?.FindFirst("sub")?.Value;
-                if (string.IsNullOrEmpty(sub))
+                var tenantClaim = Context.User?.FindFirst(TenantIdClaim)?.Value;
+                if (tenantClaim is null || !Guid.TryParse(tenantClaim, out var tenantId))
                 {
                     await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {500}. Error message: {DefaultExceptionMessage}");
                     return;
                 }
 
-                var user = await _userLogic.GetUserBySubAsync(sub);
+                var user = await _userLogic.GetUserByTenantIdAsync(tenantId);
                 if (user == null)
                 {
                     await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {500}. Error message: {DefaultExceptionMessage}");
                     return;
                 }
 
-                _tenantProvider.TenantId = user.TenantId;
+                _tenantProvider.TenantId = tenantId;
                 _tenantProvider.User = user;
 
                 var usageResult = await _usageService.ValidateAndIncrementUsageAsync(user);

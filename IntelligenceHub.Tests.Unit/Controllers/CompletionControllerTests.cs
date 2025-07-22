@@ -10,6 +10,7 @@ using Moq;
 using Newtonsoft.Json;
 using IntelligenceHub.DAL.Models;
 using System.Security.Claims;
+using System;
 using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.DAL.Tenant;
@@ -43,8 +44,8 @@ namespace IntelligenceHub.Tests.Unit.Controllers
                               .ReturnsAsync(APIResponseWrapper<bool>.Success(true));
 
             var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
-            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
-            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
+            _mockUserLogic.Setup(u => u.GetUserByTenantIdAsync(It.IsAny<Guid>())).ReturnsAsync(testUser);
+            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(TenantIdClaim, testUser.TenantId.ToString()) }));
             _mockHttpContext.Setup(c => c.User).Returns(claims);
 
             // Initialize the controller with mocked dependencies
@@ -158,7 +159,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         public async Task CompletionStandard_Returns500_WhenTenantResolutionFails()
         {
             // Arrange
-            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+            _mockUserLogic.Setup(u => u.GetUserByTenantIdAsync(It.IsAny<Guid>())).ReturnsAsync((DbUser?)null);
             var request = new CompletionRequest { ProfileOptions = new Profile { Name = "p" } };
 
             // Act
@@ -255,7 +256,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         [Fact]
         public async Task CompletionStreaming_Returns500_WhenTenantResolutionFails()
         {
-            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+            _mockUserLogic.Setup(u => u.GetUserByTenantIdAsync(It.IsAny<Guid>())).ReturnsAsync((DbUser?)null);
             var request = new CompletionRequest { ProfileOptions = new Profile { Name = "p" } };
 
             var result = await _controller.CompletionStreaming("p", request);

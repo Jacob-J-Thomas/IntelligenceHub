@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using System;
 using Moq;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.DAL.Tenant;
@@ -31,8 +32,8 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _httpContext = new Mock<HttpContext>();
 
             var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
-            _userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
-            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
+            _userLogicMock.Setup(u => u.GetUserByTenantIdAsync(It.IsAny<Guid>())).ReturnsAsync(testUser);
+            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(TenantIdClaim, testUser.TenantId.ToString()) }));
             _httpContext.Setup(c => c.User).Returns(claims);
 
             _controller = new ToolController(_profileLogicMock.Object, _userLogicMock.Object, _tenantProvider.Object);

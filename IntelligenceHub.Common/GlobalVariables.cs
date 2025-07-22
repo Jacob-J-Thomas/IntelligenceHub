@@ -193,6 +193,11 @@
         public const string ElevatedAuthPolicy = "AdminPolicy";
 
         /// <summary>
+        /// The claim type containing the tenant identifier.
+        /// </summary>
+        public const string TenantIdClaim = "tenant_id";
+
+        /// <summary>
         /// The system message for RAG requests.
         /// </summary>
         public const string RagMetadataGenSystemMessage =
