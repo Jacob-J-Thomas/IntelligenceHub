@@ -48,6 +48,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
+                name = AppendTenant(name);
                 var response = await _profileLogic.GetTool(name);
 
                 if (response.IsSuccess) return Ok(response.Data);
@@ -106,6 +107,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
+                name = AppendTenant(name);
                 var response = await _profileLogic.GetToolProfileAssociations(name);
                 if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
                 return Ok(response.Data ?? new List<string>());
@@ -133,6 +135,7 @@ namespace IntelligenceHub.Controllers
             {
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
+                foreach (var tool in toolList) tool.Function.Name = AppendTenant(tool.Function.Name);
                 var response = await _profileLogic.CreateOrUpdateTools(toolList);
                 if (!response.IsSuccess) return BadRequest(response.ErrorMessage);
                 else return Ok(toolList);
@@ -164,6 +167,8 @@ namespace IntelligenceHub.Controllers
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
                 if (profiles == null || profiles.Count < 1) return BadRequest("Invalid request. 'Profiles' property cannot be null or empty.");
+                name = AppendTenant(name);
+                profiles = profiles.Select(AppendTenant).ToList();
                 var response = await _profileLogic.AddToolToProfiles(name, profiles);
                 if (response.IsSuccess)
                 {
@@ -201,6 +206,8 @@ namespace IntelligenceHub.Controllers
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
                 if (profiles == null || profiles.Count < 1) return BadRequest("Invalid request. 'Profiles' property cannot be null or empty.");
+                name = AppendTenant(name);
+                profiles = profiles.Select(AppendTenant).ToList();
                 var response = await _profileLogic.DeleteToolAssociations(name, profiles);
                 if (response.IsSuccess) return Ok(response.Data);
                 else return NotFound(response.ErrorMessage);
@@ -230,6 +237,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(name)) return BadRequest("Invalid request. Please check the route parameter for the profile name.");
+                name = AppendTenant(name);
                 var response = await _profileLogic.DeleteTool(name);
                 if (response.IsSuccess) return NoContent();
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);

@@ -51,6 +51,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+                index = AppendTenant(index);
                 var response = await _ragLogic.GetRagIndex(index);
                 if (response.IsSuccess) return Ok(response.Data);
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -106,6 +107,7 @@ namespace IntelligenceHub.Controllers
                 if (indexDefinition is null) return BadRequest("The request body is malformed.");
                 if (!_featureFlags.UseAzureAISearch && indexDefinition.RagHost == RagServiceHost.Azure)
                     return BadRequest("Azure is not a supported RAG host for your pricing tier.");
+                indexDefinition.Name = AppendTenant(indexDefinition.Name);
                 var response = await _ragLogic.CreateIndex(indexDefinition);
                 if (response.IsSuccess) return Ok(indexDefinition);
                 else if (response.StatusCode == APIResponseStatusCodes.BadRequest) return BadRequest(response.ErrorMessage);
@@ -138,6 +140,7 @@ namespace IntelligenceHub.Controllers
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (indexDefinition is null) return BadRequest("The request body is malformed.");
                 if (!_featureFlags.UseAzureAISearch && indexDefinition.RagHost == RagServiceHost.Azure) return BadRequest("Azure is not a supported RAG host for your pricing tier.");
+                indexDefinition.Name = AppendTenant(indexDefinition.Name);
                 var response = await _ragLogic.ConfigureIndex(indexDefinition);
                 if (response.IsSuccess) return Ok(indexDefinition);
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -170,6 +173,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(query)) return BadRequest("The required route parameter, 'query', is null or empty.");
+                index = AppendTenant(index);
                 var response = await _ragLogic.QueryIndex(index, query);
                 if (response.IsSuccess) return Ok(response.Data);
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -200,6 +204,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+                index = AppendTenant(index);
                 var response = await _ragLogic.RunIndexUpdate(index);
                 if (response.IsSuccess) return NoContent();
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -231,6 +236,7 @@ namespace IntelligenceHub.Controllers
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+                index = AppendTenant(index);
                 var response = await _ragLogic.DeleteIndex(index);
                 if (response.IsSuccess) return NoContent();
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -265,6 +271,7 @@ namespace IntelligenceHub.Controllers
                 if (page < 1) return BadRequest("Page must be 1 or greater");
                 if (count < 1) return BadRequest("Count must be 1 or greater");
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'");
+                index = AppendTenant(index);
 
                 var response = await _ragLogic.GetAllDocuments(index, count, page);
                 if (response.IsSuccess) return Ok(response.Data ?? new List<IndexDocument>());
@@ -295,6 +302,7 @@ namespace IntelligenceHub.Controllers
             {
                 var tenantResult = await SetUserTenantContextAsync();
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
+                index = AppendTenant(index);
                 var response = await _ragLogic.GetDocument(index, document);
                 if (response.IsSuccess) return Ok(response.Data);
                 else if (response.StatusCode == APIResponseStatusCodes.NotFound) return NotFound(response.ErrorMessage);
@@ -327,6 +335,7 @@ namespace IntelligenceHub.Controllers
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 if (documentUpsertRequest == null || documentUpsertRequest.Documents.Count < 1) return BadRequest("The request body is malformed or contains less than 1 document.");
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'.");
+                index = AppendTenant(index);
                 foreach (var doc in documentUpsertRequest.Documents) if (doc.Title.Contains('/') || doc.Title.Contains('\\')) return BadRequest($"Document titles cannot contain slashes. Document: {doc.Title}");
                 var response = await _ragLogic.UpsertDocuments(index, documentUpsertRequest);
                 if (response.IsSuccess) return Ok(documentUpsertRequest);
@@ -361,6 +370,7 @@ namespace IntelligenceHub.Controllers
                 if (!tenantResult.IsSuccess) return StatusCode(StatusCodes.Status500InternalServerError, tenantResult.ErrorMessage);
                 var documents = commaDelimitedDocNames.ToStringArray();
                 if (string.IsNullOrEmpty(index)) return BadRequest($"Invalid index name: '{index}'.");
+                index = AppendTenant(index);
                 if (documents.Length < 1) return BadRequest("No document names were provided in the request route.");
                 var response = await _ragLogic.DeleteDocuments(index, documents);
                 if (response.IsSuccess) return Ok(response.Data);

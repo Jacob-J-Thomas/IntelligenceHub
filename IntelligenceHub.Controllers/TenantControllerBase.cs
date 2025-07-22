@@ -41,5 +41,17 @@ namespace IntelligenceHub.Controllers
 
             return APIResponseWrapper<Guid>.Success(user.TenantId);
         }
+
+        /// <summary>
+        /// Appends the current tenant identifier to a name if it is not already present.
+        /// </summary>
+        /// <param name="name">The base name.</param>
+        /// <returns>The name with the tenant identifier appended.</returns>
+        protected string AppendTenant(string name)
+        {
+            var tenant = _tenantProvider.TenantId?.ToString();
+            if (string.IsNullOrEmpty(tenant)) return name;
+            return name.EndsWith("_" + tenant) ? name : $"{name}_{tenant}";
+        }
     }
 }
