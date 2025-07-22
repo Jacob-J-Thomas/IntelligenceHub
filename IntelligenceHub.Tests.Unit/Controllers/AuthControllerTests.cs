@@ -34,8 +34,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         {
             // Arrange
             var token = new Auth0Response { AccessToken = "admin", ExpiresIn = 3600, TokenType = "Bearer" };
-            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(new DbUser());
-            _authLogicMock.Setup(x => x.GetAdminAuthToken()).ReturnsAsync(token);
+            var user = new DbUser();
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(user);
+            _authLogicMock.Setup(x => x.GetAdminAuthToken(user)).ReturnsAsync(token);
 
             // Act
             var result = await _sut.GetAdminToken(ValidKey);
@@ -63,8 +64,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         public async Task GetAdminToken_ReturnsUnauthorized_WhenTokenNull()
         {
             // Arrange
-            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(new DbUser());
-            _authLogicMock.Setup(x => x.GetAdminAuthToken()).ReturnsAsync((Auth0Response)null);
+            var user = new DbUser();
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(user);
+            _authLogicMock.Setup(x => x.GetAdminAuthToken(user)).ReturnsAsync((Auth0Response)null);
 
             // Act
             var result = await _sut.GetAdminToken(ValidKey);
@@ -77,8 +79,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         public async Task GetAdminToken_ReturnsInternalServerError_OnException()
         {
             // Arrange
-            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(new DbUser());
-            _authLogicMock.Setup(x => x.GetAdminAuthToken()).ThrowsAsync(new Exception("boom"));
+            var user = new DbUser();
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(user);
+            _authLogicMock.Setup(x => x.GetAdminAuthToken(user)).ThrowsAsync(new Exception("boom"));
 
             // Act
             var result = await _sut.GetAdminToken(ValidKey);
@@ -96,8 +99,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         {
             // Arrange
             var token = new Auth0Response { AccessToken = "default", ExpiresIn = 3600, TokenType = "Bearer" };
-            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(new DbUser());
-            _authLogicMock.Setup(x => x.GetDefaultAuthToken()).ReturnsAsync(token);
+            var user = new DbUser();
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(user);
+            _authLogicMock.Setup(x => x.GetDefaultAuthToken(user)).ReturnsAsync(token);
 
             // Act
             var result = await _sut.GetDefaultToken(ValidKey);
@@ -125,8 +129,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         public async Task GetDefaultToken_ReturnsUnauthorized_WhenTokenNull()
         {
             // Arrange
-            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(new DbUser());
-            _authLogicMock.Setup(x => x.GetDefaultAuthToken()).ReturnsAsync((Auth0Response)null);
+            var user = new DbUser();
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(user);
+            _authLogicMock.Setup(x => x.GetDefaultAuthToken(user)).ReturnsAsync((Auth0Response)null);
 
             // Act
             var result = await _sut.GetDefaultToken(ValidKey);
@@ -139,8 +144,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         public async Task GetDefaultToken_ReturnsInternalServerError_OnException()
         {
             // Arrange
-            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(new DbUser());
-            _authLogicMock.Setup(x => x.GetDefaultAuthToken()).ThrowsAsync(new Exception());
+            var user = new DbUser();
+            _userLogicMock.Setup(x => x.GetUserByApiTokenAsync(ValidKey)).ReturnsAsync(user);
+            _authLogicMock.Setup(x => x.GetDefaultAuthToken(user)).ThrowsAsync(new Exception());
 
             // Act
             var result = await _sut.GetDefaultToken(ValidKey);

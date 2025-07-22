@@ -44,6 +44,11 @@ namespace IntelligenceHub.Common.Config
         /// Gets or sets the administrator client secret.
         /// </summary>
         public string AdminClientSecret { get; set; }
+
+        /// <summary>
+        /// Gets or sets the secret used to sign JWTs.
+        /// </summary>
+        public string JwtSecret { get; set; }
     }
 }
 
