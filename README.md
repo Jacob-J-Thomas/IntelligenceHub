@@ -142,12 +142,8 @@ The below resources are the bare minimum requirements to run the API and get a `
 
 ## Authentication
 
-The API uses JWT bearer authentication. Obtain a token using your API key with one of the following endpoints:
-
-1. `GET /auth/defaulttoken` – returns a standard token for typical API access.
-2. `GET /auth/admintoken` – returns an elevated token for administrative actions.
-
-Send your API key in the `X-Api-Key` header. The response payload is an `Auth0Response` containing the `access_token`. Include this token in subsequent requests using the `Authorization: Bearer {token}` header.
+All endpoints are secured using API key authentication. Include your key in the
+`X-Api-Key` header when calling the API. No additional login step is required.
 
 ## Feature Flags
 
@@ -1851,7 +1847,6 @@ The project relies on the following third-party packages and libraries:
 - **DotNetEnv**: [MIT License](https://github.com/tonerdo/dotnet-env/blob/master/LICENSE)
 - **Microsoft.ApplicationInsights.AspNetCore**: [MIT License](https://github.com/microsoft/ApplicationInsights-dotnet/blob/develop/LICENSE)
 - **Microsoft.AspNet.Mvc**: [Apache License 2.0](https://github.com/aspnet/AspNetWebStack/blob/main/LICENSE.txt)
-- **Microsoft.AspNetCore.Authentication.JwtBearer**: [MIT License](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt)
 - **Microsoft.AspNetCore.Mvc.Core**: [MIT License](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt)
 - **Microsoft.AspNetCore.SignalR.Common**: [MIT License](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt)
 - **Microsoft.AspNetCore.SignalR.Core**: [MIT License](https://github.com/dotnet/aspnetcore/blob/main/LICENSE.txt)

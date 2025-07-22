@@ -3,7 +3,6 @@ using IntelligenceHub.Controllers;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.Business.Interfaces;
 using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
 using Moq;
 using Xunit;
 using IntelligenceHub.DAL.Tenant;
@@ -29,7 +28,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         }
 
         [Fact]
-        public async Task SetUserTenantContextAsync_ReturnsFailure_WhenClaimMissing()
+        public async Task SetUserTenantContextAsync_ReturnsFailure_WhenKeyMissing()
         {
             _controller.ControllerContext.HttpContext = new DefaultHttpContext();
 
@@ -43,9 +42,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         public async Task SetUserTenantContextAsync_ReturnsFailure_WhenUserNotFound()
         {
             var ctx = new DefaultHttpContext();
-            ctx.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "sub") }));
+            ctx.Request.Headers["X-Api-Key"] = "key";
             _controller.ControllerContext.HttpContext = ctx;
-            _userLogic.Setup(u => u.GetUserBySubAsync("sub")).ReturnsAsync((DbUser?)null);
+            _userLogic.Setup(u => u.GetUserByApiTokenAsync("key")).ReturnsAsync((DbUser?)null);
 
             var result = await _controller.Invoke();
 
@@ -58,9 +57,9 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         {
             var user = new DbUser { TenantId = Guid.NewGuid(), Sub = "sub" };
             var ctx = new DefaultHttpContext();
-            ctx.User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "sub") }));
+            ctx.Request.Headers["X-Api-Key"] = "key";
             _controller.ControllerContext.HttpContext = ctx;
-            _userLogic.Setup(u => u.GetUserBySubAsync("sub")).ReturnsAsync(user);
+            _userLogic.Setup(u => u.GetUserByApiTokenAsync("key")).ReturnsAsync(user);
 
             var result = await _controller.Invoke();
 
