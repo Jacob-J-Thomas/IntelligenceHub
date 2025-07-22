@@ -5,21 +5,23 @@ using Microsoft.Extensions.Configuration;
 using Moq;
 using System.Security.Cryptography;
 using System.Text;
+using System;
 
 namespace IntelligenceHub.Tests.Unit.Business
 {
     public class UserLogicTests
     {
         [Fact]
-        public async Task GetUserBySubAsync_ReturnsRepositoryResult()
+        public async Task GetUserByTenantIdAsync_ReturnsRepositoryResult()
         {
             var config = new ConfigurationBuilder().Build();
             var repo = new Mock<IUserRepository>();
             var user = new DbUser();
-            repo.Setup(r => r.GetBySubAsync("sub")).ReturnsAsync(user);
+            var tenantId = Guid.NewGuid();
+            repo.Setup(r => r.GetByTenantIdAsync(tenantId)).ReturnsAsync(user);
 
             var logic = new UserLogic(repo.Object, config);
-            var result = await logic.GetUserBySubAsync("sub");
+            var result = await logic.GetUserByTenantIdAsync(tenantId);
 
             Assert.Same(user, result);
         }

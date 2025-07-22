@@ -6,6 +6,7 @@ using IntelligenceHub.DAL.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System;
 using Moq;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.DAL.Tenant;
@@ -30,8 +31,8 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _httpContext = new Mock<HttpContext>();
 
             var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
-            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
-            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
+            _mockUserLogic.Setup(u => u.GetUserByTenantIdAsync(It.IsAny<Guid>())).ReturnsAsync(testUser);
+            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(TenantIdClaim, testUser.TenantId.ToString()) }));
             _httpContext.Setup(c => c.User).Returns(claims);
 
             _controller = new RagController(_mockRagLogic.Object, _mockUserLogic.Object, _tenantProvider.Object, _mockFeatureFlags.Object);
@@ -370,7 +371,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         [Fact]
         public async Task QueryIndex_ReturnsStatus500_WhenTenantResolutionFails()
         {
-            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+            _mockUserLogic.Setup(u => u.GetUserByTenantIdAsync(It.IsAny<Guid>())).ReturnsAsync((DbUser?)null);
 
             var result = await _controller.QueryIndex("index", "q");
 

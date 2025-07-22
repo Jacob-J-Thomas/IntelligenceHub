@@ -2,6 +2,7 @@ using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.API.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.DAL.Tenant;
 
@@ -26,22 +27,22 @@ namespace IntelligenceHub.Controllers
         /// </summary>
         protected async Task<APIResponseWrapper<Guid>> SetUserTenantContextAsync()
         {
-            var sub = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "sub")?.Value;
-            if (string.IsNullOrEmpty(sub))
+            var tenantClaim = User.Claims.FirstOrDefault(c => c.Type == TenantIdClaim)?.Value;
+            if (tenantClaim is null || !Guid.TryParse(tenantClaim, out var tenantId))
             {
                 return APIResponseWrapper<Guid>.Failure("The user's tenant couldn't be resolved.", APIResponseStatusCodes.InternalError);
             }
 
-            var user = await _userLogic.GetUserBySubAsync(sub);
+            var user = await _userLogic.GetUserByTenantIdAsync(tenantId);
             if (user == null)
             {
                 return APIResponseWrapper<Guid>.Failure("The user's tenant couldn't be resolved.", APIResponseStatusCodes.InternalError);
             }
 
-            _tenantProvider.TenantId = user.TenantId;
+            _tenantProvider.TenantId = tenantId;
             _tenantProvider.User = user;
 
-            return APIResponseWrapper<Guid>.Success(user.TenantId);
+            return APIResponseWrapper<Guid>.Success(tenantId);
         }
     }
 }

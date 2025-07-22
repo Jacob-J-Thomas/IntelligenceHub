@@ -6,6 +6,7 @@ using IntelligenceHub.API.DTOs;
 using IntelligenceHub.DAL.Models;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using System;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.DAL.Tenant;
 
@@ -27,8 +28,8 @@ namespace IntelligenceHub.Tests.Unit.Controllers
             _mockHttpContext = new Mock<HttpContext>();
 
             var testUser = new DbUser { Id = 1, Sub = "test-sub", TenantId = Guid.NewGuid(), ApiToken = "token" };
-            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(testUser);
-            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "test-sub") }));
+            _mockUserLogic.Setup(u => u.GetUserByTenantIdAsync(It.IsAny<Guid>())).ReturnsAsync(testUser);
+            var claims = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(TenantIdClaim, testUser.TenantId.ToString()) }));
             _mockHttpContext.Setup(c => c.User).Returns(claims);
 
             _controller = new ProfileController(_mockProfileLogic.Object, _mockUserLogic.Object, _mockTenantProvider.Object);
@@ -192,7 +193,7 @@ namespace IntelligenceHub.Tests.Unit.Controllers
         [Fact]
         public async Task GetProfile_Returns500_WhenTenantResolutionFails()
         {
-            _mockUserLogic.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+            _mockUserLogic.Setup(u => u.GetUserByTenantIdAsync(It.IsAny<Guid>())).ReturnsAsync((DbUser?)null);
 
             var result = await _controller.GetProfile("name");
 
