@@ -82,6 +82,7 @@ namespace IntelligenceHub.Business.Handlers
             // validate reference profiles exist (same with any other values?)
             if (string.IsNullOrWhiteSpace(profile.Name) || profile.Name == null) return "The 'Name' field is required.";
             if (profile.Name.ToLower() == "all") return "Profile name 'all' conflicts with the profile/get/all route.";
+            if (string.IsNullOrEmpty(profile.Host.ToString()) || profile.Host == AGIServiceHost.None) return "The host parameter is required.";
 
             var errorMessage = ValidateProfileOptions(profile);
             if (errorMessage != null) return errorMessage;
@@ -97,14 +98,14 @@ namespace IntelligenceHub.Business.Handlers
         public string? ValidateProfileOptions(Profile profile, List<Message>? messages = null)
         {
             if (profile.Model == null) return "The model parameter is required.";
-            if (string.IsNullOrEmpty(profile.Host.ToString()) || profile.Host == AGIServiceHost.None) return "The host parameter is required.";
+            
 
             // Validate model names for each host.
             if (!string.IsNullOrEmpty(profile.Model))
             {
                 if (profile.Host == AGIServiceHost.Azure && !_validModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Azure. Supported model names include: {_validModels.ToCommaSeparatedString()}.";
                 if (profile.Host == AGIServiceHost.OpenAI && !_validModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by OpenAI. Supported model names include: {_validModels.ToCommaSeparatedString()}.";
-                if (profile.Host == AGIServiceHost.Anthropic && !ValidAnthropicModels.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Anthropic. Supported model names include: {ValidAnthropicModels.ToCommaSeparatedString()}.";
+                if (profile.Host == AGIServiceHost.Anthropic && !ValidAnthropicModels.Keys.Contains(profile.Model.ToLower())) return $"The provided model name is not supported by Anthropic. Supported model names include: {ValidAnthropicModels.Keys.ToCommaSeparatedString()}.";
             }
 
             // Validate common parameters.
@@ -132,11 +133,10 @@ namespace IntelligenceHub.Business.Handlers
             }
             else if (profile.Host == AGIServiceHost.Anthropic)
             {
-                // For Anthropic, use a fixed context limit.
-                int contextLimit = 4000; // Recommended limit; update if newer models allow more.
-                if (profile.MaxTokens > contextLimit) return "For Anthropic, MaxTokens (max_tokens_to_sample) should not exceed 4000.";
-
                 // Anthropic does not support penalties.
+                if (!ValidAnthropicModels.TryGetValue(profile.Model.ToLower(), out int contextLimit)) contextLimit = 64000;
+                if (profile.MaxTokens > contextLimit) return $"The MaxTokens property cannot exceed {contextLimit} for the Anthropic model, '{profile.Model}'.";
+                if (!string.IsNullOrEmpty(profile.Model) && !ValidAnthropicModels.Keys.Contains(profile.Model.ToLower())) return $"the provided model name '{profile.Model}' is invalid for Anthropic.";
                 if (profile.FrequencyPenalty != 0 || profile.PresencePenalty != 0) return "Frequency and Presence penalties are not supported for Anthropic and must be set to 0 or null.";
 
                 if (messages != null)
@@ -197,6 +197,7 @@ namespace IntelligenceHub.Business.Handlers
             {
                 foreach (var str in tool.Function.Parameters.required) if (!tool.Function.Parameters.properties.ContainsKey(str)) return $"Required property {str} does not exist in the tool {tool.Function.Name}'s properties list.";
             }
+            if (!string.IsNullOrEmpty(tool.ExecutionUrl) && !tool.ExecutionUrl.StartsWith("https://") && !tool.ExecutionUrl.StartsWith("http://")) return $"Please provide a valid execution url for the tool {tool.Function.Name}. Supplied url: '{tool.ExecutionUrl}'.";
 
             if (tool.Function.Parameters.properties != null && tool.Function.Parameters.properties.Count > 0)
             {
@@ -377,7 +378,7 @@ namespace IntelligenceHub.Business.Handlers
                 if (index.RagHost == RagServiceHost.Weaviate && index.EmbeddingModel != null && index.EmbeddingModel.ToLower() != DefaultWeaviateEmbeddingModel.ToLower()) return $"EmbeddingModel must correspond with the Weaviate RagHost ({DefaultWeaviateEmbeddingModel}).";
                 if (index.RagHost == RagServiceHost.Azure && index.EmbeddingModel != null && index.EmbeddingModel.ToLower() == DefaultWeaviateEmbeddingModel.ToLower()) return $"EmbeddingModel {DefaultWeaviateEmbeddingModel} is reserved for the Weaviate RagHost.";
             }
-            if (index.MaxRagAttachments < 0) return "MaxRagAttachments must be a non-negative integer greater than 0.";
+            if (index.MaxRagAttachments < 1) return "MaxRagAttachments must be a non-negative integer greater than 0.";
             if (index.MaxRagAttachments > 20) return "MaxRagAttachments cannot exceed 20.";
             if (index.QueryType == QueryType.VectorSemanticHybrid && index.RagHost == RagServiceHost.Weaviate) return "The Weaviate client does not support the VectorSemanticHybrid query type at this time.";
 

@@ -149,7 +149,7 @@
         /// <summary>
         /// The default model for Anthropic.
         /// </summary>
-        public const string DefaultAnthropicModel = "claude-3-7-sonnet";
+        public const string DefaultAnthropicModel = "claude-3-7-sonnet-latest";
 
         /// <summary>
         /// The default model for OpenAI.
@@ -159,18 +159,18 @@
         /// <summary>
         /// The valid models for Anthropic.
         /// </summary>
-        public static readonly string[] ValidAnthropicModels =
+        public static readonly Dictionary<string, int> ValidAnthropicModels = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {
-            "claude-3-7-sonnet-latest",
-            "claude-3-7-sonnet-20250219",
-            "claude-3-5-sonnet-latest",
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-sonnet-20240620",
-            "claude-3-5-haiku-latest",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-latest",
-            "claude-3-opus-20240229",
-            "claude-3-haiku-20240307"
+            { "claude-3-7-sonnet-latest", 64000 },
+            { "claude-3-7-sonnet-20250219", 64000 },
+            { "claude-3-5-sonnet-latest", 8192 },
+            { "claude-3-5-sonnet-20241022", 8192 },
+            { "claude-3-5-sonnet-20240620", 8192 },
+            { "claude-3-5-haiku-latest", 8192 },
+            { "claude-3-5-haiku-20241022", 8192 },
+            { "claude-3-opus-latest", 8192 },
+            { "claude-3-opus-20240229", 8192 },
+            { "claude-3-haiku-20240307", 4096 }
         };
 
         /// <summary>
@@ -178,12 +178,12 @@
         /// </summary>
         public static readonly Dictionary<string, int> ValidOpenAIModelsAndContextLimits = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {
-            { "o1", 4096 },
-            { "o3-mini", 2048 },
-            { "gpt-4.1", 8192 },
-            { "gpt-4o", 8192 },
-            { "gpt-4o-mini", 4096 },
-            { "gpt-4", 8192 },
+            { "gpt-4o", 16384 },
+            { "o1", 100000 },
+            { "o3-mini", 100000 },
+            { "gpt-4.1", 32768 },
+            { "gpt-4o-mini", 16384 },
+            { "gpt-4", 4096 },
             { "gpt-3.5-turbo", 4096 }
         };
 

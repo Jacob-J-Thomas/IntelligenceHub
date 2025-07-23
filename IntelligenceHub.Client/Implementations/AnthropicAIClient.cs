@@ -134,7 +134,8 @@ namespace IntelligenceHub.Client.Implementations
             foreach (var message in request.Messages)
             {
                 var messageContents = ConvertToAnthropicMessage(message);
-                var mimeType = GetMimeTypeFromBase64(message.Base64Image);
+                var mimeType = string.Empty;
+                if (!string.IsNullOrEmpty(message.Base64Image)) mimeType = GetMimeTypeFromBase64(message.Base64Image);
 
                 if (message.Role == Role.System) systemMessages.Add(new Anthropic.SDK.Messaging.SystemMessage(message.Content));
                 if (message.Base64Image != null) anthropicMessages.Add(new Anthropic.SDK.Messaging.Message { Content = new List<ContentBase> { new ImageContent { Source = new ImageSource() { Data = message.Base64Image, MediaType = mimeType } } }, Role = ConvertToAnthropicRole(message.Role) });
@@ -142,7 +143,7 @@ namespace IntelligenceHub.Client.Implementations
             }
 
             var anthropicTools = new List<Anthropic.SDK.Common.Tool>();
-            foreach (var tool in request.ProfileOptions?.Tools)
+            if (request.ProfileOptions != null && request.ProfileOptions.Tools != null) foreach (var tool in request.ProfileOptions?.Tools)
             {
                 var schema = ConvertToolParameters(tool);
                 var serializedParams = JsonSerializer.Serialize(tool.Function.Parameters);
@@ -153,18 +154,21 @@ namespace IntelligenceHub.Client.Implementations
                 anthropicTools.Add(anthropicTool);
             }
 
+            if (!ValidAnthropicModels.TryGetValue(request.ProfileOptions?.Model ?? string.Empty, out int contextLimit)) contextLimit = 8192;
+
             ToolChoiceType? toolChoiceType = null;
-            if (request.ProfileOptions.ToolChoice?.ToString().ToLower() == ToolExecutionRequirement.Auto.ToString().ToLower()) toolChoiceType = ToolChoiceType.Auto;
-            else if (request.ProfileOptions.ToolChoice?.ToString().ToLower() == ToolExecutionRequirement.Required.ToString().ToLower()) toolChoiceType = ToolChoiceType.Tool;
+            if (request.ProfileOptions?.ToolChoice?.ToString().ToLower() == ToolExecutionRequirement.Auto.ToString().ToLower()) toolChoiceType = ToolChoiceType.Auto;
+            else if (request.ProfileOptions?.ToolChoice?.ToString().ToLower() == ToolExecutionRequirement.Required.ToString().ToLower()) toolChoiceType = ToolChoiceType.Tool;
             var messageParams = new MessageParameters()
             {
                 Messages = anthropicMessages,
-                Model = request.ProfileOptions.Model, // only one model is supported from anthropic
+                Model = request.ProfileOptions?.Model ?? DefaultAnthropicModel, // only one model is supported from anthropic
                 Stream = false,
-                StopSequences = request.ProfileOptions.Stop,
+                StopSequences = request.ProfileOptions?.Stop,
                 System = systemMessages,
                 Tools = anthropicTools,
-                Metadata = new Dictionary<string, string> { { AnthropicSpecificStrings.user_id.ToString(), request.ProfileOptions.User ?? string.Empty } },
+                Metadata = new Dictionary<string, string> { { AnthropicSpecificStrings.user_id.ToString(), request.ProfileOptions?.User ?? string.Empty } },
+                MaxTokens = request.ProfileOptions?.MaxTokens ?? contextLimit
             };
 
             if (request.ProfileOptions.MaxTokens.HasValue) messageParams.MaxTokens = request.ProfileOptions.MaxTokens.Value;

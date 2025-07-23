@@ -28,7 +28,7 @@ namespace IntelligenceHub.API.DTOs
         /// <summary>
         /// Gets or sets the host providing the model implementation.
         /// </summary>
-        public AGIServiceHost Host { get; set; }
+        public AGIServiceHost? Host { get; set; }
 
         /// <summary>
         /// Gets or sets the host used for image generation.
