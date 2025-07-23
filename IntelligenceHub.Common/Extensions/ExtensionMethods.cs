@@ -143,5 +143,31 @@ namespace IntelligenceHub.Common.Extensions
             if (provider == RagServiceHost.Azure.ToString().ToLower()) return RagServiceHost.Azure;
             return RagServiceHost.None;
         }
+
+        /// <summary>
+        /// Appends the tenant identifier to a name.
+        /// </summary>
+        /// <param name="name">The base name.</param>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <returns>The name combined with the tenant identifier.</returns>
+        public static string AppendTenant(this string name, Guid? tenantId)
+        {
+            if (string.IsNullOrWhiteSpace(name) || !tenantId.HasValue) return name;
+            return $"{name}_{tenantId}";
+        }
+
+        /// <summary>
+        /// Removes a trailing tenant identifier from a name if present.
+        /// </summary>
+        /// <param name="name">The name that may contain a tenant identifier.</param>
+        /// <returns>The name without a tenant identifier.</returns>
+        public static string RemoveTenant(this string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return name;
+            var index = name.LastIndexOf('_');
+            if (index <= 0) return name;
+            var suffix = name[(index + 1)..];
+            return Guid.TryParse(suffix, out _) ? name[..index] : name;
+        }
     }
 }

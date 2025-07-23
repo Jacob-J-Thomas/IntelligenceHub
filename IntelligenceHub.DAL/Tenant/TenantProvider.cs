@@ -4,19 +4,19 @@ namespace IntelligenceHub.DAL.Tenant
 {
     public class TenantProvider : ITenantProvider
     {
-        private static readonly AsyncLocal<Guid?> _currentTenant = new();
-        private static readonly AsyncLocal<DbUser?> _currentUser = new();
+        private Guid? _tenantId;
+        private DbUser? _user;
 
         public Guid? TenantId
         {
-            get => _currentTenant.Value;
-            set => _currentTenant.Value = value;
+            get => _tenantId;
+            set => _tenantId = value;
         }
 
         public DbUser? User
         {
-            get => _currentUser.Value;
-            set => _currentUser.Value = value;
+            get => _user;
+            set => _user = value;
         }
     }
 }

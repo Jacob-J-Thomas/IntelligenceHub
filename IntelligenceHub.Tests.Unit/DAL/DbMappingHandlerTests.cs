@@ -82,7 +82,7 @@ namespace IntelligenceHub.Tests.Unit.DAL
             };
 
             // Act
-            var result = DbMappingHandler.MapToDbProfile("Test Profile", "Default Model", null, profileUpdate);
+            var result = DbMappingHandler.MapToDbProfile("Test Profile", "Default Model", null, null, profileUpdate);
 
             // Assert
             Assert.Equal("Test Profile", result.Name);
@@ -158,7 +158,7 @@ namespace IntelligenceHub.Tests.Unit.DAL
             };
 
             // Act
-            var result = DbMappingHandler.MapToDbTool(tool);
+            var result = DbMappingHandler.MapToDbTool(tool, null);
 
             // Assert
             Assert.Equal(tool.Id, result.Id);
@@ -393,7 +393,7 @@ namespace IntelligenceHub.Tests.Unit.DAL
             };
 
             // Act
-            var result = DbMappingHandler.MapToDbIndexMetadata(indexData);
+            var result = DbMappingHandler.MapToDbIndexMetadata(indexData, null);
 
             // Assert
             Assert.Equal(indexData.Name, result.Name);

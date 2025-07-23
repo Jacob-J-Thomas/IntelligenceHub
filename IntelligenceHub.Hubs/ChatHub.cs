@@ -2,6 +2,7 @@
 using IntelligenceHub.Business.Handlers;
 using IntelligenceHub.Business.Interfaces;
 using IntelligenceHub.Common;
+using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL.Tenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -45,15 +46,16 @@ namespace IntelligenceHub.Hubs
         {
             try
             {
-                var sub = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
-                          Context.User?.FindFirst("sub")?.Value;
-                if (string.IsNullOrEmpty(sub))
+                var httpContext = Context.GetHttpContext();
+                if (httpContext is null ||
+                    !httpContext.Request.Headers.TryGetValue("X-Api-Key", out var apiKey) ||
+                    string.IsNullOrWhiteSpace(apiKey))
                 {
                     await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {500}. Error message: {DefaultExceptionMessage}");
                     return;
                 }
 
-                var user = await _userLogic.GetUserBySubAsync(sub);
+                var user = await _userLogic.GetUserByApiTokenAsync(apiKey!);
                 if (user == null)
                 {
                     await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {500}. Error message: {DefaultExceptionMessage}");
@@ -70,12 +72,15 @@ namespace IntelligenceHub.Hubs
                     return;
                 }
 
+                
                 var errorMessage = _validationLogic.ValidateChatRequest(completionRequest);
                 if (!string.IsNullOrEmpty(errorMessage))
                 {
                     await Clients.Caller.SendAsync("broadcastMessage", errorMessage);
                     return;
                 }
+
+                completionRequest.ProfileOptions.Name = completionRequest.ProfileOptions.Name.AppendTenant(user.TenantId);
 
                 var response = _completionLogic.StreamCompletion(completionRequest);
                 await foreach (var chunk in response)

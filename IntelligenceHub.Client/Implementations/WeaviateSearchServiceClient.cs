@@ -12,6 +12,8 @@ using Newtonsoft.Json;
 using static IntelligenceHub.Common.GlobalVariables;
 using System.Globalization;
 using Azure.Core;
+using System;
+using System.Linq;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -42,12 +44,24 @@ namespace IntelligenceHub.Client.Implementations
         }
 
         /// <summary>
-        /// Creates an HTTP request for the Weaviate API.
+        /// Normalizes a string to a valid Weaviate class name: PascalCase, no underscores/dashes.
         /// </summary>
-        /// <param name="method">HTTP method to use.</param>
-        /// <param name="path">Relative path of the endpoint.</param>
-        /// <param name="body">Optional request body object which will be serialized as JSON.</param>
-        /// <returns>A configured <see cref="HttpRequestMessage"/>.</returns>
+        /// <param name="input">The input name.</param>
+        /// <returns>Normalized class name.</returns>
+        private static string ToWeaviateClassName(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                throw new ArgumentException("Index name must not be empty.");
+
+            // Remove underscores/dashes and split into words
+            var noSpecial = input.Replace("-", " ").Replace("_", " ");
+            var words = noSpecial.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            // Capitalize each word, concatenate
+            var pascal = string.Concat(words.Select(w => char.ToUpper(w[0]) + w.Substring(1)));
+            return pascal;
+        }
+
         private HttpRequestMessage CreateRequest(HttpMethod method, string path, object? body = null)
         {
             var request = new HttpRequestMessage(method, $"{_endpoint}{path}");
@@ -78,16 +92,14 @@ namespace IntelligenceHub.Client.Implementations
             }
             else if (index.QueryType == QueryType.VectorSimpleHybrid)
             {
-                // Hybrid search combines BM25 and vector similarity. Using a default alpha of 0.5
                 searchClause = $"hybrid: {{ query: \"{query}\", alpha: 0.5 }}";
             }
             else
             {
-                // Default to BM25 text search for simple/full/semantic queries
                 searchClause = $"bm25: {{ query: \"{query}\" }}";
             }
 
-            var className = char.ToUpper(index.Name[0]) + index.Name.Substring(1); // Weaviate is case sensative
+            var className = ToWeaviateClassName(index.Name);
             var gql = new
             {
                 query = $"{{ Get {{ {className}({searchClause}) {{ title chunk topic keywords source created modified }} }} }}"
@@ -99,8 +111,7 @@ namespace IntelligenceHub.Client.Implementations
             var root = JObject.Parse(content);
             var getObj = root["data"]?["Get"];
 
-            JToken? resultsToken = getObj?[className] ?? getObj?.Children<JProperty>().FirstOrDefault(p => p.Name.Equals(index.Name, StringComparison.OrdinalIgnoreCase))?.Value;
-
+            JToken? resultsToken = getObj?[className] ?? getObj?.Children<JProperty>().FirstOrDefault(p => p.Name.Equals(className, StringComparison.OrdinalIgnoreCase))?.Value;
 
             var results = new List<SearchResult<IndexDefinition>>();
             if (resultsToken is JArray rows)
@@ -160,9 +171,10 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns><c>true</c> if the operation succeeded; otherwise, <c>false</c>.</returns>
         public async Task<bool> UpsertIndex(IndexMetadata indexDefinition)
         {
+            var className = ToWeaviateClassName(indexDefinition.Name);
             var schema = new
             {
-                @class = indexDefinition.Name,
+                @class = className,
                 vectorizer = _defaultWeaviateVectorizerModule,
                 moduleConfig = new Dictionary<string, object>
                 {
@@ -229,7 +241,8 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns><c>true</c> if the deletion succeeded; otherwise, <c>false</c>.</returns>
         public async Task<bool> DeleteIndex(string indexName)
         {
-            var req = CreateRequest(HttpMethod.Delete, $"/v1/schema/{indexName}");
+            var className = ToWeaviateClassName(indexName);
+            var req = CreateRequest(HttpMethod.Delete, $"/v1/schema/{className}");
             var res = await _httpClient.SendAsync(req);
             return res.IsSuccessStatusCode;
         }
@@ -284,17 +297,17 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>List of <see cref="IndexDocument"/> instances.</returns>
         public async Task<List<IndexDocument>> GetAllDocuments(string indexName)
         {
-            var upperCaseName = char.ToUpper(indexName[0]) + indexName.Substring(1);
+            var className = ToWeaviateClassName(indexName);
             var gql = new
             {
-                query = $"{{ Get {{ {upperCaseName} {{ _additional {{ id }} title chunk topic keywords source created modified }} }} }}"
+                query = $"{{ Get {{ {className} {{ _additional {{ id }} title chunk topic keywords source created modified }} }} }}"
             };
             var req = CreateRequest(HttpMethod.Post, "/v1/graphql", gql);
             var res = await _httpClient.SendAsync(req);
             res.EnsureSuccessStatusCode();
             var content = await res.Content.ReadAsStringAsync();
             var j = JObject.Parse(content);
-            var resultsToken = j["data"]?["Get"]?[upperCaseName];
+            var resultsToken = j["data"]?["Get"]?[className];
             var results = new List<IndexDocument>();
             if (resultsToken != null)
             {
@@ -327,10 +340,11 @@ namespace IntelligenceHub.Client.Implementations
         public async Task<bool> UpsertDocument(string indexName, IndexDocument document)
         {
             var uuid = IntToUuid(document.Id);
+            var className = ToWeaviateClassName(indexName);
             var body = new
             {
                 id = uuid,
-                @class = indexName,
+                @class = className,
                 properties = new
                 {
                     title = document.Title,
@@ -343,8 +357,7 @@ namespace IntelligenceHub.Client.Implementations
                 }
             };
 
-            var upperCaseName = char.ToUpper(indexName[0]) + indexName.Substring(1);
-            var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{upperCaseName}/{uuid}", body);
+            var req = CreateRequest(HttpMethod.Put, $"/v1/objects/{className}/{uuid}", body);
             var res = await _httpClient.SendAsync(req);
             if (res.IsSuccessStatusCode) return true;
 
@@ -365,7 +378,8 @@ namespace IntelligenceHub.Client.Implementations
         public async Task<bool> DeleteDocument(string indexName, int id)
         {
             var uuid = IntToUuid(id);
-            var req = CreateRequest(HttpMethod.Delete, $"/v1/objects/{uuid}");
+            var className = ToWeaviateClassName(indexName);
+            var req = CreateRequest(HttpMethod.Delete, $"/v1/objects/{className}/{uuid}");
             var res = await _httpClient.SendAsync(req);
             return res.IsSuccessStatusCode;
         }
@@ -378,7 +392,7 @@ namespace IntelligenceHub.Client.Implementations
         {
             public string name { get; set; }
             public string[] dataType { get; set; }
-            public Dictionary<string, object>? moduleConfig { get; set; }  // nullable to allow absence
+            public Dictionary<string, object>? moduleConfig { get; set; }
         }
     }
 }

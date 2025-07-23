@@ -26,8 +26,7 @@ namespace IntelligenceHub.API.DTOs.RAG
         /// <summary>
         /// Gets or sets the service that stores the vectors.
         /// </summary>
-        [JsonIgnore]
-        public RagServiceHost? RagHost { get; set; } = RagServiceHost.Weaviate; // Weaviate is currently only supported and does not support this value
+        public RagServiceHost? RagHost { get; set; } // Weaviate is currently only supported and does not support this value
 
         /// <summary>
         /// Gets or sets how frequently the index should be rebuilt.
