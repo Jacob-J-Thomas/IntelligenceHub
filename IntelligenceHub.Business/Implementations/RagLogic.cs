@@ -325,11 +325,14 @@ namespace IntelligenceHub.Business.Implementations
         {
             if (!_validationHandler.IsValidIndexName(index) || string.IsNullOrEmpty(index)) return APIResponseWrapper<List<IndexDocument>>.Failure($"The supplied index name, '{index}' is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
             if (string.IsNullOrEmpty(query)) return APIResponseWrapper<List<IndexDocument>>.Failure("The supplied query is null or empty.", APIResponseStatusCodes.BadRequest);
+
             var indexData = await _metaRepository.GetByNameAsync(index);
             if (indexData is null) return APIResponseWrapper<List<IndexDocument>>.Failure($"No index with the name '{index}' was found.", APIResponseStatusCodes.NotFound);
 
             var docList = new List<IndexDocument>();
             var indexDefinition = DbMappingHandler.MapFromDbIndexMetadata(indexData);
+
+            indexDefinition.Name = AppendTenant(indexDefinition.Name);
             var ragClient = _ragClientFactory.GetClient(indexDefinition.RagHost);
             var response = await ragClient.SearchIndex(indexDefinition, query);
             var results = response.GetResultsAsync();
@@ -360,6 +363,8 @@ namespace IntelligenceHub.Business.Implementations
         {
             if (!_validationHandler.IsValidIndexName(index) || string.IsNullOrEmpty(index)) return APIResponseWrapper<bool>.Failure($"The supplied index name, '{index}' is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
             var indexMetadata = await _metaRepository.GetByNameAsync(index);
+
+            index = AppendTenant(index);
             if (indexMetadata == null) return APIResponseWrapper<bool>.Failure($"No index with the name '{index}' was found.", APIResponseStatusCodes.NotFound);
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.None) return APIResponseWrapper<bool>.Failure($"Failed to convert the RagHost to a valid enum.", APIResponseStatusCodes.InternalError);
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.Weaviate)
@@ -481,33 +486,41 @@ namespace IntelligenceHub.Business.Implementations
 
         private async Task SyncWeaviateIndex(string index, IIndexRepository repository, WeaviateSearchServiceClient weaviateClient, CancellationToken token)
         {
-            const int batch = 100;
-            int page = 1;
-            var sqlDocs = new List<DbIndexDocument>();
-            IEnumerable<DbIndexDocument> pageDocs;
-            do
+            try
             {
-                pageDocs = await repository.GetAllAsync(index, batch, page);
-                sqlDocs.AddRange(pageDocs);
-                page++;
-            } while (pageDocs.Any());
-
-            var weavDocs = await weaviateClient.GetAllDocuments(index);
-            var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
-
-            foreach (var wdoc in weavDocs)
-            {
-                if (!sqlLookup.ContainsKey(wdoc.Id))
+                const int batch = 100;
+                int page = 1;
+                var sqlDocs = new List<DbIndexDocument>();
+                IEnumerable<DbIndexDocument> pageDocs;
+                do
                 {
-                    await weaviateClient.DeleteDocument(index, wdoc.Id);
+                    pageDocs = await repository.GetAllAsync(index, batch, page);
+                    sqlDocs.AddRange(pageDocs);
+                    page++;
+                } while (pageDocs.Any());
+
+                var weavDocs = await weaviateClient.GetAllDocuments(index);
+                var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
+
+                foreach (var wdoc in weavDocs)
+                {
+                    if (!sqlLookup.ContainsKey(wdoc.Id))
+                    {
+                        await weaviateClient.DeleteDocument(index, wdoc.Id);
+                    }
+                }
+
+                foreach (var sdoc in sqlDocs)
+                {
+                    var dto = DbMappingHandler.MapFromDbIndexDocument(sdoc);
+                    await weaviateClient.UpsertDocument(index, dto);
                 }
             }
-
-            foreach (var sdoc in sqlDocs)
+            catch (Exception ex)
             {
-                var dto = DbMappingHandler.MapFromDbIndexDocument(sdoc);
-                await weaviateClient.UpsertDocument(index, dto);
+                // log exception here
             }
+            
         }
 
         #region Private Methods
