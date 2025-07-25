@@ -158,7 +158,7 @@ namespace IntelligenceHub.Client.Implementations
                 {
                     // capture current values
                     if (string.IsNullOrEmpty(currentTool)) currentTool = update.FunctionName;
-                    if (currentTool == update.FunctionName && update.FunctionArgumentsUpdate != null && update.FunctionArgumentsUpdate.ToArray().Any()) currentToolArgs += update.FunctionArgumentsUpdate.ToString() ?? string.Empty;
+                    if (update.FunctionArgumentsUpdate != null && update.FunctionArgumentsUpdate.ToArray().Any()) currentToolArgs += update.FunctionArgumentsUpdate.ToString() ?? string.Empty;
 
                     if (toolCalls.ContainsKey(currentTool)) toolCalls[currentTool] = currentToolArgs ?? string.Empty;
                     else
