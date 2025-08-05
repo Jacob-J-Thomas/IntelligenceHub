@@ -440,6 +440,12 @@ namespace IntelligenceHub.Business.Implementations
                 if (indexData.GenerateTopic) document.Topic = await GenerateDocumentMetadata("a topic", document, indexData.GenerationHost.ConvertToServiceHost());
                 if (indexData.GenerateKeywords) document.Keywords = await GenerateDocumentMetadata("a comma separated list of keywords", document, indexData.GenerationHost.ConvertToServiceHost());
 
+                document.Title = document.Title.CleanRagDbString() ?? string.Empty;
+                document.Content = document.Content.CleanRagDbString() ?? string.Empty;
+                document.Topic = document.Topic.CleanRagDbString();
+                document.Keywords = document.Keywords.CleanRagDbString();
+                document.Source = document.Source.CleanRagDbString() ?? string.Empty;
+
                 var newDbDocument = DbMappingHandler.MapToDbIndexDocument(document);
 
                 var existingDoc = await _ragRepository.GetDocumentAsync(indexData.Name, document.Title);

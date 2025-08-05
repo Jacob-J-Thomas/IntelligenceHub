@@ -1,5 +1,6 @@
 ﻿using OpenAI.Chat;
 using System.Text;
+using System.Text.RegularExpressions;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Common.Extensions
@@ -168,6 +169,21 @@ namespace IntelligenceHub.Common.Extensions
             if (index <= 0) return name;
             var suffix = name[(index + 1)..];
             return Guid.TryParse(suffix, out _) ? name[..index] : name;
+        }
+
+        /// <summary>
+        /// Normalizes a string for RAG database storage by collapsing whitespace
+        /// and removing unsupported control characters.
+        /// </summary>
+        /// <param name="input">The string to clean.</param>
+        /// <returns>The cleaned string, or null if the input was null.</returns>
+        public static string? CleanRagDbString(this string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return input?.Trim();
+
+            var cleaned = Regex.Replace(input, @"\s+", " ");
+            cleaned = Regex.Replace(cleaned, "[\u0000-\u001F\u007F-\u009F]", "");
+            return cleaned.Trim();
         }
     }
 }
