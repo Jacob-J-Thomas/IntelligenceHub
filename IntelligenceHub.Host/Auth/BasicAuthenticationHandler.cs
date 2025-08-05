@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using IntelligenceHub.Common.Config;
+using static IntelligenceHub.Common.GlobalVariables;
+using System;
 
 /// <summary>
 /// Handles basic authentication for the application.
@@ -57,6 +59,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<AuthenticationSc
                 var claims = new[] {
                     new Claim(ClaimTypes.NameIdentifier, username),
                     new Claim(ClaimTypes.Name, username),
+                    new Claim(TenantIdClaim, Guid.Empty.ToString()),
                     new Claim("scope", "all:admin"), // Add required claim for elevated policy
                     new Claim("scope", "all:user")
                 };

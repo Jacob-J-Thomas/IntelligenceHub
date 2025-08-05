@@ -16,5 +16,10 @@ namespace IntelligenceHub.Business.Interfaces
         /// Gets a user by the stored API token.
         /// </summary>
         Task<DbUser?> GetUserByApiTokenAsync(string apiToken);
+
+        /// <summary>
+        /// Gets a user by tenant identifier.
+        /// </summary>
+        Task<DbUser?> GetUserByTenantIdAsync(Guid tenantId);
     }
 }
