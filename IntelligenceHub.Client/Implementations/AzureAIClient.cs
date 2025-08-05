@@ -53,7 +53,7 @@ namespace IntelligenceHub.Client.Implementations
 
             var apiKey = service.Key;
             var credential = new ApiKeyCredential(apiKey);
-            var options = new AzureOpenAIClientOptions()
+            var options = new AzureOpenAIClientOptions(AzureOpenAIClientOptions.ServiceVersion.V2024_12_01_Preview)
             {
                 Transport = new HttpClientPipelineTransport(policyClient)
             };

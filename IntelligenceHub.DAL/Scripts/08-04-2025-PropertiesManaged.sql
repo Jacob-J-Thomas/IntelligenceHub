@@ -1,4 +1,4 @@
-﻿CREATE TABLE Properties (
+﻿CREATE TABLE PropertiesManaged (
     Id INT IDENTITY(1,1) PRIMARY KEY,
     TenantId UNIQUEIDENTIFIER NOT NULL,
     [Name] NVARCHAR(64) NOT NULL,

@@ -700,6 +700,49 @@ namespace IntelligenceHub.Tests.Unit.Business
         }
 
         [Fact]
+        public async Task UpsertDocuments_ShouldCleanStringsBeforeUpsert()
+        {
+            // Arrange
+            var indexName = "testIndex";
+            var fullName = $"{indexName}_{_tenantProvider.Object.TenantId}";
+            var dbIndexMetadata = new DbIndexMetadata { Name = fullName, GenerationHost = AGIServiceHost.Azure.ToString() };
+
+            var document = new IndexDocument
+            {
+                Title = "  Test" + '\t' + "Title " + '\u0000',
+                Content = "  Test" + "\r\n" + "Content " + '\u0001',
+                Topic = " Test Topic " + '\u0002',
+                Keywords = "  kw1, kw2 " + '\u0003',
+                Source = "\tSource" + '\u0004'
+            };
+
+            var upsertRequest = new RagUpsertRequest { Documents = new List<IndexDocument> { document } };
+
+            _mockValidationHandler.Setup(repo => repo.IsValidIndexName(indexName)).Returns(true);
+            _mockValidationHandler.Setup(repo => repo.IsValidRagUpsertRequest(upsertRequest)).Returns(string.Empty);
+            _mockMetaRepository.Setup(repo => repo.GetByNameAsync(fullName)).ReturnsAsync(dbIndexMetadata);
+            _mockRagRepository.Setup(repo => repo.GetDocumentAsync(fullName, "Test Title")).ReturnsAsync((DbIndexDocument?)null);
+
+            DbIndexDocument? savedDoc = null;
+            _mockRagRepository
+                .Setup(repo => repo.AddAsync(It.IsAny<DbIndexDocument>(), fullName))
+                .Callback<DbIndexDocument, string>((doc, _) => savedDoc = doc)
+                .ReturnsAsync(new DbIndexDocument());
+
+            // Act
+            var result = await _ragLogic.UpsertDocuments(indexName, upsertRequest);
+
+            // Assert
+            Assert.True(result.Data);
+            Assert.NotNull(savedDoc);
+            Assert.Equal("Test Title", savedDoc!.Title);
+            Assert.Equal("Test Content", savedDoc.Content);
+            Assert.Equal("Test Topic", savedDoc.Topic);
+            Assert.Equal("kw1, kw2", savedDoc.Keywords);
+            Assert.Equal("Source", savedDoc.Source);
+        }
+
+        [Fact]
         public async Task GetDocument_ShouldReturnDocument_WhenDocumentExists()
         {
             // Arrange

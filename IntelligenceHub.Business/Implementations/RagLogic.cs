@@ -71,7 +71,7 @@ namespace IntelligenceHub.Business.Implementations
         public async Task<APIResponseWrapper<IndexMetadata>> GetRagIndex(string index)
         {
             if (!_validationHandler.IsValidIndexName(index)) return APIResponseWrapper<IndexMetadata>.Failure("The provided index name is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
-            var dbIndexData = await _metaRepository.GetByNameAsync(AppendTenant(index));
+            var dbIndexData = await _metaRepository.GetByNameAsync(index);
             if (dbIndexData == null) return APIResponseWrapper<IndexMetadata>.Failure($"No index by the name '{index}' was found.", APIResponseStatusCodes.NotFound);
             var mapped = DbMappingHandler.MapFromDbIndexMetadata(dbIndexData);
             mapped.Name = RemoveTenant(mapped.Name);
@@ -111,20 +111,21 @@ namespace IntelligenceHub.Business.Implementations
             if (existing != null) return APIResponseWrapper<bool>.Failure($"An index with the name '{indexDefinition.Name}' already exists.", APIResponseStatusCodes.BadRequest);
 
             // add index entry for metadata
-            indexDefinition.Name = fullName;
-            var newDbIndex = DbMappingHandler.MapToDbIndexMetadata(indexDefinition);
+            var newDbIndex = DbMappingHandler.MapToDbIndexMetadata(indexDefinition, _tenantProvider.TenantId);
             var response = await _metaRepository.AddAsync(newDbIndex);
             if (response == null) APIResponseWrapper<bool>.Failure($"Failed to add index '{indexDefinition.Name}' to the database.", APIResponseStatusCodes.InternalError);
 
             // create a new table for the index
-            var success = await _ragRepository.CreateIndexAsync(indexDefinition.Name);
-            if (!success) return APIResponseWrapper<bool>.Failure($"Partially failed to add index '{indexDefinition.Name}' to the database.", APIResponseStatusCodes.InternalError);
+            var success = await _ragRepository.CreateIndexAsync(newDbIndex.Name);
+            if (!success) return APIResponseWrapper<bool>.Failure($"Partially failed to add index '{newDbIndex.Name}' to the database.", APIResponseStatusCodes.InternalError);
 
-            success = await _ragRepository.EnableChangeTrackingAsync(indexDefinition.Name);
-            if (!success) return APIResponseWrapper<bool>.Failure($"Partially failed to add index '{indexDefinition.Name}' to the database.", APIResponseStatusCodes.InternalError);
+            success = await _ragRepository.EnableChangeTrackingAsync(newDbIndex.Name);
+            if (!success) return APIResponseWrapper<bool>.Failure($"Partially failed to add index '{newDbIndex.Name}' to the database.", APIResponseStatusCodes.InternalError);
 
             // create the index in the selected RAG service
             var ragClient = _ragClientFactory.GetClient(indexDefinition.RagHost);
+
+            indexDefinition.Name = fullName;
             success = await ragClient.UpsertIndex(indexDefinition);
             if (!success) return APIResponseWrapper<bool>.Failure("Failed to add the index to the corresponding search service resource.", APIResponseStatusCodes.InternalError);
 
@@ -150,9 +151,9 @@ namespace IntelligenceHub.Business.Implementations
             if (!string.IsNullOrEmpty(errorMessage)) return APIResponseWrapper<bool>.Failure(errorMessage, APIResponseStatusCodes.BadRequest);
 
             var originalName = indexDefinition.Name;
-            var fullName = AppendTenant(indexDefinition.Name);
+            indexDefinition.Name = AppendTenant(indexDefinition.Name);
 
-            var existingDefinition = await _metaRepository.GetByNameAsync(fullName);
+            var existingDefinition = await _metaRepository.GetByNameAsync(indexDefinition.Name);
             if (existingDefinition == null) return APIResponseWrapper<bool>.Failure($"An index with the name '{indexDefinition.Name}' was not found.", APIResponseStatusCodes.NotFound);
             if (indexDefinition.RagHost != null && existingDefinition.RagHost.ConvertToRagHost() != indexDefinition.RagHost) return APIResponseWrapper<bool>.Failure("The index RagHost cannot be modified after the index is created.", APIResponseStatusCodes.BadRequest);
 
@@ -162,8 +163,7 @@ namespace IntelligenceHub.Business.Implementations
             //success = await _searchClient.UpsertIndexer(indexDefinition);
             //if (!success) return APIResponseWrapper<bool>.Failure("Failed to update the indexer against the search service.", APIResponseStatusCodes.InternalError);
 
-            indexDefinition.Name = fullName;
-            var newDefinition = DbMappingHandler.MapToDbIndexMetadata(indexDefinition);
+            var newDefinition = DbMappingHandler.MapToDbIndexMetadata(indexDefinition, _tenantProvider.TenantId);
 
             // Check if we an update is required - this is done before updating the SQL, as existingDefinition reflects the current state of the corresponding SQL entry
             var updateAllDocs = false;
@@ -293,7 +293,7 @@ namespace IntelligenceHub.Business.Implementations
         {
             var success = false;
             if (!_validationHandler.IsValidIndexName(index)) return APIResponseWrapper<bool>.Failure($"The supplied index name, '{index}' is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
-            var indexMetadata = await _metaRepository.GetByNameAsync(AppendTenant(index));
+            var indexMetadata = await _metaRepository.GetByNameAsync(index);
             if (indexMetadata == null) return APIResponseWrapper<bool>.Failure($"The index '{index}' was not found.", APIResponseStatusCodes.NotFound);
             if (await _ragRepository.DeleteIndexAsync(indexMetadata.Name))
             {
@@ -325,11 +325,14 @@ namespace IntelligenceHub.Business.Implementations
         {
             if (!_validationHandler.IsValidIndexName(index) || string.IsNullOrEmpty(index)) return APIResponseWrapper<List<IndexDocument>>.Failure($"The supplied index name, '{index}' is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
             if (string.IsNullOrEmpty(query)) return APIResponseWrapper<List<IndexDocument>>.Failure("The supplied query is null or empty.", APIResponseStatusCodes.BadRequest);
-            var indexData = await _metaRepository.GetByNameAsync(AppendTenant(index));
+
+            var indexData = await _metaRepository.GetByNameAsync(index);
             if (indexData is null) return APIResponseWrapper<List<IndexDocument>>.Failure($"No index with the name '{index}' was found.", APIResponseStatusCodes.NotFound);
 
             var docList = new List<IndexDocument>();
             var indexDefinition = DbMappingHandler.MapFromDbIndexMetadata(indexData);
+
+            indexDefinition.Name = AppendTenant(indexDefinition.Name);
             var ragClient = _ragClientFactory.GetClient(indexDefinition.RagHost);
             var response = await ragClient.SearchIndex(indexDefinition, query);
             var results = response.GetResultsAsync();
@@ -359,7 +362,9 @@ namespace IntelligenceHub.Business.Implementations
         public async Task<APIResponseWrapper<bool>> RunIndexUpdate(string index)
         {
             if (!_validationHandler.IsValidIndexName(index) || string.IsNullOrEmpty(index)) return APIResponseWrapper<bool>.Failure($"The supplied index name, '{index}' is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
-            var indexMetadata = await _metaRepository.GetByNameAsync(AppendTenant(index));
+            var indexMetadata = await _metaRepository.GetByNameAsync(index);
+
+            index = AppendTenant(index);
             if (indexMetadata == null) return APIResponseWrapper<bool>.Failure($"No index with the name '{index}' was found.", APIResponseStatusCodes.NotFound);
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.None) return APIResponseWrapper<bool>.Failure($"Failed to convert the RagHost to a valid enum.", APIResponseStatusCodes.InternalError);
             if (indexMetadata.RagHost.ConvertToRagHost() == RagServiceHost.Weaviate)
@@ -390,7 +395,7 @@ namespace IntelligenceHub.Business.Implementations
         public async Task<APIResponseWrapper<IEnumerable<IndexDocument>>> GetAllDocuments(string index, int count, int page)
         {
             if (!_validationHandler.IsValidIndexName(index)) return APIResponseWrapper<IEnumerable<IndexDocument>>.Failure($"The supplied index name, '{index}' is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
-            var dbIndex = await _metaRepository.GetByNameAsync(AppendTenant(index));
+            var dbIndex = await _metaRepository.GetByNameAsync(index);
             if (dbIndex == null) return APIResponseWrapper<IEnumerable<IndexDocument>>.Failure($"The supplied index '{index}' does not exist.", APIResponseStatusCodes.NotFound);
             var docList = new List<IndexDocument>();
             var dbDocumentList = await _ragRepository.GetAllAsync(dbIndex.Name, count, page);
@@ -408,7 +413,7 @@ namespace IntelligenceHub.Business.Implementations
         {
             if (!_validationHandler.IsValidIndexName(index)) return APIResponseWrapper<IndexDocument>.Failure($"The supplied index name, '{index}' is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
             if (string.IsNullOrEmpty(document)) return APIResponseWrapper<IndexDocument>.Failure($"The required argument 'document' is null or empty", APIResponseStatusCodes.BadRequest);
-            var dbIndex = await _metaRepository.GetByNameAsync(AppendTenant(index));
+            var dbIndex = await _metaRepository.GetByNameAsync(index);
             if (dbIndex == null) return APIResponseWrapper<IndexDocument>.Failure($"A document in index '{index}' with the name '{document}' could not be found.", APIResponseStatusCodes.NotFound);
             var dbDocument = await _ragRepository.GetDocumentAsync(dbIndex.Name, document);
             if (dbDocument == null) return APIResponseWrapper<IndexDocument>.Failure($"A document in index '{index}' with the name '{document}' could not be found.", APIResponseStatusCodes.NotFound);
@@ -427,13 +432,19 @@ namespace IntelligenceHub.Business.Implementations
             var errorMessage = _validationHandler.IsValidRagUpsertRequest(documentUpsertRequest);
             if (!string.IsNullOrEmpty(errorMessage)) return APIResponseWrapper<bool>.Failure(errorMessage, APIResponseStatusCodes.BadRequest);
 
-            var indexData = await _metaRepository.GetByNameAsync(AppendTenant(index));
+            var indexData = await _metaRepository.GetByNameAsync(index);
             if (indexData == null) return APIResponseWrapper<bool>.Failure($"An index with the name '{index}' was not found.", APIResponseStatusCodes.NotFound);
 
             foreach (var document in documentUpsertRequest.Documents)
             {
                 if (indexData.GenerateTopic) document.Topic = await GenerateDocumentMetadata("a topic", document, indexData.GenerationHost.ConvertToServiceHost());
                 if (indexData.GenerateKeywords) document.Keywords = await GenerateDocumentMetadata("a comma separated list of keywords", document, indexData.GenerationHost.ConvertToServiceHost());
+
+                document.Title = document.Title.CleanRagDbString() ?? string.Empty;
+                document.Content = document.Content.CleanRagDbString() ?? string.Empty;
+                document.Topic = document.Topic.CleanRagDbString();
+                document.Keywords = document.Keywords.CleanRagDbString();
+                document.Source = document.Source.CleanRagDbString() ?? string.Empty;
 
                 var newDbDocument = DbMappingHandler.MapToDbIndexDocument(document);
 
@@ -465,7 +476,7 @@ namespace IntelligenceHub.Business.Implementations
         {
             var deletedDocuments = 0;
             if (!_validationHandler.IsValidIndexName(index)) return APIResponseWrapper<int>.Failure($"The supplied index name, '{index}' is invalid. Please avoid reserved SQL words.", APIResponseStatusCodes.BadRequest);
-            var dbIndex = await _metaRepository.GetByNameAsync(AppendTenant(index));
+            var dbIndex = await _metaRepository.GetByNameAsync(index);
             if (dbIndex == null) return APIResponseWrapper<int>.Failure($"The supplied index '{index}' does not exist.", APIResponseStatusCodes.NotFound);
 
             foreach (var documentName in documentList)
@@ -481,51 +492,53 @@ namespace IntelligenceHub.Business.Implementations
 
         private async Task SyncWeaviateIndex(string index, IIndexRepository repository, WeaviateSearchServiceClient weaviateClient, CancellationToken token)
         {
-            const int batch = 100;
-            int page = 1;
-            var sqlDocs = new List<DbIndexDocument>();
-            IEnumerable<DbIndexDocument> pageDocs;
-            do
+            try
             {
-                pageDocs = await repository.GetAllAsync(index, batch, page);
-                sqlDocs.AddRange(pageDocs);
-                page++;
-            } while (pageDocs.Any());
-
-            var weavDocs = await weaviateClient.GetAllDocuments(index);
-            var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
-
-            foreach (var wdoc in weavDocs)
-            {
-                if (!sqlLookup.ContainsKey(wdoc.Id))
+                const int batch = 100;
+                int page = 1;
+                var sqlDocs = new List<DbIndexDocument>();
+                IEnumerable<DbIndexDocument> pageDocs;
+                do
                 {
-                    await weaviateClient.DeleteDocument(index, wdoc.Id);
+                    pageDocs = await repository.GetAllAsync(index, batch, page);
+                    sqlDocs.AddRange(pageDocs);
+                    page++;
+                } while (pageDocs.Any());
+
+                var weavDocs = await weaviateClient.GetAllDocuments(index);
+                var sqlLookup = sqlDocs.ToDictionary(d => d.Id);
+
+                foreach (var wdoc in weavDocs)
+                {
+                    if (!sqlLookup.ContainsKey(wdoc.Id))
+                    {
+                        await weaviateClient.DeleteDocument(index, wdoc.Id);
+                    }
+                }
+
+                foreach (var sdoc in sqlDocs)
+                {
+                    var dto = DbMappingHandler.MapFromDbIndexDocument(sdoc);
+                    await weaviateClient.UpsertDocument(index, dto);
                 }
             }
-
-            foreach (var sdoc in sqlDocs)
+            catch (Exception ex)
             {
-                var dto = DbMappingHandler.MapFromDbIndexDocument(sdoc);
-                await weaviateClient.UpsertDocument(index, dto);
+                // log exception here
             }
+            
         }
 
         #region Private Methods
 
         private string AppendTenant(string indexName)
         {
-            var tenant = _tenantProvider.TenantId?.ToString();
-            return string.IsNullOrEmpty(tenant) ? indexName : $"{indexName}_{tenant}";
+            return indexName.AppendTenant(_tenantProvider.TenantId);
         }
 
         private string RemoveTenant(string indexName)
         {
-            var tenant = _tenantProvider.TenantId?.ToString();
-            if (!string.IsNullOrEmpty(tenant) && indexName.EndsWith("_" + tenant))
-            {
-                return indexName.Substring(0, indexName.Length - tenant.Length - 1);
-            }
-            return indexName;
+            return indexName.RemoveTenant();
         }
 
         /// <summary>

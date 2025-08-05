@@ -3,6 +3,7 @@ using IntelligenceHub.DAL.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using IntelligenceHub.DAL.Tenant;
+using System.Text;
 
 namespace IntelligenceHub.DAL.Implementations
 {
@@ -22,12 +23,37 @@ namespace IntelligenceHub.DAL.Implementations
         }
 
         /// <summary>
-        /// Retrieves the length of the RAG index.
+        /// Sanitizes and normalizes any dynamic table name to ensure it is valid in SQL Server.
         /// </summary>
-        /// <param name="tableName">The name of the RAG index.</param>
-        /// <returns>The length of the index.</returns>
+        private static string ToValidSqlTableName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Table name cannot be null or empty.");
+
+            var valid = new StringBuilder();
+            foreach (char c in name)
+            {
+                if (char.IsLetterOrDigit(c))
+                    valid.Append(c);
+                // skips dashes, underscores, spaces, and other non-alphanumerics
+            }
+
+            if (valid.Length == 0 || !char.IsLetter(valid[0]))
+                valid.Insert(0, "TBL_");
+
+            // Capitalize first letter for convention
+            if (char.IsLower(valid[0]))
+                valid[0] = char.ToUpper(valid[0]);
+
+            if (valid.Length > 128)
+                return valid.ToString().Substring(0, 128);
+
+            return valid.ToString();
+        }
+
         public async Task<int> GetRagIndexLengthAsync(string tableName)
         {
+            tableName = ToValidSqlTableName(tableName);
             var query = $@"SELECT COUNT(*) FROM [{tableName}]";
             return await _context.Database.ExecuteSqlRawAsync(query);
         }
@@ -40,6 +66,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The document, or null if no matching entry is found.</returns>
         public async Task<DbIndexDocument?> GetDocumentAsync(string tableName, string title)
         {
+            tableName = ToValidSqlTableName(tableName);
             var query = $@"SELECT * FROM [{tableName}] WHERE Title = @Title";
             var parameters = new[] { new SqlParameter("@Title", title) };
             return await _dbSet.FromSqlRaw(query, parameters).FirstOrDefaultAsync();
@@ -52,6 +79,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success or failure of the operation.</returns>
         public async Task<bool> CreateIndexAsync(string tableName)
         {
+            tableName = ToValidSqlTableName(tableName);
             var contentTableQuery = $@"CREATE TABLE [{tableName}] (
                                 Id INT IDENTITY(1,1) PRIMARY KEY,
                                 Title NVARCHAR(255) NOT NULL,
@@ -63,7 +91,8 @@ namespace IntelligenceHub.DAL.Implementations
                                 Modified DATETIMEOFFSET NOT NULL
                             );";
 
-            var tombstoneTableQuery = $@"CREATE TABLE [{tableName}_Deleted] (
+            var tombstoneTableName = ToValidSqlTableName($"{tableName}_Deleted");
+            var tombstoneTableQuery = $@"CREATE TABLE [{tombstoneTableName}] (
                 Id INT PRIMARY KEY,
                 DeletedAt DATETIMEOFFSET NOT NULL DEFAULT SYSUTCDATETIME()
             );";
@@ -80,11 +109,14 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> EnableChangeTrackingAsync(string tableName)
         {
+            tableName = ToValidSqlTableName(tableName);
+            var tombstoneTableName = ToValidSqlTableName($"{tableName}_Deleted");
+
             var contentTrackingQuery = $@"ALTER TABLE [dbo].[{tableName}]
                                   ENABLE CHANGE_TRACKING 
                                   WITH (TRACK_COLUMNS_UPDATED = ON);";
 
-            var tombstoneTrackingQuery = $@"ALTER TABLE [dbo].[{tableName}_Deleted]
+            var tombstoneTrackingQuery = $@"ALTER TABLE [dbo].[{tombstoneTableName}]
                                     ENABLE CHANGE_TRACKING 
                                     WITH (TRACK_COLUMNS_UPDATED = OFF);";
 
@@ -100,7 +132,8 @@ namespace IntelligenceHub.DAL.Implementations
         /// <param name="tableName">Base name of the index/content table (without “vw_” prefix or “_Deleted” suffix).</param>
         public async Task<bool> CreateDatasourceViewAsync(string tableName)
         {
-            // Build the view name and the SQL statement
+            tableName = ToValidSqlTableName(tableName);
+            var tombstoneTableName = ToValidSqlTableName($"{tableName}_Deleted");
             string viewName = $"vw_{tableName}";
             string sql = $@"
                 CREATE OR ALTER VIEW [dbo].[{viewName}] AS
@@ -128,10 +161,9 @@ namespace IntelligenceHub.DAL.Implementations
                     DeletedAt  AS Created,
                     DeletedAt  AS Modified,
                     CAST(1 AS BIT) AS IsDeleted
-                FROM [dbo].[{tableName}_Deleted];
+                FROM [dbo].[{tombstoneTableName}];
             ";
 
-            // Execute the DDL
             await _context.Database.ExecuteSqlRawAsync(sql);
             return true;
         }
@@ -144,7 +176,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> MarkIndexForUpdateAsync(string tableName)
         {
-            // Dummy operation to mark the whole index as updated
+            tableName = ToValidSqlTableName(tableName);
             var query = $@"UPDATE [{tableName}] SET Modified = Modified";
             await _context.Database.ExecuteSqlRawAsync(query);
             return true;
@@ -157,8 +189,11 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> DeleteIndexAsync(string tableName)
         {
+            tableName = ToValidSqlTableName(tableName);
+            var tombstoneTableName = ToValidSqlTableName($"{tableName}_Deleted");
+
             var dropMainTableQuery = $@"DROP TABLE IF EXISTS [{tableName}];";
-            var dropTombstoneQuery = $@"DROP TABLE IF EXISTS [{tableName}_Deleted];";
+            var dropTombstoneQuery = $@"DROP TABLE IF EXISTS [{tombstoneTableName}];";
 
             await _context.Database.ExecuteSqlRawAsync(dropMainTableQuery);
             await _context.Database.ExecuteSqlRawAsync(dropTombstoneQuery);
@@ -176,16 +211,15 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>An IEnumerable containing the documents.</returns>
         public async Task<IEnumerable<DbIndexDocument>> GetAllAsync(string tableName, int count, int page)
         {
-            // Calculate the number of rows to skip based on the page number
+            tableName = ToValidSqlTableName(tableName);
+
             var skip = (page - 1) * count;
 
-            // Formulate the SQL query for pagination
             var query = $@"SELECT * FROM [{tableName}]
                            ORDER BY Id
                            OFFSET {skip} ROWS
                            FETCH NEXT {count} ROWS ONLY";
 
-            // Execute the query and return the result
             var responseCollection = await _dbSet.FromSqlRaw(query).ToListAsync();
             return responseCollection;
         }
@@ -198,19 +232,20 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The newly added document.</returns>
         public async Task<DbIndexDocument> AddAsync(DbIndexDocument document, string tableName)
         {
+            tableName = ToValidSqlTableName(tableName);
             var query = $@"INSERT INTO [{tableName}] (Title, Content, Topic, Keywords, Source, Created, Modified)
                                VALUES (@Title, @Content, @Topic, @Keywords, @Source, @Created, @Modified);
                                SELECT CAST(SCOPE_IDENTITY() as int);";
             var parameters = new[]
             {
-                    new SqlParameter("@Title", document.Title),
-                    new SqlParameter("@Content", document.Content),
-                    new SqlParameter("@Topic", document.Topic ?? (object)DBNull.Value),
-                    new SqlParameter("@Keywords", document.Keywords ?? (object)DBNull.Value),
-                    new SqlParameter("@Source", document.Source),
-                    new SqlParameter("@Created", document.Created),
-                    new SqlParameter("@Modified", document.Modified)
-                };
+                new SqlParameter("@Title", document.Title),
+                new SqlParameter("@Content", document.Content),
+                new SqlParameter("@Topic", document.Topic ?? (object)DBNull.Value),
+                new SqlParameter("@Keywords", document.Keywords ?? (object)DBNull.Value),
+                new SqlParameter("@Source", document.Source),
+                new SqlParameter("@Created", document.Created),
+                new SqlParameter("@Modified", document.Modified)
+            };
             document.Id = await _context.Database.ExecuteSqlRawAsync(query, parameters);
             return document;
         }
@@ -224,6 +259,7 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A boolean indicating the success of the operation.</returns>
         public async Task<bool> UpdateAsync(int id, DbIndexDocument document, string tableName)
         {
+            tableName = ToValidSqlTableName(tableName);
             var query = $@"UPDATE [{tableName}] SET 
                                Title = @Title, 
                                Content = @Content, 
@@ -255,11 +291,13 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>A bool indicating the success or failure of the operation.</returns>
         public async Task<bool> DeleteAsync(DbIndexDocument document, string tableName)
         {
-            // Wrap both operations in a single transaction
+            tableName = ToValidSqlTableName(tableName);
+            var tombstoneTableName = ToValidSqlTableName($"{tableName}_Deleted");
+
             await using var tx = await _context.Database.BeginTransactionAsync();
 
             var insertTombstone = $@"
-                INSERT INTO [{tableName}_Deleted] (Id)
+                INSERT INTO [{tombstoneTableName}] (Id)
                 VALUES (@Id);
             ";
 
@@ -270,13 +308,8 @@ namespace IntelligenceHub.DAL.Implementations
 
             var idParam = new SqlParameter("@Id", document.Id);
 
-            // 1) Insert tombstone entry
-            var tombstoneRows = await _context.Database
-                .ExecuteSqlRawAsync(insertTombstone, idParam);
-
-            // 2) Delete from main table
-            var contentRows = await _context.Database
-                .ExecuteSqlRawAsync(deleteContent, idParam);
+            var tombstoneRows = await _context.Database.ExecuteSqlRawAsync(insertTombstone, idParam);
+            var contentRows = await _context.Database.ExecuteSqlRawAsync(deleteContent, idParam);
 
             if (tombstoneRows == 1 && contentRows == 1)
             {
@@ -289,6 +322,5 @@ namespace IntelligenceHub.DAL.Implementations
                 return false;
             }
         }
-
     }
 }

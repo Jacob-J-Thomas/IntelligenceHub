@@ -46,7 +46,7 @@ namespace IntelligenceHub.DAL
             // Configure entity properties and relationships
             modelBuilder.Entity<DbMessage>(entity =>
             {
-                entity.ToTable("MessageHistory");
+                entity.ToTable("MessageHistoryManaged");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.ConversationId).IsRequired();
@@ -60,7 +60,7 @@ namespace IntelligenceHub.DAL
 
             modelBuilder.Entity<DbIndexMetadata>(entity =>
             {
-                entity.ToTable("IndexMetadata");
+                entity.ToTable("IndexMetadataManaged");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
@@ -105,7 +105,7 @@ namespace IntelligenceHub.DAL
 
             modelBuilder.Entity<DbProfile>(entity =>
             {
-                entity.ToTable("Profiles");
+                entity.ToTable("ProfilesManaged");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
@@ -130,7 +130,7 @@ namespace IntelligenceHub.DAL
 
             modelBuilder.Entity<DbTool>(entity =>
             {
-                entity.ToTable("Tools");
+                entity.ToTable("ToolsManaged");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
@@ -156,7 +156,7 @@ namespace IntelligenceHub.DAL
 
             modelBuilder.Entity<DbProperty>(entity =>
             {
-                entity.ToTable("Properties");
+                entity.ToTable("PropertiesManaged");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
@@ -172,7 +172,7 @@ namespace IntelligenceHub.DAL
 
             modelBuilder.Entity<DbProfileTool>(entity =>
             {
-                entity.ToTable("ProfileTools");
+                entity.ToTable("ProfileToolsManaged");
                 entity.HasKey(e => new { e.ProfileID, e.ToolID });
 
                 entity.HasOne(e => e.Profile)
@@ -186,7 +186,7 @@ namespace IntelligenceHub.DAL
 
             modelBuilder.Entity<DbUser>(entity =>
             {
-                entity.ToTable("Users");
+                entity.ToTable("UsersManaged");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.Sub).IsRequired().HasMaxLength(255);

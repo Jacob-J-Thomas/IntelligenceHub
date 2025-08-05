@@ -27,15 +27,12 @@ namespace IntelligenceHub.Business.Implementations
         {
             var isPaid = user.AccessLevel.Equals(AccessLevel.Paid.ToString(), StringComparison.OrdinalIgnoreCase);
 
-            if (!_rateLimitService.IsRequestAllowed(user.Id.ToString(), isPaid))
-            {
-                return APIResponseWrapper<bool>.Failure("Rate limit exceeded.", APIResponseStatusCodes.TooManyRequests);
-            }
+            if (!_rateLimitService.IsRequestAllowed(user.Id.ToString(), isPaid)) return APIResponseWrapper<bool>.Failure("Rate limit exceeded.", APIResponseStatusCodes.TooManyRequests);
 
-            if (isPaid)
-            {
-                return APIResponseWrapper<bool>.Success(true);
-            }
+            if (isPaid) return APIResponseWrapper<bool>.Success(true);
+
+            // rate limiting is temporarily disabled - delete the following line to enable it
+            return APIResponseWrapper<bool>.Success(true);
 
             var now = DateTime.UtcNow;
             if (user.RequestMonthStart.Month != now.Month || user.RequestMonthStart.Year != now.Year)

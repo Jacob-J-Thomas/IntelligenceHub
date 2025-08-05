@@ -8,8 +8,8 @@ using IntelligenceHub.Common;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.DAL.Tenant;
 using IntelligenceHub.Hubs;
-using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Http;
 using Moq;
 using Xunit;
 
@@ -24,13 +24,17 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             Mock<ITenantProvider> tenantProviderMock,
             Mock<IUsageService> usageMock,
             Mock<ISingleClientProxy> clientProxy,
-            ClaimsPrincipal? claimsPrincipal = null)
+            string? apiKey = "key")
         {
             var clients = new Mock<IHubCallerClients>();
             clients.Setup(c => c.Caller).Returns(clientProxy.Object);
             var context = new Mock<HubCallerContext>();
-            claimsPrincipal ??= new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "sub") }));
-            context.Setup(c => c.User).Returns(claimsPrincipal);
+            var httpContext = new DefaultHttpContext();
+            if (apiKey != null)
+            {
+                httpContext.Request.Headers["X-Api-Key"] = apiKey;
+            }
+            context.Setup(c => c.GetHttpContext()).Returns(httpContext);
 
             var hub = new ChatHub(completionMock.Object, validationMock.Object, userLogicMock.Object, tenantProviderMock.Object, usageMock.Object)
             {
@@ -61,7 +65,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             var clientProxy = new Mock<ISingleClientProxy>();
             tenantProviderMock.SetupAllProperties();
             usageMock.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>())).ReturnsAsync(APIResponseWrapper<bool>.Success(true));
-            userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
+            userLogicMock.Setup(u => u.GetUserByApiTokenAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
             var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy);
             var request = new CompletionRequest();
             const string error = "Invalid";
@@ -84,7 +88,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             var clientProxy = new Mock<ISingleClientProxy>();
             tenantProviderMock.SetupAllProperties();
             usageMock.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>())).ReturnsAsync(APIResponseWrapper<bool>.Success(true));
-            userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
+            userLogicMock.Setup(u => u.GetUserByApiTokenAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
             var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy);
             var request = new CompletionRequest();
             var chunk = APIResponseWrapper<CompletionStreamChunk>.Success(new CompletionStreamChunk { CompletionUpdate = "hi" });
@@ -106,7 +110,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             var clientProxy = new Mock<ISingleClientProxy>();
             tenantProviderMock.SetupAllProperties();
             usageMock.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>())).ReturnsAsync(APIResponseWrapper<bool>.Success(true));
-            userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
+            userLogicMock.Setup(u => u.GetUserByApiTokenAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
             var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy);
             var request = new CompletionRequest();
             const string msg = "missing";
@@ -130,7 +134,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             var clientProxy = new Mock<ISingleClientProxy>();
             tenantProviderMock.SetupAllProperties();
             usageMock.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>())).ReturnsAsync(APIResponseWrapper<bool>.Success(true));
-            userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
+            userLogicMock.Setup(u => u.GetUserByApiTokenAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
             var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy);
             var request = new CompletionRequest();
             completionMock.Setup(c => c.StreamCompletion(request)).Throws(new System.Exception());
@@ -153,7 +157,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             tenantProviderMock.SetupAllProperties();
             usageMock.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>()))
                      .ReturnsAsync(APIResponseWrapper<bool>.Failure("limit", GlobalVariables.APIResponseStatusCodes.TooManyRequests));
-            userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
+            userLogicMock.Setup(u => u.GetUserByApiTokenAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
             var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy);
             var request = new CompletionRequest();
 
@@ -173,7 +177,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             var clientProxy = new Mock<ISingleClientProxy>();
             tenantProviderMock.SetupAllProperties();
             usageMock.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>())).ReturnsAsync(APIResponseWrapper<bool>.Success(true));
-            userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
+            userLogicMock.Setup(u => u.GetUserByApiTokenAsync(It.IsAny<string>())).ReturnsAsync((DbUser?)null);
             var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy);
             var request = new CompletionRequest();
 
@@ -184,7 +188,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
         }
 
         [Fact]
-        public async Task Send_ReturnsError_WhenSubMissing()
+        public async Task Send_ReturnsError_WhenApiKeyMissing()
         {
             var completionMock = new Mock<ICompletionLogic>();
             var validationMock = new Mock<IValidationHandler>();
@@ -193,15 +197,14 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             var usageMock = new Mock<IUsageService>();
             var clientProxy = new Mock<ISingleClientProxy>();
             tenantProviderMock.SetupAllProperties();
-            var claims = new ClaimsPrincipal(new ClaimsIdentity());
-            var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy, claims);
+            var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy, null);
             var request = new CompletionRequest();
 
             await hub.Send(request);
 
             var expected = $"Response Status: {500}. Error message: {GlobalVariables.DefaultExceptionMessage}";
             clientProxy.Verify(p => p.SendCoreAsync("broadcastMessage", It.Is<object[]>(o => (string)o[0] == expected), default), Times.Once);
-            userLogicMock.Verify(u => u.GetUserBySubAsync(It.IsAny<string>()), Times.Never);
+            userLogicMock.Verify(u => u.GetUserByApiTokenAsync(It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -215,7 +218,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             var clientProxy = new Mock<ISingleClientProxy>();
             tenantProviderMock.SetupAllProperties();
             usageMock.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>())).ReturnsAsync(APIResponseWrapper<bool>.Success(true));
-            userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
+            userLogicMock.Setup(u => u.GetUserByApiTokenAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
             var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy);
             var request = new CompletionRequest();
             const string msg = "limit";
@@ -239,7 +242,7 @@ namespace IntelligenceHub.Tests.Unit.Hubs
             var clientProxy = new Mock<ISingleClientProxy>();
             tenantProviderMock.SetupAllProperties();
             usageMock.Setup(u => u.ValidateAndIncrementUsageAsync(It.IsAny<DbUser>())).ReturnsAsync(APIResponseWrapper<bool>.Success(true));
-            userLogicMock.Setup(u => u.GetUserBySubAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
+            userLogicMock.Setup(u => u.GetUserByApiTokenAsync(It.IsAny<string>())).ReturnsAsync(new DbUser { TenantId = Guid.NewGuid() });
             var hub = CreateHub(completionMock, validationMock, userLogicMock, tenantProviderMock, usageMock, clientProxy);
             var request = new CompletionRequest();
             const string msg = "error";

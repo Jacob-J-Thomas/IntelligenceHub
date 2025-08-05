@@ -1,5 +1,6 @@
 ﻿using OpenAI.Chat;
 using System.Text;
+using System.Text.RegularExpressions;
 using static IntelligenceHub.Common.GlobalVariables;
 
 namespace IntelligenceHub.Common.Extensions
@@ -142,6 +143,47 @@ namespace IntelligenceHub.Common.Extensions
             if (provider == RagServiceHost.Weaviate.ToString().ToLower()) return RagServiceHost.Weaviate;
             if (provider == RagServiceHost.Azure.ToString().ToLower()) return RagServiceHost.Azure;
             return RagServiceHost.None;
+        }
+
+        /// <summary>
+        /// Appends the tenant identifier to a name.
+        /// </summary>
+        /// <param name="name">The base name.</param>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <returns>The name combined with the tenant identifier.</returns>
+        public static string AppendTenant(this string name, Guid? tenantId)
+        {
+            if (string.IsNullOrWhiteSpace(name) || !tenantId.HasValue) return name;
+            return $"{name}_{tenantId}";
+        }
+
+        /// <summary>
+        /// Removes a trailing tenant identifier from a name if present.
+        /// </summary>
+        /// <param name="name">The name that may contain a tenant identifier.</param>
+        /// <returns>The name without a tenant identifier.</returns>
+        public static string RemoveTenant(this string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return name;
+            var index = name.LastIndexOf('_');
+            if (index <= 0) return name;
+            var suffix = name[(index + 1)..];
+            return Guid.TryParse(suffix, out _) ? name[..index] : name;
+        }
+
+        /// <summary>
+        /// Normalizes a string for RAG database storage by collapsing whitespace
+        /// and removing unsupported control characters.
+        /// </summary>
+        /// <param name="input">The string to clean.</param>
+        /// <returns>The cleaned string, or null if the input was null.</returns>
+        public static string? CleanRagDbString(this string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return input?.Trim();
+
+            var cleaned = Regex.Replace(input, @"\s+", " ");
+            cleaned = Regex.Replace(cleaned, "[\u0000-\u001F\u007F-\u009F]", "");
+            return cleaned.Trim();
         }
     }
 }

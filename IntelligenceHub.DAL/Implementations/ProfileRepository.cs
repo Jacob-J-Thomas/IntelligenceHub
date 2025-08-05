@@ -1,5 +1,6 @@
 ﻿using IntelligenceHub.API.DTOs;
 using IntelligenceHub.DAL.Interfaces;
+using IntelligenceHub.Common.Extensions;
 using IntelligenceHub.DAL.Models;
 using IntelligenceHub.DAL.Tenant;
 using Microsoft.EntityFrameworkCore;
@@ -28,11 +29,12 @@ namespace IntelligenceHub.DAL.Implementations
         /// <returns>The matching profile, or null if no results are found.</returns>
         public async Task<DbProfile?> GetByNameAsync(string name)
         {
+            var fullName = name.AppendTenant(_tenantProvider.TenantId);
             return await _dbSet
                 .Include(p => p.ProfileTools)
                 .ThenInclude(pt => pt.Tool)
                 .ThenInclude(t => t.Properties)
-                .FirstOrDefaultAsync(p => p.Name == name && p.TenantId == _tenantProvider.TenantId);
+                .FirstOrDefaultAsync(p => p.Name == fullName && p.TenantId == _tenantProvider.TenantId);
         }
 
         /// <summary>

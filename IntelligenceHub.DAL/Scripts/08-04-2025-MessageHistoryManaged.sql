@@ -1,4 +1,4 @@
-﻿CREATE TABLE MessageHistory (
+﻿CREATE TABLE MessageHistoryManaged (
     Id INT IDENTITY(1,1) PRIMARY KEY,
     TenantId UNIQUEIDENTIFIER NOT NULL,
     ConversationId UNIQUEIDENTIFIER,
