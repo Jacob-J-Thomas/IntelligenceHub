@@ -19,6 +19,7 @@ using Polly;
 using Polly.Extensions.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text;
 using static IntelligenceHub.Common.GlobalVariables;
 using IntelligenceHub.Business.Factories;
 using IntelligenceHub.Host.Swagger;
@@ -113,7 +114,7 @@ namespace IntelligenceHub.Host
             builder.Services.AddSingleton<IToolClient, ToolClient>();
             builder.Services.AddSingleton<AzureAISearchServiceClient>();
             builder.Services.AddSingleton<WeaviateSearchServiceClient>();
-            builder.Services.AddSingleton<IAIAuth0Client, Auth0Client>();
+            builder.Services.AddSingleton<IJwtService, JwtService>();
             builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 
             // Repositories
@@ -241,13 +242,16 @@ namespace IntelligenceHub.Host
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(options =>
             {
-                options.Authority = authSettings.Domain;
-                options.Audience = authSettings.Audience;
-
-                // Specify the Role Claim Type if necessary
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    RoleClaimType = "roles"
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authSettings.JwtSecret)),
+                    ValidateIssuer = true,
+                    ValidIssuer = authSettings.Domain,
+                    ValidateAudience = true,
+                    ValidAudience = authSettings.Audience,
+                    RoleClaimType = "roles",
+                    ClockSkew = TimeSpan.Zero
                 };
             });
 

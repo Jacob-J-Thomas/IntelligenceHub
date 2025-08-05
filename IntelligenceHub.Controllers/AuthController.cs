@@ -46,7 +46,7 @@ namespace IntelligenceHub.API.Controllers
                 var user = await _userLogic.GetUserByApiTokenAsync(apiKey);
                 if (user is null) return Unauthorized();
 
-                var token = await _authLogic.GetAdminAuthToken();
+                var token = await _authLogic.GetAdminAuthToken(user);
                 return token is null ? Unauthorized() : Ok(token);
             }
             catch
@@ -72,7 +72,7 @@ namespace IntelligenceHub.API.Controllers
                 var user = await _userLogic.GetUserByApiTokenAsync(apiKey);
                 if (user is null) return Unauthorized();
 
-                var token = await _authLogic.GetDefaultAuthToken();
+                var token = await _authLogic.GetDefaultAuthToken(user);
                 return token is null ? Unauthorized() : Ok(token);
             }
             catch
