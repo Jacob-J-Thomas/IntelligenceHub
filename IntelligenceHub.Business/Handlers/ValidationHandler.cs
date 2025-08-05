@@ -197,7 +197,39 @@ namespace IntelligenceHub.Business.Handlers
             {
                 foreach (var str in tool.Function.Parameters.required) if (!tool.Function.Parameters.properties.ContainsKey(str)) return $"Required property {str} does not exist in the tool {tool.Function.Name}'s properties list.";
             }
-            if (!string.IsNullOrEmpty(tool.ExecutionUrl) && !tool.ExecutionUrl.StartsWith("https://") && !tool.ExecutionUrl.StartsWith("http://")) return $"Please provide a valid execution url for the tool {tool.Function.Name}. Supplied url: '{tool.ExecutionUrl}'.";
+            if (!string.IsNullOrEmpty(tool.ExecutionUrl))
+            {
+                if (!Uri.TryCreate(tool.ExecutionUrl, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                {
+                    return $"Please provide a valid execution url for the tool {tool.Function.Name}. Supplied url: '{tool.ExecutionUrl}'.";
+                }
+            }
+
+            if (!string.IsNullOrEmpty(tool.ExecutionMethod))
+            {
+                var validMethods = new[] { "GET", "POST", "PUT", "PATCH", "DELETE" };
+                if (!validMethods.Contains(tool.ExecutionMethod.ToUpperInvariant()))
+                {
+                    return $"Please provide a valid execution method for the tool {tool.Function.Name}. Supplied method: '{tool.ExecutionMethod}'. Valid values are {string.Join(", ", validMethods)}.";
+                }
+            }
+
+            if (!string.IsNullOrEmpty(tool.ExecutionBase64Key))
+            {
+                try
+                {
+                    var decoded = Convert.FromBase64String(tool.ExecutionBase64Key);
+                    if (decoded.Length == 0)
+                    {
+                        return $"Please provide a valid base64 encoded execution key for the tool {tool.Function.Name}. Supplied key: '{tool.ExecutionBase64Key}'.";
+                    }
+                }
+                catch (FormatException)
+                {
+                    return $"Please provide a valid base64 encoded execution key for the tool {tool.Function.Name}. Supplied key: '{tool.ExecutionBase64Key}'.";
+                }
+            }
 
             if (tool.Function.Parameters.properties != null && tool.Function.Parameters.properties.Count > 0)
             {
