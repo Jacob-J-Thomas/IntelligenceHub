@@ -280,7 +280,7 @@ namespace IntelligenceHub.Tests.Unit.Business
                     }
                 },
                 ExecutionUrl = "http://example.com",
-                ExecutionBase64Key = "key",
+                ExecutionBase64Key = "a2V5",
                 ExecutionMethod = "GET"
             };
 
@@ -289,6 +289,90 @@ namespace IntelligenceHub.Tests.Unit.Business
 
             // Assert
             Assert.Null(result);
+        }
+
+        [Fact]
+        public void ValidateTool_WithInvalidExecutionUrl_ReturnsError()
+        {
+            // Arrange - Tool with invalid execution URL.
+            var tool = new IntelligenceHub.API.DTOs.Tools.Tool
+            {
+                Function = new IntelligenceHub.API.DTOs.Tools.Function
+                {
+                    Name = "TestTool",
+                    Description = "A test tool",
+                    Parameters = new IntelligenceHub.API.DTOs.Tools.Parameters
+                    {
+                        required = new string[] { },
+                        properties = new Dictionary<string, IntelligenceHub.API.DTOs.Tools.Property>()
+                    }
+                },
+                ExecutionUrl = "invalid-url",
+                ExecutionMethod = "GET",
+                ExecutionBase64Key = "a2V5"
+            };
+
+            // Act
+            var result = _handler.ValidateTool(tool);
+
+            // Assert
+            Assert.Equal("Please provide a valid execution url for the tool TestTool. Supplied url: 'invalid-url'.", result);
+        }
+
+        [Fact]
+        public void ValidateTool_WithInvalidExecutionMethod_ReturnsError()
+        {
+            // Arrange - Tool with invalid execution method.
+            var tool = new IntelligenceHub.API.DTOs.Tools.Tool
+            {
+                Function = new IntelligenceHub.API.DTOs.Tools.Function
+                {
+                    Name = "TestTool",
+                    Description = "A test tool",
+                    Parameters = new IntelligenceHub.API.DTOs.Tools.Parameters
+                    {
+                        required = new string[] { },
+                        properties = new Dictionary<string, IntelligenceHub.API.DTOs.Tools.Property>()
+                    }
+                },
+                ExecutionUrl = "http://example.com",
+                ExecutionMethod = "INVALID",
+                ExecutionBase64Key = "a2V5"
+            };
+
+            // Act
+            var result = _handler.ValidateTool(tool);
+
+            // Assert
+            Assert.Equal("Please provide a valid execution method for the tool TestTool. Supplied method: 'INVALID'. Valid values are GET, POST, PUT, PATCH, DELETE.", result);
+        }
+
+        [Fact]
+        public void ValidateTool_WithInvalidExecutionBase64Key_ReturnsError()
+        {
+            // Arrange - Tool with invalid base64 execution key.
+            var tool = new IntelligenceHub.API.DTOs.Tools.Tool
+            {
+                Function = new IntelligenceHub.API.DTOs.Tools.Function
+                {
+                    Name = "TestTool",
+                    Description = "A test tool",
+                    Parameters = new IntelligenceHub.API.DTOs.Tools.Parameters
+                    {
+                        required = new string[] { },
+                        properties = new Dictionary<string, IntelligenceHub.API.DTOs.Tools.Property>()
+                    }
+                },
+                ExecutionUrl = "http://example.com",
+                ExecutionMethod = "GET",
+                ExecutionBase64Key = "not-base64"
+            };
+
+            // Act
+            var result = _handler.ValidateTool(tool);
+
+            // Assert
+            Assert.Equal("Please provide a valid base64 encoded execution key for the tool TestTool. Supplied key: 'not-base64'.", result);
         }
 
         [Fact]
