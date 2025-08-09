@@ -63,7 +63,7 @@ namespace IntelligenceHub.Hubs
                 }
 
                 _tenantProvider.TenantId = user.TenantId;
-                _tenantProvider.User = user;
+                _tenantProvider.User = user; 
 
                 var usageResult = await _usageService.ValidateAndIncrementUsageAsync(user);
                 if (!usageResult.IsSuccess)
@@ -79,8 +79,6 @@ namespace IntelligenceHub.Hubs
                     await Clients.Caller.SendAsync("broadcastMessage", errorMessage);
                     return;
                 }
-
-                completionRequest.ProfileOptions.Name = completionRequest.ProfileOptions.Name.AppendTenant(user.TenantId);
 
                 var response = _completionLogic.StreamCompletion(completionRequest);
                 await foreach (var chunk in response)

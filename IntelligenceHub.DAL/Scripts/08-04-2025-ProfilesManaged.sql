@@ -1,7 +1,7 @@
 ﻿CREATE TABLE ProfilesManaged (
     Id INT IDENTITY(1,1) PRIMARY KEY,
     TenantId UNIQUEIDENTIFIER NOT NULL,
-    [Name] NVARCHAR(40) UNIQUE NOT NULL,
+    [Name] NVARCHAR(255) UNIQUE NOT NULL,
     Model NVARCHAR(255),
     FrequencyPenalty FLOAT,
     PresencePenalty FLOAT,
