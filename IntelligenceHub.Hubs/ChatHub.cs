@@ -51,7 +51,7 @@ namespace IntelligenceHub.Hubs
                     !httpContext.Request.Headers.TryGetValue("X-Api-Key", out var apiKey) ||
                     string.IsNullOrWhiteSpace(apiKey))
                 {
-                    await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {500}. Error message: {DefaultExceptionMessage}");
+                    await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {401}. Unauthorized.");
                     return;
                 }
 

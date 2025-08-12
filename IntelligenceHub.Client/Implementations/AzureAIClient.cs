@@ -5,11 +5,13 @@ using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.Common.Extensions;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using OpenAI.Chat;
 using OpenAI.Images;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using static IntelligenceHub.Common.GlobalVariables;
 
@@ -144,48 +146,78 @@ namespace IntelligenceHub.Client.Implementations
         /// </summary>
         /// <param name="completionRequest">The CompletionRequest request details used to generate a completion.</param>
         /// <returns>An asyncronous collection of CompletionStreamChunks.</returns>
+        /// <summary>
+        /// Streams the completion results returned from a completion request.
+        /// </summary>
+        /// <param name="completionRequest">The CompletionRequest request details used to generate a completion.</param>
+        /// <returns>An asynchronous collection of CompletionStreamChunks.</returns>
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
             var options = BuildCompletionOptions(completionRequest);
             var messages = BuildCompletionMessages(completionRequest);
             var chatClient = _azureOpenAIClient.GetChatClient(completionRequest.ProfileOptions.Model);
-            var resultCollection = chatClient.CompleteChatStreamingAsync(messages, options);
+            var results = chatClient.CompleteChatStreamingAsync(messages, options);
 
             var chunkId = 0;
             string role = null;
             string finishReason = null;
-            var currentTool = string.Empty;
-            var currentToolArgs = string.Empty;
-            var toolCalls = new Dictionary<string, string>();
-            await foreach (var result in resultCollection)
+
+            // Accumulate tool-call args by stable index
+            var argBuildersByIndex = new Dictionary<int, StringBuilder>();
+            var funcNamesByIndex = new Dictionary<int, string>();
+            var toolCalls = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            await foreach (var result in results)
             {
-                if (!string.IsNullOrEmpty(result.Role.ToString())) role = result.Role.ToString() ?? role ?? string.Empty;
-                if (!string.IsNullOrEmpty(result.FinishReason.ToString())) finishReason = result.FinishReason.ToString() ?? finishReason ?? string.Empty;
+                var roleStr = result.Role?.ToString();
+                if (!string.IsNullOrEmpty(roleStr)) role = roleStr;
+
+                var finishStr = result.FinishReason?.ToString();
+                if (!string.IsNullOrEmpty(finishStr)) finishReason = finishStr;
+
+                // Streamed content
                 var content = string.Empty;
                 var base64Image = string.Empty;
 
-                foreach (var update in result.ContentUpdate)
+                foreach (var part in result.ContentUpdate)
                 {
-                    if (string.IsNullOrEmpty(base64Image) && update.Kind == ChatMessageContentPartKind.Image) base64Image = Convert.ToBase64String(update.ImageBytes);
-                    if (string.IsNullOrEmpty(content) && update.Kind == ChatMessageContentPartKind.Text) content += update.Text;
+                    if (part.Kind == ChatMessageContentPartKind.Image && string.IsNullOrEmpty(base64Image)) base64Image = Convert.ToBase64String(part.ImageBytes);
+                    else if (part.Kind == ChatMessageContentPartKind.Text) content += part.Text; // append every chunk
                 }
 
-                // handle tool conversion - move to seperate method
+                // Streamed tool-call updates
                 foreach (var update in result.ToolCallUpdates)
                 {
-                    // capture current values
-                    if (string.IsNullOrEmpty(currentTool)) currentTool = update.FunctionName;
-                    if (currentTool == update.FunctionName && update.FunctionArgumentsUpdate != null && update.FunctionArgumentsUpdate.ToArray().Any()) currentToolArgs += update.FunctionArgumentsUpdate.ToString() ?? string.Empty;
+                    var idx = update.Index;
 
-                    if (toolCalls.ContainsKey(currentTool)) toolCalls[currentTool] = currentToolArgs ?? string.Empty;
-                    else
+                    if (!string.IsNullOrEmpty(update.FunctionName)) funcNamesByIndex[idx] = update.FunctionName;
+
+                    // FunctionArgumentsUpdate is BinaryData -> convert to string
+                    var argDeltaBD = update.FunctionArgumentsUpdate;
+                    var hasArgDelta = argDeltaBD is not null && argDeltaBD.ToString() is string s && s.Length > 0;
+
+                    if (hasArgDelta)
                     {
-                        if (currentTool.ToLower() != SystemTools.Chat_Recursion.ToString().ToLower()) toolCalls.Add(currentTool, currentToolArgs ?? string.Empty);
-                        else toolCalls.Add(SystemTools.Chat_Recursion.ToString().ToLower(), string.Empty);
+                        if (!argBuildersByIndex.TryGetValue(idx, out var sb))
+                        {
+                            sb = new StringBuilder();
+                            argBuildersByIndex[idx] = sb;
+                        }
+
+                        var argDelta = argDeltaBD.ToString();
+                        sb.Append(argDelta);
+
+                        var name = funcNamesByIndex.TryGetValue(idx, out var n) ? n : "tool";
+
+                        if (name.Equals(SystemTools.Chat_Recursion.ToString(), StringComparison.OrdinalIgnoreCase)) toolCalls[SystemTools.Chat_Recursion.ToString().ToLower()] = string.Empty;
+                        else toolCalls[name] = sb.ToString();
                     }
                 }
+
                 var finalContentString = GetMessageContent(content, toolCalls);
-                yield return new CompletionStreamChunk()
+
+                // snapshot toolCalls so previously yielded chunks don’t mutate
+                yield return new CompletionStreamChunk
                 {
                     Id = chunkId++,
                     Role = role?.ConvertStringToRole(),
@@ -193,7 +225,7 @@ namespace IntelligenceHub.Client.Implementations
                     CompletionUpdate = finalContentString,
                     Base64Image = base64Image,
                     FinishReason = finishReason?.ConvertStringToFinishReason(),
-                    ToolCalls = toolCalls
+                    ToolCalls = new Dictionary<string, string>(toolCalls, StringComparer.Ordinal)
                 };
             }
         }

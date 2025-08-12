@@ -129,12 +129,14 @@ namespace IntelligenceHub.Business.Implementations
 
             Role? dbMessageRole;
             var allCompletionChunks = string.Empty;
-            var toolCallDictionary = new Dictionary<string, string>();
+
+            var toolArgBuilders = new Dictionary<string, StringBuilder>(StringComparer.Ordinal);
+            var toolCallDictionary = new Dictionary<string, string>(StringComparer.Ordinal);
+
             await foreach (var update in completionCollection)
             {
                 if (update == null) continue;
 
-                toolCallDictionary = update.ToolCalls;
                 allCompletionChunks += update.CompletionUpdate;
 
                 var roleString = update.Role.ToString();
