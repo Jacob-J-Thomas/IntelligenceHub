@@ -5,6 +5,9 @@ using IntelligenceHub.Client.Interfaces;
 using IntelligenceHub.Common.Config;
 using IntelligenceHub.DAL.Interfaces;
 using IntelligenceHub.DAL.Models;
+using Azure.Search.Documents.Models;
+using IntelligenceHub.API.DTOs.RAG;
+using Azure;
 using Moq;
 using System.Reflection;
 using System.Linq;
@@ -130,6 +133,46 @@ namespace IntelligenceHub.Tests.Unit.Business
             // Assert
             Assert.NotNull(result);
             Assert.Equal(completionResponse, result.Data);
+        }
+
+        [Fact]
+        public async Task ProcessCompletion_AppendsTenantIdToRagIndexName()
+        {
+            var tenantId = Guid.NewGuid();
+            var indexName = "TestIndex";
+            var fullIndexName = $"{indexName}_{tenantId}";
+
+            var completionRequest = new CompletionRequest
+            {
+                Messages = new List<Message> { new Message { Role = Role.User, Content = "Hello" } },
+                ProfileOptions = new Profile { Name = "TestProfile", Host = AGIServiceHost.OpenAI, Model = DefaultOpenAIModel, RagDatabase = indexName }
+            };
+
+            var profile = new DbProfile { Name = "TestProfile", Host = AGIServiceHost.OpenAI.ToString(), Model = DefaultOpenAIModel };
+            _mockProfileRepository.Setup(r => r.GetByNameAsync(It.IsAny<string>())).ReturnsAsync(profile);
+
+            var dbIndex = new DbIndexMetadata
+            {
+                Name = fullIndexName,
+                TenantId = tenantId,
+                RagHost = RagServiceHost.Azure.ToString(),
+                GenerationHost = AGIServiceHost.Azure.ToString(),
+                IndexingInterval = TimeSpan.Zero,
+                MaxRagAttachments = 1
+            };
+            _mockRagMetaRepository.Setup(r => r.GetByNameAsync(indexName)).ReturnsAsync(dbIndex);
+
+            var searchResults = SearchModelFactory.SearchResults<IndexDefinition>(new List<SearchResult<IndexDefinition>>(), null, null, null, new Mock<Response>().Object);
+            _mockSearchClient.Setup(c => c.SearchIndex(It.Is<IndexMetadata>(i => i.Name == fullIndexName), It.IsAny<string>()))
+                              .ReturnsAsync(searchResults);
+
+            _mockAIClient.SetupSequence(c => c.PostCompletion(It.IsAny<CompletionRequest>()))
+                         .ReturnsAsync(new CompletionResponse { Messages = new List<Message> { new Message { Role = Role.Assistant, Content = "intent" } }, FinishReason = FinishReasons.Stop })
+                         .ReturnsAsync(new CompletionResponse { Messages = new List<Message> { new Message { Role = Role.Assistant, Content = "resp" } }, FinishReason = FinishReasons.Stop });
+
+            await _completionLogic.ProcessCompletion(completionRequest);
+
+            _mockSearchClient.Verify(c => c.SearchIndex(It.Is<IndexMetadata>(i => i.Name == fullIndexName), It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
