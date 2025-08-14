@@ -512,6 +512,7 @@ namespace IntelligenceHub.Business.Implementations
             if (string.IsNullOrWhiteSpace(intentfulQuery)) return null;
 
             var indexData = DbMappingHandler.MapFromDbIndexMetadata(dbIndex);
+            indexData.Name = indexData.Name.AppendTenant(dbIndex.TenantId);
             var ragClient = _ragClientFactory.GetClient(indexData.RagHost);
             var ragData = await ragClient.SearchIndex(indexData, intentfulQuery);
 
