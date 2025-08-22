@@ -148,15 +148,17 @@ namespace IntelligenceHub.Host
 
             // Define the Completion retry policy
             var retryPolicy = HttpPolicyExtensions
-                .HandleTransientHttpError()
-                .OrResult(r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                .WaitAndRetryAsync(settings.AGIClientMaxRetries, _ =>
-                {
-                    // Add random jitter up to 5 seconds.
-                    var maxJitter = settings.AGIClientMaxJitter * 1000; // convert to milliseconds
-                    var jitter = TimeSpan.FromMilliseconds(new Random().Next(0, maxJitter));
-                    return TimeSpan.FromSeconds(settings.AGIClientInitialRetryDelay) + jitter;
-                });
+                .HandleTransientHttpError() // 5xx, 408, HttpRequestException
+                .OrResult(r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests
+                               || (int)r.StatusCode == 529) // Anthropic "overloaded"
+                .WaitAndRetryAsync(
+                    settings.AGIClientMaxRetries,
+                    _ =>
+                    {
+                        // jittered backoff
+                        var jitterMs = new Random().Next(0, settings.AGIClientMaxJitter * 1000);
+                        return TimeSpan.FromSeconds(settings.AGIClientInitialRetryDelay) + TimeSpan.FromMilliseconds(jitterMs);
+                    });
 
             // Define the Completion circuit breaker policy if more than one service exists.
             IAsyncPolicy<HttpResponseMessage> policyWrap = retryPolicy;

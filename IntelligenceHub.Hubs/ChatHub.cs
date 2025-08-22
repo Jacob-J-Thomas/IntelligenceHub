@@ -90,7 +90,7 @@ namespace IntelligenceHub.Hubs
                     else await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {chunk.StatusCode}. Error message: {chunk.ErrorMessage}");
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 await Clients.Caller.SendAsync("broadcastMessage", $"Response Status: {500}. Error message: {DefaultExceptionMessage}");
             }

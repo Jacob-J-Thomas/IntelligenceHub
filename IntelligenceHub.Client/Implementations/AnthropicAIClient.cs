@@ -8,6 +8,7 @@ using IntelligenceHub.Common.Config;
 using IntelligenceHub.API.DTOs.Tools;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text;
 
 namespace IntelligenceHub.Client.Implementations
 {
@@ -95,31 +96,111 @@ namespace IntelligenceHub.Client.Implementations
         /// <returns>Any asyncronous collection of streaming chunks containing the completion response.</returns>
         public async IAsyncEnumerable<CompletionStreamChunk> StreamCompletion(CompletionRequest completionRequest)
         {
-            var request = BuildCompletionParameters(completionRequest);
-            var response = _anthropicClient.Messages.StreamClaudeMessageAsync(request);
+            const int maxAttempts = 5;
+            var attempt = 0;
+            var rng = new Random();
+            var alreadySent = new StringBuilder(); // for de-dup if a retry restarts content
 
-            var toolCalls = new Dictionary<string, string>();
-            await foreach (var chunk in response)
+            while (true)
             {
-                var content = string.Empty;
-                var base64Image = string.Empty;
-                foreach (var contentPart in chunk.Content)
+                attempt++;
+
+                var request = BuildCompletionParameters(completionRequest, true);
+                var stream = _anthropicClient.Messages.StreamClaudeMessageAsync(request);
+
+                await using var e = stream.GetAsyncEnumerator();
+
+                while (true)
                 {
-                    if (contentPart is ImageContent imageContent) base64Image = imageContent.Source.Data;
-                    else if (contentPart is TextContent textContent) content += textContent.Text;
+                    bool hasItem;
+
+                    try
+                    {
+                        hasItem = await e.MoveNextAsync(); // <-- exceptions happen here mid-stream
+                    }
+                    catch (Exception ex) when (IsTransientAnthropicStreamError(ex) && attempt < maxAttempts)
+                    {
+                        // Backoff + retry new attempt
+                        var delayMs = (int)(Math.Pow(2, attempt - 1) * 500) + rng.Next(0, 250);
+                        await Task.Delay(delayMs);
+                        break; // break inner while, continue outer while (new attempt)
+                    }
+
+                    if (!hasItem) yield break; // stream completed cleanly
+
+                    var chunk = e.Current;
+
+                    string content = "";
+                    string base64Image = "";
+
+                    if (chunk.Content != null)
+                    {
+                        foreach (var part in chunk.Content)
+                        {
+                            if (part is ImageContent img) base64Image = img.Source.Data;
+                            else if (part is TextContent txt) content += txt.Text;
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(chunk.Delta?.Text))
+                    {
+                        foreach (var c in chunk.Delta.Text) content += c;
+                    }
+
+                    // De-duplication if a retry restarted the stream
+                    if (!string.IsNullOrEmpty(content) && alreadySent.Length > 0)
+                    {
+                        var sent = alreadySent.ToString();
+                        if (content.StartsWith(sent, StringComparison.Ordinal)) content = content.Substring(sent.Length);
+                        else if (sent.StartsWith(content, StringComparison.Ordinal)) content = ""; // entirely duplicate
+                    }
+
+                    if (!string.IsNullOrEmpty(content)) alreadySent.Append(content);
+
+                    var contentString = GetMessageContent(content, new Dictionary<string, string>());
+
+                    yield return new CompletionStreamChunk
+                    {
+                        Base64Image = base64Image,
+                        CompletionUpdate = contentString,
+                        ToolCalls = ConvertResponseTools(chunk.ToolCalls ?? new List<Anthropic.SDK.Common.Function>()),
+                        Role = Role.Assistant,
+                        FinishReason = ConvertFinishReason(chunk.StopReason, chunk.ToolCalls?.Any() == true)
+                    };
                 }
-
-                var contentString = GetMessageContent(content, toolCalls);
-
-                yield return new CompletionStreamChunk
-                {
-                    Base64Image = base64Image,
-                    CompletionUpdate = contentString,
-                    ToolCalls = ConvertResponseTools(chunk.ToolCalls),
-                    Role = ConvertFromAnthropicRole(chunk.Role),
-                    FinishReason = ConvertFinishReason(chunk.StopReason, chunk.ToolCalls.Any())
-                };
             }
+        }
+
+        /// <summary>
+        /// Assists with retry logic by identifying transient errors during streaming.
+        /// </summary>
+        /// <param name="ex">The exception being checked.</param>
+        /// <returns>A bool indicating if the error is transient or not.</returns>
+        private static bool IsTransientAnthropicStreamError(Exception ex)
+        {
+            // Cover likely mid-stream cases:
+            if (ex is TaskCanceledException || ex is TimeoutException) return true;
+            if (ex is IOException) return true;
+
+            if (ex is HttpRequestException hre)
+            {
+                // .StatusCode is nullable
+                if (hre.StatusCode.HasValue)
+                {
+                    var code = (int)hre.StatusCode.Value;
+                    if (code == 429 || code == 408 || (code >= 500 && code <= 599) || code == 529)
+                        return true;
+                }
+                // Some SDKs don’t populate StatusCode on mid-stream breaks; fall through to message
+            }
+
+            // Anthropic SDK may throw custom exceptions with "overloaded" in the message/type
+            var msg = ex.ToString();
+            if (msg.Contains("overloaded", StringComparison.OrdinalIgnoreCase)
+                || msg.Contains("overload", StringComparison.OrdinalIgnoreCase)
+                || msg.Contains("529", StringComparison.Ordinal))
+                return true;
+
+            return false;
         }
 
         /// <summary>
@@ -127,7 +208,7 @@ namespace IntelligenceHub.Client.Implementations
         /// </summary>
         /// <param name="request">The completion request details.</param>
         /// <returns>The parameters used to generate a completion.</returns>
-        private MessageParameters BuildCompletionParameters(CompletionRequest request)
+        private MessageParameters BuildCompletionParameters(CompletionRequest request, bool stream = false)
         {
             var anthropicMessages = new List<Anthropic.SDK.Messaging.Message>();
             var systemMessages = new List<SystemMessage>();
@@ -163,7 +244,7 @@ namespace IntelligenceHub.Client.Implementations
             {
                 Messages = anthropicMessages,
                 Model = request.ProfileOptions?.Model ?? DefaultAnthropicModel, // only one model is supported from anthropic
-                Stream = false,
+                Stream = stream,
                 StopSequences = request.ProfileOptions?.Stop,
                 System = systemMessages,
                 Tools = anthropicTools,
@@ -308,9 +389,9 @@ namespace IntelligenceHub.Client.Implementations
         {
             var reason = FinishReasons.Stop;
             if (hasTools) reason = FinishReasons.ToolCalls;
-            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.end_turn.ToString().ToLower()) reason = FinishReasons.Stop;
-            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.stop_sequence.ToString().ToLower()) reason = FinishReasons.Stop;
-            else if (anthropicStopReason.ToLower() == AnthropicSpecificStrings.max_tokens.ToString().ToLower()) reason = FinishReasons.Length;
+            else if (anthropicStopReason?.ToLower() == AnthropicSpecificStrings.end_turn.ToString().ToLower()) reason = FinishReasons.Stop;
+            else if (anthropicStopReason?.ToLower() == AnthropicSpecificStrings.stop_sequence.ToString().ToLower()) reason = FinishReasons.Stop;
+            else if (anthropicStopReason?.ToLower() == AnthropicSpecificStrings.max_tokens.ToString().ToLower()) reason = FinishReasons.Length;
             return reason;
         }
 
